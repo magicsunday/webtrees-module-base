@@ -1,0 +1,19 @@
+includes:
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+
+parameters:
+    # You can currently choose from 10 levels (0 is the loosest and 9 is the strictest).
+    level: max
+
+    paths:
+        - src/
+
+    excludePaths:
+        - vendor/
+        - test/
+
+    # Ignore error, mainly due invalid PHP in TYPO3
+    ignoreErrors:
+        - '#^Constant MagicSunday\\Webtrees\\ModuleBase\\Processor\\NameProcessor\:\:XPATH_NICKNAME is unused.$#'
+        - '#^Call to an undefined method Fisharebest\\Webtrees\\Module\\ModuleCustomInterface\:\:assetUrl\(\).$#'
