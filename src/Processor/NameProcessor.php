@@ -39,7 +39,7 @@ class NameProcessor
      * The XPath identifier to extract the first name parts.
      */
     private const XPATH_FIRST_NAMES
-        = '//span[@class="NAME"]//text()[parent::*[not(@class="wt-nickname")]][following::span[@class="SURN"]]';
+        = '//span[@class="NAME"]//text()[parent::*[not(@class="wt-nickname") and not(@class="SURN")]]';
 
     /**
      * The XPath identifier to extract the last name parts (surname + surname suffix).
@@ -157,22 +157,26 @@ class NameProcessor
     /**
      * Returns all name parts by given identifier.
      *
+     * @param string $expression The XPath expression to execute
+     *
      * @return string[]
      */
-    private function getNamesByIdentifier(string $identifier): array
+    private function getNamesByIdentifier(string $expression): array
     {
-        $nodeList = $this->xPath->query($identifier);
+        $nodeList = $this->xPath->query($expression);
         $names    = [];
 
         if ($nodeList !== false) {
             /** @var DOMNode $node */
             foreach ($nodeList as $node) {
-                $names[] = $node->nodeValue !== null ? trim($node->nodeValue) : '';
+                $names[] = $node->nodeValue ?? '';
             }
         }
 
-        $names = explode(' ', implode(' ', $names));
+        // Remove all leading/trailing whitespaces
+        $names = array_map('trim', $names);
 
+        // Remove empty values and reindex array
         return array_values(array_filter($names));
     }
 
@@ -212,6 +216,16 @@ class NameProcessor
         }
 
         return '';
+    }
+
+    /**
+     * Returns all assigned nicknames of the individual.
+     *
+     * @return string[]
+     */
+    public function getNicknames(): array
+    {
+        return $this->getNamesByIdentifier(self::XPATH_NICKNAME);
     }
 
     /**

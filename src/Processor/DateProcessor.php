@@ -73,25 +73,21 @@ class DateProcessor
     /**
      * Get the year of birth.
      *
-     * @return string
+     * @return int
      */
-    private function getBirthYear(): string
+    public function getBirthYear(): int
     {
-        return $this->decodeValue(
-            $this->birthDate->minimumDate()->format('%Y')
-        );
+        return $this->birthDate->minimumDate()->year();
     }
 
     /**
      * Get the year of death.
      *
-     * @return string
+     * @return int
      */
-    private function getDeathYear(): string
+    public function getDeathYear(): int
     {
-        return $this->decodeValue(
-            $this->deathDate->minimumDate()->format('%Y')
-        );
+        return $this->deathDate->minimumDate()->year();
     }
 
     /**
@@ -130,11 +126,11 @@ class DateProcessor
         }
 
         if ($this->birthDate->isOK()) {
-            return I18N::translate('Born: %s', $this->getBirthYear());
+            return I18N::translate('Born: %s', (string) $this->getBirthYear());
         }
 
         if ($this->deathDate->isOK()) {
-            return I18N::translate('Died: %s', $this->getDeathYear());
+            return I18N::translate('Died: %s', (string) $this->getDeathYear());
         }
 
         if ($this->individual->isDead()) {

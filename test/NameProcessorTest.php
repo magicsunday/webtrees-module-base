@@ -15,6 +15,7 @@ use DOMXPath;
 use MagicSunday\Webtrees\ModuleBase\Processor\NameProcessor;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use ReflectionException;
 
 /**
  * NameProcessorTest.
@@ -70,12 +71,15 @@ class NameProcessorTest extends TestCase
      * @param string $expected
      *
      * @return void
+     *
+     * @throws ReflectionException
      */
     public function convertToHtmlEntities(string $input, string $expected): void
     {
-        $reflectionClass   = new ReflectionClass(NameProcessor::class);
+        // Create mock
         $nameProcessorMock = $this->createMock(NameProcessor::class);
 
+        $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('convertToHtmlEntities');
         $reflectionMethod->setAccessible(true);
 
@@ -89,7 +93,7 @@ class NameProcessorTest extends TestCase
      */
     public function individualNameDataProvider(): array
     {
-        // [ input, expected ]
+        // [ input, expected => [ First names, Last names, Preferred first name, Nick names ] ]
         return [
             [
                 '<span class="NAME" dir="auto" translate="no"><span class="starredname">Max</span> Hermann <span class="SURN">Mustermann</span></span>',
@@ -104,11 +108,51 @@ class NameProcessorTest extends TestCase
                     [
                         'Max',
                     ],
+                    [
+                    ]
                 ],
             ],
 
             [
-                '<span class="NAME" dir="auto" translate="no">Max Hermann <span class="SURN">Mustermann</span></span>',
+                '<span class="NAME" dir="auto" translate="no">Max <span class="starredname">Peter</span> <q class="wt-nickname">Mäxchen</q> <span class="SURN">Mustermann</span></span>',
+                [
+                    [
+                        'Max',
+                        'Peter',
+                    ],
+                    [
+                        'Mustermann',
+                    ],
+                    [
+                        'Peter',
+                    ],
+                    [
+                        'Mäxchen',
+                    ]
+                ],
+            ],
+
+            [
+                '<span class="NAME" dir="auto" translate="no">Max <q class="wt-nickname">Mäxchen</q> <span class="starredname">Peter</span> <span class="SURN">Mustermann</span></span>',
+                [
+                    [
+                        'Max',
+                        'Peter',
+                    ],
+                    [
+                        'Mustermann',
+                    ],
+                    [
+                        'Peter',
+                    ],
+                    [
+                        'Mäxchen',
+                    ]
+                ],
+            ],
+
+            [
+                '<span class="NAME" dir="auto" translate="no">Max <q class="wt-nickname">Mäxchen</q> Hermann <span class="SURN">Mustermann</span></span>',
                 [
                     [
                         'Max',
@@ -120,6 +164,9 @@ class NameProcessorTest extends TestCase
                     [
                         '',
                     ],
+                    [
+                        'Mäxchen',
+                    ]
                 ],
             ],
 
@@ -137,6 +184,28 @@ class NameProcessorTest extends TestCase
                     [
                         'Antonio',
                     ],
+                    [
+                    ]
+                ],
+            ],
+
+            [
+                '<span class="NAME" dir="auto" translate="no">José <span class="starredname">Antonio</span> Carlo <span class="SURN">Gómez</span> <span class="SURN">Iglesias</span></span>',
+                [
+                    [
+                        'José',
+                        'Antonio',
+                        'Carlo',
+                    ],
+                    [
+                        'Gómez',
+                        'Iglesias',
+                    ],
+                    [
+                        'Antonio',
+                    ],
+                    [
+                    ]
                 ],
             ],
         ];
@@ -148,14 +217,17 @@ class NameProcessorTest extends TestCase
      * @param string          $methodeName
      *
      * @return void
+     *
+     * @throws ReflectionException
      */
     private function assertExtractedNames($expected, string $input, string $methodeName): void
     {
-        $nameProcessorMock = $this->createMock(NameProcessor::class);
-        $reflectionClass   = new ReflectionClass(NameProcessor::class);
-
+        $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('getDomXPathInstance');
         $reflectionMethod->setAccessible(true);
+
+        // Create mock
+        $nameProcessorMock = $this->createMock(NameProcessor::class);
 
         /** @var DOMXPath $domXPath */
         $domXPath = $reflectionMethod->invoke($nameProcessorMock, $input);
@@ -180,6 +252,8 @@ class NameProcessorTest extends TestCase
      * @param array  $expected
      *
      * @return void
+     *
+     * @throws ReflectionException
      */
     public function getFirstNames(string $input, array $expected): void
     {
@@ -196,6 +270,8 @@ class NameProcessorTest extends TestCase
      * @param array  $expected
      *
      * @return void
+     *
+     * @throws ReflectionException
      */
     public function getLastNames(string $input, array $expected): void
     {
@@ -212,10 +288,30 @@ class NameProcessorTest extends TestCase
      * @param array  $expected
      *
      * @return void
+     *
+     * @throws ReflectionException
      */
     public function getPreferredName(string $input, array $expected): void
     {
         // getPreferredName returns only one match, but test data is stored as array
         $this->assertExtractedNames($expected[2][0], $input, 'getPreferredName');
+    }
+
+    /**
+     * Tests extracting the plain nicknames of an individual.
+     *
+     * @test
+     * @dataProvider individualNameDataProvider
+     *
+     * @param string $input
+     * @param array  $expected
+     *
+     * @return void
+     *
+     * @throws ReflectionException
+     */
+    public function getNicknames(string $input, array $expected): void
+    {
+        $this->assertExtractedNames($expected[3], $input, 'getNicknames');
     }
 }

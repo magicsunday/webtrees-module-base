@@ -15,5 +15,4 @@ parameters:
 
     # Ignore error, mainly due invalid PHP in TYPO3
     ignoreErrors:
-        - '#^Constant MagicSunday\\Webtrees\\ModuleBase\\Processor\\NameProcessor\:\:XPATH_NICKNAME is unused.$#'
         - '#^Call to an undefined method Fisharebest\\Webtrees\\Module\\ModuleCustomInterface\:\:assetUrl\(\).$#'
