@@ -35,10 +35,5 @@
         "psr-4": {
             "MagicSunday\\Webtrees\\ModuleBase\\Test\\": "test/"
         }
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "1.0.x-dev"
-        }
     }
 }
