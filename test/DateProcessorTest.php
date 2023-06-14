@@ -46,7 +46,7 @@ class DateProcessorTest extends TestCase
     /**
      * @return string[][]
      */
-    public function yearDataProvider(): array
+    public static function yearDataProvider(): array
     {
         // [ input, expected ]
         return [
@@ -150,7 +150,7 @@ class DateProcessorTest extends TestCase
     /**
      * @return string[][]
      */
-    public function dateDataProvider(): array
+    public static function dateDataProvider(): array
     {
         // [ input, expected ]
         return [

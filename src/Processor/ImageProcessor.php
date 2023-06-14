@@ -50,7 +50,7 @@ class ImageProcessor
     }
 
     /**
-     * Returns the URL of the highlight image of an individual.
+     * Returns the URL of a person's highlight image.
      *
      * @param int  $width             The request maximum width of the image
      * @param int  $height            The request maximum height of the image

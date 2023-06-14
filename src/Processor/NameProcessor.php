@@ -70,7 +70,7 @@ class NameProcessor
     private Individual $individual;
 
     /**
-     * The individuals primary name array.
+     * The individual's primary name array.
      *
      * @var string[]
      */
@@ -81,7 +81,7 @@ class NameProcessor
      *
      * @var DOMXPath
      */
-    private $xPath;
+    private DOMXPath $xPath;
 
     /**
      * Constructor.
@@ -95,6 +95,21 @@ class NameProcessor
 
         // The formatted name of the individual (containing HTML) is the input to the xpath processor
         $this->xPath = $this->getDomXPathInstance($this->primaryName[self::FULL_NAME]);
+    }
+
+    /**
+     * Returns the DOMXPath instance.
+     *
+     * @param string $input The input used as xpath base
+     *
+     * @return DOMXPath
+     */
+    private function getDomXPathInstance(string $input): DOMXPath
+    {
+        $document = new DOMDocument();
+        $document->loadHTML($this->convertToHtmlEntities($input));
+
+        return new DOMXPath($document);
     }
 
     /**
@@ -117,21 +132,6 @@ class NameProcessor
     private function convertToHtmlEntities(string $input): string
     {
         return mb_encode_numericentity($input, [0x80, 0xfffffff, 0, 0xfffffff], 'UTF-8');
-    }
-
-    /**
-     * Returns the DOMXPath instance.
-     *
-     * @param string $input The input used as xpath base
-     *
-     * @return DOMXPath
-     */
-    private function getDomXPathInstance(string $input): DOMXPath
-    {
-        $document = new DOMDocument();
-        $document->loadHTML($this->convertToHtmlEntities($input));
-
-        return new DOMXPath($document);
     }
 
     /**
@@ -173,7 +173,7 @@ class NameProcessor
             }
         }
 
-        // Remove all leading/trailing whitespaces
+        // Remove all leading/trailing whitespace characters
         $names = array_map('trim', $names);
 
         // Remove empty values and reindex array

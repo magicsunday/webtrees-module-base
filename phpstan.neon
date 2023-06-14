@@ -13,6 +13,6 @@ parameters:
         - vendor/
         - test/
 
-    # Ignore error, mainly due invalid PHP in TYPO3
+    # Ignore error
     ignoreErrors:
         - '#^Call to an undefined method Fisharebest\\Webtrees\\Module\\ModuleCustomInterface\:\:assetUrl\(\).$#'

@@ -86,7 +86,7 @@ class VersionInformation
                             }
                         }
                     }
-                } catch (GuzzleException $exception) {
+                } catch (GuzzleException) {
                     // Can't connect to the server?
                 }
 

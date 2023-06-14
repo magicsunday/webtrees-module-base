@@ -29,7 +29,7 @@ class NameProcessorTest extends TestCase
     /**
      * @return string[][]
      */
-    public function convertToHtmlEntitiesDataProvider(): array
+    public static function convertToHtmlEntitiesDataProvider(): array
     {
         // [ input, expected ]
         return [
@@ -91,7 +91,7 @@ class NameProcessorTest extends TestCase
     /**
      * @return string[][]
      */
-    public function individualNameDataProvider(): array
+    public static function individualNameDataProvider(): array
     {
         // [ input, expected => [ First names, Last names, Preferred first name, Nick names ] ]
         return [
