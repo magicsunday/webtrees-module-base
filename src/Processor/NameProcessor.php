@@ -86,12 +86,17 @@ class NameProcessor
     /**
      * Constructor.
      *
-     * @param Individual $individual The individual to process
+     * @param Individual      $individual     The individual to process
+     * @param null|Individual $spouse
+     * @param bool            $useMarriedName TRUE to return the married name instead of the primary one
      */
-    public function __construct(Individual $individual)
-    {
+    public function __construct(
+        Individual $individual,
+        Individual $spouse = null,
+        bool $useMarriedName = false
+    ) {
         $this->individual  = $individual;
-        $this->primaryName = $this->extractPrimaryName();
+        $this->primaryName = $this->extractPrimaryName($spouse, $useMarriedName);
 
         // The formatted name of the individual (containing HTML) is the input to the xpath processor
         $this->xPath = $this->getDomXPathInstance($this->primaryName[self::FULL_NAME]);
@@ -115,11 +120,35 @@ class NameProcessor
     /**
      * Extracts the primary name from the individual.
      *
-     * @return string[]
+     * @param null|Individual $spouse
+     * @param bool            $useMarriedName TRUE to return the married name instead of the primary one
+     *
+     * @return array<string, string>
      */
-    private function extractPrimaryName(): array
-    {
-        return $this->individual->getAllNames()[$this->individual->getPrimaryName()];
+    private function extractPrimaryName(
+        Individual $spouse = null,
+        bool $useMarriedName = false
+    ): array {
+        $individualNames = $this->individual->getAllNames();
+
+        if ($useMarriedName !== false) {
+            foreach ($individualNames as $individualName) {
+                if ($spouse !== null) {
+                    foreach ($spouse->getAllNames() as $spouseName) {
+                        if (
+                            ($individualName['type'] === '_MARNM')
+                            && ($individualName['surn'] === $spouseName['surn'])
+                        ) {
+                            return $individualName;
+                        }
+                    }
+                } elseif ($individualName['type'] === '_MARNM') {
+                    return $individualName;
+                }
+            }
+        }
+
+        return $individualNames[$this->individual->getPrimaryName()];
     }
 
     /**
@@ -144,13 +173,15 @@ class NameProcessor
     {
         // The name of the person without formatting of the individual parts of the name.
         // Remove placeholders as we do not need them in this module
-        return str_replace(
-            [
-                Individual::NOMEN_NESCIO,
-                Individual::PRAENOMEN_NESCIO,
-            ],
-            '',
-            $this->primaryName[self::FULL_NAME_WITH_PLACEHOLDERS]
+        return trim(
+            str_replace(
+                [
+                    Individual::NOMEN_NESCIO,
+                    Individual::PRAENOMEN_NESCIO,
+                ],
+                '',
+                $this->primaryName[self::FULL_NAME_WITH_PLACEHOLDERS]
+            )
         );
     }
 
