@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use DOMDocument;
-use DOMNode;
 use DOMXPath;
 use Fisharebest\Webtrees\Individual;
 
@@ -36,18 +35,6 @@ class NameProcessor
     private const FULL_NAME = 'full';
 
     /**
-     * The XPath identifier to extract the first name parts.
-     */
-    private const XPATH_FIRST_NAMES
-        = '//span[@class="NAME"]//text()[parent::*[not(@class="wt-nickname") and not(@class="SURN")]]';
-
-    /**
-     * The XPath identifier to extract the last name parts (surname + surname suffix).
-     */
-    private const XPATH_LAST_NAMES
-        = '//span[@class="NAME"]//span[@class="SURN"]/text()|//span[@class="SURN"]/following::text()';
-
-    /**
      * The XPath identifier to extract the nickname part.
      */
     private const XPATH_NICKNAME = '//span[@class="NAME"]//q[@class="wt-nickname"]/text()';
@@ -56,11 +43,6 @@ class NameProcessor
      * The XPath identifier to extract the starred name part.
      */
     private const XPATH_PREFERRED_NAME = '//span[@class="NAME"]//span[@class="starredname"]/text()';
-
-    /**
-     * The XPath identifier to extract the alternative name parts.
-     */
-    private const XPATH_ALTERNATIVE_NAME = '//span[contains(attribute::class, "NAME")]';
 
     /**
      * The individual.
@@ -164,6 +146,46 @@ class NameProcessor
     }
 
     /**
+     * Replace name placeholders.
+     *
+     * @param string $value
+     *
+     * @return string
+     */
+    private function replacePlaceholders(string $value): string
+    {
+        return trim(
+            str_replace(
+                [
+                    Individual::NOMEN_NESCIO,
+                    Individual::PRAENOMEN_NESCIO,
+                ],
+                '…',
+                $value
+            )
+        );
+    }
+
+    /**
+     * Splits a name into an array, removing all name placeholders.
+     *
+     * @param string $name
+     *
+     * @return string[]
+     */
+    private function splitAndCleanName(string $name): array
+    {
+        return array_values(
+            array_filter(
+                explode(
+                    ' ',
+                    $this->replacePlaceholders($name)
+                )
+            )
+        );
+    }
+
+    /**
      * Returns the full name of the individual without formatting of the individual parts of the name.
      * All placeholders were removed as we do not need them in this module.
      *
@@ -173,42 +195,7 @@ class NameProcessor
     {
         // The name of the person without formatting of the individual parts of the name.
         // Remove placeholders as we do not need them in this module
-        return trim(
-            str_replace(
-                [
-                    Individual::NOMEN_NESCIO,
-                    Individual::PRAENOMEN_NESCIO,
-                ],
-                '',
-                $this->primaryName[self::FULL_NAME_WITH_PLACEHOLDERS]
-            )
-        );
-    }
-
-    /**
-     * Returns all name parts by given identifier.
-     *
-     * @param string $expression The XPath expression to execute
-     *
-     * @return string[]
-     */
-    private function getNamesByIdentifier(string $expression): array
-    {
-        $nodeList = $this->xPath->query($expression);
-        $names    = [];
-
-        if ($nodeList !== false) {
-            /** @var DOMNode $node */
-            foreach ($nodeList as $node) {
-                $names[] = $node->nodeValue ?? '';
-            }
-        }
-
-        // Remove all leading/trailing whitespace characters
-        $names = array_map('trim', $names);
-
-        // Remove empty values and reindex array
-        return array_values(array_filter($names));
+        return $this->replacePlaceholders($this->primaryName[self::FULL_NAME_WITH_PLACEHOLDERS]);
     }
 
     /**
@@ -218,7 +205,7 @@ class NameProcessor
      */
     public function getFirstNames(): array
     {
-        return $this->getNamesByIdentifier(self::XPATH_FIRST_NAMES);
+        return $this->splitAndCleanName($this->primaryName['givn']);
     }
 
     /**
@@ -228,7 +215,7 @@ class NameProcessor
      */
     public function getLastNames(): array
     {
-        return $this->getNamesByIdentifier(self::XPATH_LAST_NAMES);
+        return $this->splitAndCleanName($this->primaryName['surn']);
     }
 
     /**
@@ -250,36 +237,23 @@ class NameProcessor
     }
 
     /**
-     * Returns all assigned nicknames of the individual.
+     * Returns the alternative name of the individual.
      *
-     * @return string[]
-     */
-    public function getNicknames(): array
-    {
-        return $this->getNamesByIdentifier(self::XPATH_NICKNAME);
-    }
-
-    /**
-     * Returns the alternative names of the individual.
+     * @param Individual $individual
      *
-     * @return string[]
+     * @return string
      */
-    public function getAlternateNames(): array
+    public function getAlternateName(Individual $individual): string
     {
-        $name = $this->individual->alternateName();
+        if ($individual->canShowName()
+            && ($individual->getPrimaryName() !== $individual->getSecondaryName())
+        ) {
+            $allNames        = $individual->getAllNames();
+            $alternativeName = $allNames[$individual->getSecondaryName()]['fullNN'];
 
-        if ($name === null) {
-            return [];
+            return $this->replacePlaceholders($alternativeName);
         }
 
-        $xPath    = $this->getDomXPathInstance($name);
-        $nodeList = $xPath->query(self::XPATH_ALTERNATIVE_NAME);
-
-        if (($nodeList !== false) && ($nodeList->length > 0)) {
-            $nodeItem = $nodeList->item(0);
-            $name     = ($nodeItem !== null) ? ($nodeItem->nodeValue ?? '') : '';
-        }
-
-        return array_filter(explode(' ', $name));
+        return '';
     }
 }
