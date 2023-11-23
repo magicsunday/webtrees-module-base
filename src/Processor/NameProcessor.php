@@ -35,11 +35,6 @@ class NameProcessor
     private const FULL_NAME = 'full';
 
     /**
-     * The XPath identifier to extract the nickname part.
-     */
-    private const XPATH_NICKNAME = '//span[@class="NAME"]//q[@class="wt-nickname"]/text()';
-
-    /**
      * The XPath identifier to extract the starred name part.
      */
     private const XPATH_PREFERRED_NAME = '//span[@class="NAME"]//span[@class="starredname"]/text()';
@@ -245,11 +240,12 @@ class NameProcessor
      */
     public function getAlternateName(Individual $individual): string
     {
-        if ($individual->canShowName()
+        if (
+            $individual->canShowName()
             && ($individual->getPrimaryName() !== $individual->getSecondaryName())
         ) {
             $allNames        = $individual->getAllNames();
-            $alternativeName = $allNames[$individual->getSecondaryName()]['fullNN'];
+            $alternativeName = $allNames[$individual->getSecondaryName()][self::FULL_NAME_WITH_PLACEHOLDERS];
 
             return $this->replacePlaceholders($alternativeName);
         }
