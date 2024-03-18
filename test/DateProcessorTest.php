@@ -105,6 +105,7 @@ class DateProcessorTest extends TestCase
      * Tests extracting the birth year from a date.
      *
      * @test
+     *
      * @dataProvider yearDataProvider
      *
      * @param string $input
@@ -128,6 +129,7 @@ class DateProcessorTest extends TestCase
      * Tests extracting the death year from a date.
      *
      * @test
+     *
      * @dataProvider yearDataProvider
      *
      * @param string $input
@@ -196,13 +198,14 @@ class DateProcessorTest extends TestCase
         $result = $reflectionClass->getMethod($methodeName)
             ->invokeArgs($dateProcessorMock, []);
 
-        self::assertSame( strip_tags($result), $result);
+        self::assertSame(strip_tags($result), $result);
     }
 
     /**
      * Tests extracting the plain birthdate from a date.
      *
      * @test
+     *
      * @dataProvider dateDataProvider
      *
      * @param string $input
@@ -226,6 +229,7 @@ class DateProcessorTest extends TestCase
      * Tests extracting the plain death date from a date.
      *
      * @test
+     *
      * @dataProvider dateDataProvider
      *
      * @param string $input

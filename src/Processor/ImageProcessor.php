@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use Fisharebest\Webtrees\Individual;
+use Fisharebest\Webtrees\MediaFile;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 
 /**
@@ -45,7 +46,7 @@ class ImageProcessor
      */
     public function __construct(ModuleCustomInterface $module, Individual $individual)
     {
-        $this->module = $module;
+        $this->module     = $module;
         $this->individual = $individual;
     }
 
@@ -70,7 +71,7 @@ class ImageProcessor
         ) {
             $mediaFile = $this->individual->findHighlightedMediaFile();
 
-            if ($mediaFile !== null) {
+            if ($mediaFile instanceof MediaFile) {
                 return $mediaFile->imageUrl($width, $height, 'contain');
             }
 

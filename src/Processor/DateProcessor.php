@@ -54,8 +54,8 @@ class DateProcessor
     public function __construct(Individual $individual)
     {
         $this->individual = $individual;
-        $this->birthDate = $this->individual->getBirthDate();
-        $this->deathDate = $this->individual->getDeathDate();
+        $this->birthDate  = $this->individual->getBirthDate();
+        $this->deathDate  = $this->individual->getDeathDate();
     }
 
     /**
@@ -147,7 +147,7 @@ class DateProcessor
      */
     public function getMarriageDate(): string
     {
-        /** @var null|Family $family */
+        /** @var Family|null $family */
         $family = $this->individual->spouseFamilies()->first();
 
         if ($family !== null) {
@@ -166,7 +166,7 @@ class DateProcessor
      */
     public function getMarriageDateOfParents(): string
     {
-        /** @var null|Family $family */
+        /** @var Family|null $family */
         $family = $this->individual->childFamilies()->first();
 
         if ($family !== null) {

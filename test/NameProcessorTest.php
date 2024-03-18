@@ -65,6 +65,7 @@ class NameProcessorTest extends TestCase
      * Tests conversion of UTF-8 characters to HTML entities.
      *
      * @test
+     *
      * @dataProvider convertToHtmlEntitiesDataProvider
      *
      * @param string $input
@@ -83,7 +84,7 @@ class NameProcessorTest extends TestCase
         $reflectionMethod = $reflectionClass->getMethod('convertToHtmlEntities');
         $reflectionMethod->setAccessible(true);
 
-        $result = $reflectionMethod->invokeArgs($nameProcessorMock, [ $input ]);
+        $result = $reflectionMethod->invokeArgs($nameProcessorMock, [$input]);
 
         self::assertSame($expected, $result);
     }
@@ -223,12 +224,12 @@ class NameProcessorTest extends TestCase
         $reflectionProperty->setAccessible(true);
         $reflectionProperty->setValue($nameProcessorMock, $domXPath);
 
-//        $reflectionProperty = $reflectionClass->getProperty('primaryName');
-//        $reflectionProperty->setAccessible(true);
-//        $reflectionProperty->setValue(
-//            $nameProcessorMock,
-//            $expected
-//        );
+        //        $reflectionProperty = $reflectionClass->getProperty('primaryName');
+        //        $reflectionProperty->setAccessible(true);
+        //        $reflectionProperty->setValue(
+        //            $nameProcessorMock,
+        //            $expected
+        //        );
 
         $result = $reflectionClass->getMethod($methodeName)
             ->invoke($nameProcessorMock);
@@ -240,6 +241,7 @@ class NameProcessorTest extends TestCase
      * Tests extracting the plain first names of an individual.
      *
      * @test
+     *
      * @dataProvider individualNameDataProvider
      *
      * @param string $input
@@ -258,6 +260,7 @@ class NameProcessorTest extends TestCase
      * Tests extracting the plain last names of an individual.
      *
      * @test
+     *
      * @dataProvider individualNameDataProvider
      *
      * @param string $input
@@ -276,6 +279,7 @@ class NameProcessorTest extends TestCase
      * Tests extracting the plain first names of an individual.
      *
      * @test
+     *
      * @dataProvider individualNameDataProvider
      *
      * @param string $input
