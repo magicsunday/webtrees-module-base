@@ -6,7 +6,7 @@
 ## Development
 
 ### Run tests
-```
+```shell
 composer update
 
 composer ci:test
