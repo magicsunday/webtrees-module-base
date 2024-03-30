@@ -13,6 +13,8 @@ namespace MagicSunday\Webtrees\ModuleBase\Test;
 
 use DOMXPath;
 use MagicSunday\Webtrees\ModuleBase\Processor\NameProcessor;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionException;
@@ -64,10 +66,6 @@ class NameProcessorTest extends TestCase
     /**
      * Tests conversion of UTF-8 characters to HTML entities.
      *
-     * @test
-     *
-     * @dataProvider convertToHtmlEntitiesDataProvider
-     *
      * @param string $input
      * @param string $expected
      *
@@ -75,6 +73,8 @@ class NameProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('convertToHtmlEntitiesDataProvider')]
     public function convertToHtmlEntities(string $input, string $expected): void
     {
         // Create mock
@@ -240,10 +240,6 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain first names of an individual.
      *
-     * @test
-     *
-     * @dataProvider individualNameDataProvider
-     *
      * @param string $input
      * @param array  $expected
      *
@@ -251,6 +247,8 @@ class NameProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('individualNameDataProvider')]
     public function getFirstNames(string $input, array $expected): void
     {
         $this->assertExtractedNames($expected[0], $input, 'getFirstNames');
@@ -259,10 +257,6 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain last names of an individual.
      *
-     * @test
-     *
-     * @dataProvider individualNameDataProvider
-     *
      * @param string $input
      * @param array  $expected
      *
@@ -270,6 +264,8 @@ class NameProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('individualNameDataProvider')]
     public function getLastNames(string $input, array $expected): void
     {
         $this->assertExtractedNames($expected[1], $input, 'getLastNames');
@@ -278,10 +274,6 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain first names of an individual.
      *
-     * @test
-     *
-     * @dataProvider individualNameDataProvider
-     *
      * @param string $input
      * @param array  $expected
      *
@@ -289,6 +281,8 @@ class NameProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('individualNameDataProvider')]
     public function getPreferredName(string $input, array $expected): void
     {
         // getPreferredName returns only one match, but test data is stored as an array

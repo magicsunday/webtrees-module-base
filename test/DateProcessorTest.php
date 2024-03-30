@@ -17,6 +17,8 @@ use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Registry;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionException;
@@ -104,10 +106,6 @@ class DateProcessorTest extends TestCase
     /**
      * Tests extracting the birth year from a date.
      *
-     * @test
-     *
-     * @dataProvider yearDataProvider
-     *
      * @param string $input
      * @param int    $expected
      *
@@ -115,6 +113,8 @@ class DateProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('yearDataProvider')]
     public function getBirthYear(string $input, int $expected): void
     {
         $this->assertExtractedYear(
@@ -128,10 +128,6 @@ class DateProcessorTest extends TestCase
     /**
      * Tests extracting the death year from a date.
      *
-     * @test
-     *
-     * @dataProvider yearDataProvider
-     *
      * @param string $input
      * @param int    $expected
      *
@@ -139,6 +135,8 @@ class DateProcessorTest extends TestCase
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('yearDataProvider')]
     public function getDeathYear(string $input, int $expected): void
     {
         $this->assertExtractedYear(
@@ -204,16 +202,14 @@ class DateProcessorTest extends TestCase
     /**
      * Tests extracting the plain birthdate from a date.
      *
-     * @test
-     *
-     * @dataProvider dateDataProvider
-     *
      * @param string $input
      *
      * @return void
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('dateDataProvider')]
     public function getBirthDate(string $input): void
     {
         I18N::init('en-US', true);
@@ -228,16 +224,14 @@ class DateProcessorTest extends TestCase
     /**
      * Tests extracting the plain death date from a date.
      *
-     * @test
-     *
-     * @dataProvider dateDataProvider
-     *
      * @param string $input
      *
      * @return void
      *
      * @throws ReflectionException
      */
+    #[Test]
+    #[DataProvider('dateDataProvider')]
     public function getDeathDate(string $input): void
     {
         I18N::init('en-US', true);
