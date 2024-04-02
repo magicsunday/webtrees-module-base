@@ -208,11 +208,8 @@ class NameProcessorTest extends TestCase
      */
     private function assertExtractedNames($expected, string $input, string $methodeName): void
     {
-        self::markTestIncomplete('TODO FIX ME');
-
         $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('getDomXPathInstance');
-        $reflectionMethod->setAccessible(true);
 
         // Create mock
         $nameProcessorMock = $this->createMock(NameProcessor::class);
@@ -221,17 +218,10 @@ class NameProcessorTest extends TestCase
         $domXPath = $reflectionMethod->invoke($nameProcessorMock, $input);
 
         $reflectionProperty = $reflectionClass->getProperty('xPath');
-        $reflectionProperty->setAccessible(true);
         $reflectionProperty->setValue($nameProcessorMock, $domXPath);
 
-        //        $reflectionProperty = $reflectionClass->getProperty('primaryName');
-        //        $reflectionProperty->setAccessible(true);
-        //        $reflectionProperty->setValue(
-        //            $nameProcessorMock,
-        //            $expected
-        //        );
-
-        $result = $reflectionClass->getMethod($methodeName)
+        $result = $reflectionClass
+            ->getMethod($methodeName)
             ->invoke($nameProcessorMock);
 
         self::assertSame($expected, $result);
