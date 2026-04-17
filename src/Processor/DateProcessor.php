@@ -264,6 +264,49 @@ class DateProcessor
     }
 
     /**
+     * Returns the marriage date of the individual's own spouse family, formatted with
+     * the generation-aware compact format. Empty string when there is no spouse family
+     * or the marriage date is unknown.
+     *
+     * @return string
+     */
+    public function getFormattedMarriageDate(): string
+    {
+        /** @var Family|null $family */
+        $family = $this->individual->spouseFamilies()->first();
+
+        if (($family !== null) && $family->getMarriageDate()->isOK()) {
+            return self::formatMarriageDate($family->getMarriageDate(), $this->generation, $this->detailedDateGenerations);
+        }
+
+        return '';
+    }
+
+    /**
+     * Returns the marriage date of the parents formatted with the generation-aware
+     * compact format. Returns Symbols::MARRIAGE_DATE_UNKNOWN ("?") when a MARR fact
+     * exists but carries no date, so consumers can distinguish "married, date unknown"
+     * from "no marriage fact at all". Empty string when no parent family exists.
+     *
+     * @return string
+     */
+    public function getFormattedMarriageDateOfParents(): string
+    {
+        /** @var Family|null $family */
+        $family = $this->individual->childFamilies()->first();
+
+        if (($family !== null) && $family->getMarriageDate()->isOK()) {
+            return self::formatMarriageDate($family->getMarriageDate(), $this->generation, $this->detailedDateGenerations);
+        }
+
+        if (($family !== null) && $family->facts(['MARR'])->isNotEmpty()) {
+            return Symbols::MARRIAGE_DATE_UNKNOWN;
+        }
+
+        return '';
+    }
+
+    /**
      * Returns a compact single-line lifetime description (e.g. "1853–1933").
      * Falls back to the birth or death symbol with a single year, or to the
      * lone death symbol for deceased individuals without dates.
