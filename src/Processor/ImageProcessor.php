@@ -79,6 +79,12 @@ class ImageProcessor
                 $returnSilhouettes
                 && ($this->individual->tree()->getPreference('USE_SILHOUETTE') !== '')
             ) {
+                // assetUrl() lives on AbstractModule, not on ModuleCustomInterface.
+                // Guard needed because the constructor accepts ModuleCustomInterface.
+                if (method_exists($this->module, 'assetUrl') === false) {
+                    return '';
+                }
+
                 return $this->module->assetUrl(
                     sprintf(
                         'images/silhouette-%s.svg',
