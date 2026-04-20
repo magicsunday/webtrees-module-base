@@ -14,6 +14,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Processor;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\MediaFile;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
+use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 
 /**
  * Class ImageProcessor.
@@ -27,14 +28,14 @@ class ImageProcessor
     /**
      * Constructor.
      *
-     * @param ModuleCustomInterface $module     The module
-     * @param Individual            $individual The individual to process
+     * @param ModuleCustomInterface&ModuleAssetUrlInterface $module     The module — must provide assetUrl() for silhouette URLs
+     * @param Individual                                    $individual The individual to process
      */
     public function __construct(
         /**
          * The module.
          */
-        private readonly ModuleCustomInterface $module,
+        private readonly ModuleCustomInterface&ModuleAssetUrlInterface $module,
         /**
          * The individual.
          */
@@ -71,20 +72,12 @@ class ImageProcessor
                 $returnSilhouettes
                 && ($this->individual->tree()->getPreference('USE_SILHOUETTE') !== '')
             ) {
-                // assetUrl() lives on AbstractModule, not on ModuleCustomInterface.
-                // Guard needed because the constructor accepts ModuleCustomInterface.
-                if (method_exists($this->module, 'assetUrl') === false) {
-                    return '';
-                }
-
-                $assetUrl = $this->module->assetUrl(
+                return $this->module->assetUrl(
                     sprintf(
                         'images/silhouette-%s.svg',
                         $this->individual->sex()
                     )
                 );
-
-                return is_string($assetUrl) ? $assetUrl : '';
             }
         }
 
