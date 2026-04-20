@@ -78,11 +78,10 @@ class NameProcessorTest extends TestCase
     public function convertToHtmlEntities(string $input, string $expected): void
     {
         // Create mock
-        $nameProcessorMock = $this->createMock(NameProcessor::class);
+        $nameProcessorMock = self::createStub(NameProcessor::class);
 
         $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('convertToHtmlEntities');
-        $reflectionMethod->setAccessible(true);
 
         $result = $reflectionMethod->invokeArgs($nameProcessorMock, [$input]);
 
@@ -90,7 +89,7 @@ class NameProcessorTest extends TestCase
     }
 
     /**
-     * @return string[][]
+     * @return array<int, array{string, array{list<string>, list<string>, list<string>}}>
      */
     public static function individualNameDataProvider(): array
     {
@@ -212,7 +211,7 @@ class NameProcessorTest extends TestCase
         $reflectionMethod = $reflectionClass->getMethod('getDomXPathInstance');
 
         // Create mock
-        $nameProcessorMock = $this->createMock(NameProcessor::class);
+        $nameProcessorMock = self::createStub(NameProcessor::class);
 
         /** @var DOMXPath $domXPath */
         $domXPath = $reflectionMethod->invoke($nameProcessorMock, $input);
@@ -230,8 +229,8 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain first names of an individual.
      *
-     * @param string $input
-     * @param array  $expected
+     * @param string               $input
+     * @param array<int, string[]> $expected
      *
      * @return void
      *
@@ -247,8 +246,8 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain last names of an individual.
      *
-     * @param string $input
-     * @param array  $expected
+     * @param string               $input
+     * @param array<int, string[]> $expected
      *
      * @return void
      *
@@ -264,8 +263,8 @@ class NameProcessorTest extends TestCase
     /**
      * Tests extracting the plain first names of an individual.
      *
-     * @param string $input
-     * @param array  $expected
+     * @param string               $input
+     * @param array<int, string[]> $expected
      *
      * @return void
      *

@@ -25,29 +25,21 @@ use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 class ImageProcessor
 {
     /**
-     * The module.
-     *
-     * @var ModuleCustomInterface
-     */
-    private ModuleCustomInterface $module;
-
-    /**
-     * The individual.
-     *
-     * @var Individual
-     */
-    private Individual $individual;
-
-    /**
      * Constructor.
      *
      * @param ModuleCustomInterface $module     The module
      * @param Individual            $individual The individual to process
      */
-    public function __construct(ModuleCustomInterface $module, Individual $individual)
-    {
-        $this->module     = $module;
-        $this->individual = $individual;
+    public function __construct(
+        /**
+         * The module.
+         */
+        private readonly ModuleCustomInterface $module,
+        /**
+         * The individual.
+         */
+        private readonly Individual $individual,
+    ) {
     }
 
     /**
@@ -63,7 +55,7 @@ class ImageProcessor
     public function getHighlightImageUrl(
         int $width = 250,
         int $height = 250,
-        bool $returnSilhouettes = true
+        bool $returnSilhouettes = true,
     ): string {
         if (
             $this->individual->canShow()
@@ -85,12 +77,14 @@ class ImageProcessor
                     return '';
                 }
 
-                return $this->module->assetUrl(
+                $assetUrl = $this->module->assetUrl(
                     sprintf(
                         'images/silhouette-%s.svg',
                         $this->individual->sex()
                     )
                 );
+
+                return is_string($assetUrl) ? $assetUrl : '';
             }
         }
 

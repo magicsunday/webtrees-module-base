@@ -46,7 +46,7 @@ class DateProcessorTest extends TestCase
     }
 
     /**
-     * @return string[][]
+     * @return array<int, array{string, int}>
      */
     public static function yearDataProvider(): array
     {
@@ -87,14 +87,13 @@ class DateProcessorTest extends TestCase
         int $expected,
         string $input,
         string $propertyName,
-        string $methodeName
+        string $methodeName,
     ): void {
         // Create mock
-        $dateProcessorMock = $this->createMock(DateProcessor::class);
+        $dateProcessorMock = self::createStub(DateProcessor::class);
 
         $reflectionClass    = new ReflectionClass(DateProcessor::class);
         $reflectionProperty = $reflectionClass->getProperty($propertyName);
-        $reflectionProperty->setAccessible(true);
         $reflectionProperty->setValue($dateProcessorMock, new Date($input));
 
         $result = $reflectionClass->getMethod($methodeName)
@@ -183,19 +182,19 @@ class DateProcessorTest extends TestCase
     public function assertDateNotContainsHtml(
         string $input,
         string $propertyName,
-        string $methodeName
+        string $methodeName,
     ): void {
         // Create mock
-        $dateProcessorMock = $this->createMock(DateProcessor::class);
+        $dateProcessorMock = self::createStub(DateProcessor::class);
 
         $reflectionClass    = new ReflectionClass(DateProcessor::class);
         $reflectionProperty = $reflectionClass->getProperty($propertyName);
-        $reflectionProperty->setAccessible(true);
         $reflectionProperty->setValue($dateProcessorMock, new Date($input));
 
         $result = $reflectionClass->getMethod($methodeName)
             ->invokeArgs($dateProcessorMock, []);
 
+        self::assertIsString($result);
         self::assertSame(strip_tags($result), $result);
     }
 

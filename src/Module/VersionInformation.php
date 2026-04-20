@@ -27,20 +27,16 @@ use GuzzleHttp\Exception\GuzzleException;
 class VersionInformation
 {
     /**
-     * The module.
-     *
-     * @var ModuleCustomInterface
-     */
-    private ModuleCustomInterface $module;
-
-    /**
      * Constructor.
      *
      * @param ModuleCustomInterface $module The module
      */
-    public function __construct(ModuleCustomInterface $module)
-    {
-        $this->module = $module;
+    public function __construct(
+        /**
+         * The module.
+         */
+        private readonly ModuleCustomInterface $module,
+    ) {
     }
 
     /**

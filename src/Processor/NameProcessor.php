@@ -28,35 +28,28 @@ class NameProcessor
     /**
      * The full name identifier with name placeholders.
      */
-    private const FULL_NAME_WITH_PLACEHOLDERS = 'fullNN';
+    private const string FULL_NAME_WITH_PLACEHOLDERS = 'fullNN';
 
     /**
      * The full name identifier.
      */
-    private const FULL_NAME = 'full';
+    private const string FULL_NAME = 'full';
 
     /**
      * The XPath identifier to extract the first name parts (including the prefix).
      */
-    private const XPATH_FIRST_NAMES
+    private const string XPATH_FIRST_NAMES
         = '//text()[not(ancestor::q[@class="wt-nickname"]) and not(preceding::span[@class="SURN"] or ancestor::span[@class="SURN"])]';
 
     /**
      * The XPath identifier to extract the last name parts (surname + surname suffix).
      */
-    private const XPATH_LAST_NAMES = '//span[@class="NAME"]//span[@class="SURN"]/text()|//span[@class="SURN"]/following::text()';
+    private const string XPATH_LAST_NAMES = '//span[@class="NAME"]//span[@class="SURN"]/text()|//span[@class="SURN"]/following::text()';
 
     /**
      * The XPath identifier to extract the starred name part.
      */
-    private const XPATH_PREFERRED_NAME = '//span[@class="NAME"]//span[@class="starredname"]/text()';
-
-    /**
-     * The individual.
-     *
-     * @var Individual
-     */
-    private Individual $individual;
+    private const string XPATH_PREFERRED_NAME = '//span[@class="NAME"]//span[@class="starredname"]/text()';
 
     /**
      * The individual's primary name array.
@@ -67,10 +60,8 @@ class NameProcessor
 
     /**
      * The DOM xpath processor.
-     *
-     * @var DOMXPath
      */
-    private DOMXPath $xPath;
+    private readonly DOMXPath $xPath;
 
     /**
      * Constructor.
@@ -80,11 +71,13 @@ class NameProcessor
      * @param bool            $useMarriedName TRUE to return the married name instead of the primary one
      */
     public function __construct(
-        Individual $individual,
+        /**
+         * The individual.
+         */
+        private readonly Individual $individual,
         ?Individual $spouse = null,
-        bool $useMarriedName = false
+        bool $useMarriedName = false,
     ) {
-        $this->individual  = $individual;
         $this->primaryName = $this->extractPrimaryName($spouse, $useMarriedName);
 
         // The formatted name of the individual (containing HTML) is the input to the xpath processor
@@ -116,7 +109,7 @@ class NameProcessor
      */
     private function extractPrimaryName(
         ?Individual $spouse = null,
-        bool $useMarriedName = false
+        bool $useMarriedName = false,
     ): array {
         $individualNames = $this->individual->getAllNames();
 
@@ -207,7 +200,8 @@ class NameProcessor
         // Remove empty values and reindex array
         return array_values(
             array_filter(
-                array_merge(...$values)
+                array_merge(...$values),
+                static fn (string $value): bool => $value !== ''
             )
         );
     }
@@ -232,7 +226,7 @@ class NameProcessor
         }
 
         // Remove all leading/trailing whitespace characters
-        $names = array_map('trim', $names);
+        $names = array_map(trim(...), $names);
 
         return $this->splitAndCleanName($names);
     }
