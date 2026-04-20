@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test;
 
 use DOMXPath;
+use Fisharebest\Webtrees\Individual;
 use MagicSunday\Webtrees\ModuleBase\Processor\NameProcessor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -276,5 +277,111 @@ class NameProcessorTest extends TestCase
     {
         // getPreferredName returns only one match, but test data is stored as an array
         $this->assertExtractedNames($expected[2][0], $input, 'getPreferredName');
+    }
+
+    /**
+     * Invokes the real getMarriedSurnames() on a stubbed NameProcessor whose
+     * $individual property is set via reflection. Required because
+     * self::createStub() overrides public methods with no-op stubs — the real
+     * method body is reachable only via Reflection::invoke().
+     *
+     * @param array<int, array<string, string>> $individualNames
+     * @param Individual|null                   $spouse
+     *
+     * @return string[]
+     *
+     * @throws ReflectionException
+     */
+    private function invokeGetMarriedSurnames(array $individualNames, ?Individual $spouse = null): array
+    {
+        $individualStub = self::createStub(Individual::class);
+        $individualStub->method('getAllNames')->willReturn($individualNames);
+
+        $processorStub = self::createStub(NameProcessor::class);
+
+        $reflectionClass = new ReflectionClass(NameProcessor::class);
+        $reflectionClass->getProperty('individual')->setValue($processorStub, $individualStub);
+
+        $result = $reflectionClass->getMethod('getMarriedSurnames')->invoke($processorStub, $spouse);
+
+        self::assertIsArray($result);
+
+        return array_values(array_filter($result, is_string(...)));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    public function getMarriedSurnamesReturnsEmptyWhenNoMarnmRecord(): void
+    {
+        self::assertSame([], $this->invokeGetMarriedSurnames([
+            ['type' => 'NAME', 'surn' => 'Schmidt'],
+        ]));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    public function getMarriedSurnamesReturnsMarnmSurnameWhenNoSpouseGiven(): void
+    {
+        self::assertSame(['Müller'], $this->invokeGetMarriedSurnames([
+            ['type' => 'NAME', 'surn' => 'Schmidt'],
+            ['type' => '_MARNM', 'surn' => 'Müller'],
+        ]));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    public function getMarriedSurnamesSplitsMultipleSurnameParts(): void
+    {
+        self::assertSame(['Müller', 'Meier'], $this->invokeGetMarriedSurnames([
+            ['type' => '_MARNM', 'surn' => 'Müller Meier'],
+        ]));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    public function getMarriedSurnamesMatchesSpouseSurname(): void
+    {
+        $spouseStub = self::createStub(Individual::class);
+        $spouseStub->method('getAllNames')->willReturn([
+            ['type' => 'NAME', 'surn' => 'Müller'],
+        ]);
+
+        // The first _MARNM ("Andere") doesn't match the spouse's surname,
+        // so it must be skipped; the second _MARNM ("Müller") matches.
+        self::assertSame(['Müller'], $this->invokeGetMarriedSurnames(
+            [
+                ['type' => 'NAME', 'surn' => 'Schmidt'],
+                ['type' => '_MARNM', 'surn' => 'Andere'],
+                ['type' => '_MARNM', 'surn' => 'Müller'],
+            ],
+            $spouseStub
+        ));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    public function getMarriedSurnamesReturnsEmptyWhenSpouseSurnameDoesNotMatchAnyMarnm(): void
+    {
+        $spouseStub = self::createStub(Individual::class);
+        $spouseStub->method('getAllNames')->willReturn([
+            ['type' => 'NAME', 'surn' => 'Schmidt'],
+        ]);
+
+        self::assertSame([], $this->invokeGetMarriedSurnames(
+            [
+                ['type' => '_MARNM', 'surn' => 'Müller'],
+            ],
+            $spouseStub
+        ));
     }
 }
