@@ -1,11 +1,16 @@
 {
     "name": "magicsunday/webtrees-module-base",
-    "description": "This modules provides base functionality for all magicsunday/webtrees modules.",
+    "description": "Shared PHP base classes (date, name, image, place processors plus module helpers) for the magicsunday/webtrees-* chart modules.",
     "license": "GPL-3.0-or-later",
     "type": "library",
     "keywords": [
         "webtrees",
-        "module"
+        "module",
+        "library",
+        "genealogy",
+        "php",
+        "processor",
+        "shared"
     ],
     "authors": [
         {
