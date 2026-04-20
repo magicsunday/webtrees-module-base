@@ -252,6 +252,50 @@ class NameProcessor
     }
 
     /**
+     * Returns the married surname parts (from a `_MARNM` GEDCOM record), or an empty
+     * array when no married-name record matches. When $spouse is given, only `_MARNM`
+     * records whose `surn` matches the spouse's `surn` are considered; otherwise any
+     * `_MARNM` is returned.
+     *
+     * Use this in a chart consumer that already shows the birth name and wants to
+     * append the married surname (e.g. "Schmidt (Müller)") — separate from the
+     * `useMarriedName` constructor flag, which switches the primary name out
+     * entirely.
+     *
+     * @param Individual|null $spouse Optional spouse to scope the surname match
+     *
+     * @return string[]
+     */
+    public function getMarriedSurnames(?Individual $spouse = null): array
+    {
+        foreach ($this->individual->getAllNames() as $individualName) {
+            if ($individualName['type'] !== '_MARNM') {
+                continue;
+            }
+
+            if ($spouse instanceof Individual) {
+                $spouseHasMatch = false;
+
+                foreach ($spouse->getAllNames() as $spouseName) {
+                    if ($individualName['surn'] === $spouseName['surn']) {
+                        $spouseHasMatch = true;
+
+                        break;
+                    }
+                }
+
+                if (!$spouseHasMatch) {
+                    continue;
+                }
+            }
+
+            return $this->splitAndCleanName([$individualName['surn']]);
+        }
+
+        return [];
+    }
+
+    /**
      * Returns the preferred name of the individual.
      *
      * @return string
