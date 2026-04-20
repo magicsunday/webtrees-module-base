@@ -8,15 +8,5 @@
 vendor/
 composer.lock
 
-# Build stuff
+# Build stuff (incl. all dev-tool caches under .build/cache/)
 .build/
-package-lock.json
-node_modules/
-
-# Cache
-.php-cs-fixer.cache
-.phplint.cache
-.phpunit.result.cache
-.phpunit.cache
-
-# Custom
