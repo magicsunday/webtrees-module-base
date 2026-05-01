@@ -64,7 +64,15 @@ class ImageProcessor
         ) {
             $mediaFile = $this->individual->findHighlightedMediaFile();
 
-            if ($mediaFile instanceof MediaFile) {
+            // The GEDCOM may reference a media file whose actual file is
+            // missing on disk. Webtrees core's media-thumbnail endpoint 404s
+            // in that case instead of substituting a silhouette itself, so
+            // verify the file exists before returning its URL — otherwise
+            // fall through to the silhouette branch below.
+            if (
+                $mediaFile instanceof MediaFile
+                && ($mediaFile->isExternal() || $mediaFile->fileExists())
+            ) {
                 return $mediaFile->imageUrl($width, $height, 'contain');
             }
 
