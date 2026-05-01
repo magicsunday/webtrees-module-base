@@ -68,17 +68,38 @@ class ImageProcessor
                 return $mediaFile->imageUrl($width, $height, 'contain');
             }
 
-            if (
-                $returnSilhouettes
-                && ($this->individual->tree()->getPreference('USE_SILHOUETTE') !== '')
-            ) {
-                return $this->module->assetUrl(
-                    sprintf(
-                        'images/silhouette-%s.svg',
-                        $this->individual->sex()
-                    )
-                );
+            if ($returnSilhouettes) {
+                return $this->getSilhouetteUrl();
             }
+        }
+
+        return '';
+    }
+
+    /**
+     * Returns the URL of the sex-specific silhouette image, intended as a
+     * client-side fallback when a highlight image's media file is missing
+     * (webtrees core's media-thumbnail endpoint 404s in that case instead
+     * of substituting a silhouette itself).
+     *
+     * Returns an empty string when the individual cannot be shown or when
+     * the tree has `USE_SILHOUETTE` disabled — same gating as the
+     * silhouette branch in `getHighlightImageUrl()`.
+     *
+     * @return string
+     */
+    public function getSilhouetteUrl(): string
+    {
+        if (
+            $this->individual->canShow()
+            && ($this->individual->tree()->getPreference('USE_SILHOUETTE') !== '')
+        ) {
+            return $this->module->assetUrl(
+                sprintf(
+                    'images/silhouette-%s.svg',
+                    $this->individual->sex()
+                )
+            );
         }
 
         return '';
