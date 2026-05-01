@@ -104,7 +104,7 @@ class ImageProcessor
         ) {
             return $this->module->assetUrl(
                 sprintf(
-                    'images/silhouette-%s.svg',
+                    'images/silhouette-%s.png',
                     $this->individual->sex()
                 )
             );
