@@ -386,46 +386,57 @@ class NameProcessorTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, string, string, string}>
+     * @return array<string, array{string, list<string>, string, string}>
      */
     public static function injectNicknameDataProvider(): array
     {
-        // [ fullName, surname, nick, expected ]
+        // [ fullName, firstNames, nick, expected ]
         return [
             'Empty nick returns input unchanged' => [
-                'Martin White', 'White', '', 'Martin White',
+                'Martin White', ['Martin'], '', 'Martin White',
             ],
-            'Inserts before single-word surname' => [
-                'Martin White', 'White', 'Chalky', 'Martin "Chalky" White',
+            'Inserts after last given name (single-word surname)' => [
+                'Martin White', ['Martin'], 'Chalky', 'Martin "Chalky" White',
             ],
-            'Inserts before multi-word surname' => [
-                'Hans Van Der Berg', 'Van Der Berg', 'Hänschen', 'Hans "Hänschen" Van Der Berg',
+            'Multiple given names: inserts after the last one' => [
+                'Friedrich Wilhelm August von Habsburg-Lothringen',
+                ['Friedrich', 'Wilhelm', 'August'],
+                'Fritz',
+                'Friedrich Wilhelm August "Fritz" von Habsburg-Lothringen',
+            ],
+            'Surname particle in given-name area: nickname stays before particle+surname' => [
+                'Friedrich von Berg',
+                ['Friedrich', 'von'],
+                'Fritz',
+                'Friedrich von "Fritz" Berg',
             ],
             'Idempotent: nick already inline' => [
-                'Martin "Chalky" White', 'White', 'Chalky', 'Martin "Chalky" White',
+                'Martin "Chalky" White', ['Martin'], 'Chalky', 'Martin "Chalky" White',
             ],
-            'No surname found: appends nick' => [
-                'Anonymous', 'White', 'Chalky', 'Anonymous "Chalky"',
+            'No given names: appends nick' => [
+                'Anonymous', [], 'Chalky', 'Anonymous "Chalky"',
             ],
-            'Empty surname: appends nick' => [
-                'Anonymous', '', 'Chalky', 'Anonymous "Chalky"',
-            ],
-            'Hits last occurrence when surname is also a given name' => [
-                'White Robert White', 'White', 'Bob', 'White Robert "Bob" White',
+            'Hits last occurrence when given name repeats' => [
+                'Maria Anna Maria Schmidt',
+                ['Maria', 'Anna', 'Maria'],
+                'Mimi',
+                'Maria Anna Maria "Mimi" Schmidt',
             ],
         ];
     }
 
     /**
+     * @param list<string> $firstNames
+     *
      * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('injectNicknameDataProvider')]
-    public function injectNickname(string $fullName, string $surname, string $nick, string $expected): void
+    public function injectNickname(string $fullName, array $firstNames, string $nick, string $expected): void
     {
         $processorStub    = self::createStub(NameProcessor::class);
         $reflectionMethod = (new ReflectionClass(NameProcessor::class))->getMethod('injectNickname');
-        $result           = $reflectionMethod->invoke($processorStub, $fullName, $surname, $nick);
+        $result           = $reflectionMethod->invoke($processorStub, $fullName, $firstNames, $nick);
 
         self::assertSame($expected, $result);
     }

@@ -183,15 +183,25 @@ class NameProcessor
     }
 
     /**
-     * Returns the GEDCOM `2 NICK` value of the individual's primary NAME fact, or
-     * an empty string when no nickname is set. The lookup walks all NAME facts and
-     * returns the first NICK it finds.
+     * Returns the GEDCOM `2 NICK` value of the individual's *primary* NAME fact, or
+     * an empty string when no nickname is set there. NAME facts whose `2 TYPE` is
+     * something other than the primary identity (e.g. `_MARNM`, `aka`) are skipped:
+     * a nickname attached to the married name belongs to the married identity, not
+     * the birth identity that `getFullName()` returns by default.
      *
      * @return string
      */
     public function getNickname(): string
     {
         foreach ($this->individual->facts(['NAME']) as $nameFact) {
+            $type = $nameFact->attribute('TYPE');
+
+            // Skip non-primary NAME variants (married name, also-known-as, etc.)
+            // so the nickname injection sticks to the birth-identity name.
+            if ($type !== '' && strtoupper($type) !== 'BIRTH') {
+                continue;
+            }
+
             $nick = $nameFact->attribute('NICK');
 
             if ($nick !== '') {
@@ -223,40 +233,50 @@ class NameProcessor
 
         return $this->injectNickname(
             $this->getFullName(),
-            implode(' ', $this->getLastNames()),
+            $this->getFirstNames(),
             $nick
         );
     }
 
     /**
-     * Inserts the quoted nickname before the surname in a flat name string.
+     * Inserts the quoted nickname after the last given name in a flat name string,
+     * which lands it before whatever comes next (a surname particle like `von`
+     * followed by the surname, the surname itself, a married-name suffix, etc.).
      * Idempotent: if the nickname is already present in quotes, the input is
      * returned unchanged.
      *
-     * @param string $fullName Plain full name (e.g. "Martin White")
-     * @param string $surname  Surname tokens joined by spaces (e.g. "White" or "Van Der Berg")
-     * @param string $nick     Nickname without quotes (e.g. "Chalky")
+     * Anchoring on the last given name (rather than the first surname token) keeps
+     * particles like `von`, `de la`, `van der` -- which webtrees renders inside
+     * the given-name area when they sit outside `/SURN/` slashes -- attached to the
+     * surname they belong to instead of letting the nickname split them off.
+     *
+     * @param string   $fullName   Plain full name (e.g. "Martin White")
+     * @param string[] $firstNames Given-name tokens as returned by getFirstNames()
+     * @param string   $nick       Nickname without quotes (e.g. "Chalky")
      *
      * @return string
      */
-    private function injectNickname(string $fullName, string $surname, string $nick): string
+    private function injectNickname(string $fullName, array $firstNames, string $nick): string
     {
         if ($nick === '' || str_contains($fullName, '"' . $nick . '"')) {
             return $fullName;
         }
 
-        $position = ($surname !== '') ? strrpos($fullName, $surname) : false;
+        $lastGivenName = end($firstNames);
 
-        if ($position !== false) {
-            return substr_replace(
-                $fullName,
-                '"' . $nick . '" ' . $surname,
-                $position,
-                strlen($surname)
-            );
+        if ($lastGivenName === false || $lastGivenName === '') {
+            return $fullName . ' "' . $nick . '"';
         }
 
-        return $fullName . ' "' . $nick . '"';
+        $position = strrpos($fullName, $lastGivenName);
+
+        if ($position === false) {
+            return $fullName . ' "' . $nick . '"';
+        }
+
+        $insertAt = $position + strlen($lastGivenName);
+
+        return substr_replace($fullName, ' "' . $nick . '"', $insertAt, 0);
     }
 
     /**
