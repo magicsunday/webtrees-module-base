@@ -183,6 +183,83 @@ class NameProcessor
     }
 
     /**
+     * Returns the GEDCOM `2 NICK` value of the individual's primary NAME fact, or
+     * an empty string when no nickname is set. The lookup walks all NAME facts and
+     * returns the first NICK it finds.
+     *
+     * @return string
+     */
+    public function getNickname(): string
+    {
+        foreach ($this->individual->facts(['NAME']) as $nameFact) {
+            $nick = $nameFact->attribute('NICK');
+
+            if ($nick !== '') {
+                return $nick;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Returns the full name with the nickname injected in quotes between the given
+     * names and the surname (e.g. `Martin "Chalky" White`). When the GEDCOM has no
+     * NICK, or when the displayed name already contains the nickname inline, the
+     * unmodified full name is returned.
+     *
+     * Mirrors the legacy webtrees ≤ 1.x behaviour and the `BertKoor/wt-module-old-nicknames`
+     * data-fix output, but operates at display time without modifying the GEDCOM.
+     *
+     * @return string
+     */
+    public function getFullNameWithNickname(): string
+    {
+        $nick = $this->getNickname();
+
+        if ($nick === '') {
+            return $this->getFullName();
+        }
+
+        return $this->injectNickname(
+            $this->getFullName(),
+            implode(' ', $this->getLastNames()),
+            $nick
+        );
+    }
+
+    /**
+     * Inserts the quoted nickname before the surname in a flat name string.
+     * Idempotent: if the nickname is already present in quotes, the input is
+     * returned unchanged.
+     *
+     * @param string $fullName Plain full name (e.g. "Martin White")
+     * @param string $surname  Surname tokens joined by spaces (e.g. "White" or "Van Der Berg")
+     * @param string $nick     Nickname without quotes (e.g. "Chalky")
+     *
+     * @return string
+     */
+    private function injectNickname(string $fullName, string $surname, string $nick): string
+    {
+        if ($nick === '' || str_contains($fullName, '"' . $nick . '"')) {
+            return $fullName;
+        }
+
+        $position = ($surname !== '') ? strrpos($fullName, $surname) : false;
+
+        if ($position !== false) {
+            return substr_replace(
+                $fullName,
+                '"' . $nick . '" ' . $surname,
+                $position,
+                strlen($surname)
+            );
+        }
+
+        return $fullName . ' "' . $nick . '"';
+    }
+
+    /**
      * Splits a name into an array, removing all name placeholders.
      *
      * @param string[] $names

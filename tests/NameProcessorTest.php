@@ -384,4 +384,49 @@ class NameProcessorTest extends TestCase
             $spouseStub
         ));
     }
+
+    /**
+     * @return array<string, array{string, string, string, string}>
+     */
+    public static function injectNicknameDataProvider(): array
+    {
+        // [ fullName, surname, nick, expected ]
+        return [
+            'Empty nick returns input unchanged' => [
+                'Martin White', 'White', '', 'Martin White',
+            ],
+            'Inserts before single-word surname' => [
+                'Martin White', 'White', 'Chalky', 'Martin "Chalky" White',
+            ],
+            'Inserts before multi-word surname' => [
+                'Hans Van Der Berg', 'Van Der Berg', 'Hänschen', 'Hans "Hänschen" Van Der Berg',
+            ],
+            'Idempotent: nick already inline' => [
+                'Martin "Chalky" White', 'White', 'Chalky', 'Martin "Chalky" White',
+            ],
+            'No surname found: appends nick' => [
+                'Anonymous', 'White', 'Chalky', 'Anonymous "Chalky"',
+            ],
+            'Empty surname: appends nick' => [
+                'Anonymous', '', 'Chalky', 'Anonymous "Chalky"',
+            ],
+            'Hits last occurrence when surname is also a given name' => [
+                'White Robert White', 'White', 'Bob', 'White Robert "Bob" White',
+            ],
+        ];
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[Test]
+    #[DataProvider('injectNicknameDataProvider')]
+    public function injectNickname(string $fullName, string $surname, string $nick, string $expected): void
+    {
+        $processorStub    = self::createStub(NameProcessor::class);
+        $reflectionMethod = (new ReflectionClass(NameProcessor::class))->getMethod('injectNickname');
+        $result           = $reflectionMethod->invoke($processorStub, $fullName, $surname, $nick);
+
+        self::assertSame($expected, $result);
+    }
 }
