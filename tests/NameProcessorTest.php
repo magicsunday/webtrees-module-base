@@ -393,10 +393,10 @@ class NameProcessorTest extends TestCase
         // [ fullName, firstNames, nick, expected ]
         return [
             'Empty nick returns input unchanged' => [
-                'Martin White', ['Martin'], '', 'Martin White',
+                'John Doe', ['John'], '', 'John Doe',
             ],
             'Inserts after last given name (single-word surname)' => [
-                'Martin White', ['Martin'], 'Chalky', 'Martin "Chalky" White',
+                'John Doe', ['John'], 'Jonny', 'John "Jonny" Doe',
             ],
             'Multiple given names: inserts after the last one' => [
                 'Friedrich Wilhelm August von Habsburg-Lothringen',
@@ -411,10 +411,10 @@ class NameProcessorTest extends TestCase
                 'Friedrich von "Fritz" Berg',
             ],
             'Idempotent: nick already inline' => [
-                'Martin "Chalky" White', ['Martin'], 'Chalky', 'Martin "Chalky" White',
+                'John "Jonny" Doe', ['John'], 'Jonny', 'John "Jonny" Doe',
             ],
             'No given names: appends nick' => [
-                'Anonymous', [], 'Chalky', 'Anonymous "Chalky"',
+                'Anonymous', [], 'Jonny', 'Anonymous "Jonny"',
             ],
             'Hits last occurrence when given name repeats' => [
                 'Maria Anna Maria Schmidt',

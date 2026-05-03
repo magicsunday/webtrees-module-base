@@ -214,7 +214,7 @@ class NameProcessor
 
     /**
      * Returns the full name with the nickname injected in quotes between the given
-     * names and the surname (e.g. `Martin "Chalky" White`). When the GEDCOM has no
+     * names and the surname (e.g. `John "Jonny" Doe`). When the GEDCOM has no
      * NICK, or when the displayed name already contains the nickname inline, the
      * unmodified full name is returned.
      *
@@ -250,9 +250,9 @@ class NameProcessor
      * the given-name area when they sit outside `/SURN/` slashes -- attached to the
      * surname they belong to instead of letting the nickname split them off.
      *
-     * @param string   $fullName   Plain full name (e.g. "Martin White")
+     * @param string   $fullName   Plain full name (e.g. "John Doe")
      * @param string[] $firstNames Given-name tokens as returned by getFirstNames()
-     * @param string   $nick       Nickname without quotes (e.g. "Chalky")
+     * @param string   $nick       Nickname without quotes (e.g. "Jonny")
      *
      * @return string
      */
