@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
+use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Gedcom;
 use Fisharebest\Webtrees\Individual;
@@ -149,10 +150,48 @@ final readonly class FactResolver
         return [
             'tag'   => $tag,
             'label' => $fact->label(),
-            'date'  => strip_tags($fact->date()->display()),
-            'place' => strip_tags($fact->place()->shortName()),
+            'date'  => $this->formatDate($fact->date()),
+            // Full GEDCOM place name (mirrors the fan-chart tooltip). The
+            // renderer truncates the visible text to the available row
+            // width and exposes the full string via <title> so hovering a
+            // truncated row reveals the complete place hierarchy.
+            'place' => $fact->place()->gedcomName(),
             'value' => strip_tags($fact->value()),
         ];
+    }
+
+    /**
+     * Formats a fact date as DD.MM.YYYY when day, month, and year are all
+     * known, falling back to MM.YYYY or YYYY for partial precision, and to
+     * the locale-aware display for approximate / qualified dates ("ABT
+     * 1832", "BEF 1900"). Matches the compact format used in the fan-chart
+     * tooltip so the chart-box rows stay narrow enough to show place
+     * alongside the date.
+     */
+    private function formatDate(Date $date): string
+    {
+        // Approximate / qualified dates (ABT, BEF, AFT, FROM..TO, …) keep
+        // the locale-aware display so the qualifier prefix stays visible.
+        // Collapsing them to bare minimumDate would silently drop "ABT".
+        if (!$date->isOK() || $date->qual1 !== '' || $date->qual2 !== '') {
+            return strip_tags($date->display());
+        }
+
+        $cd = $date->minimumDate();
+
+        if ($cd->day() > 0 && $cd->month() > 0) {
+            return $cd->format('%d.%m.%Y');
+        }
+
+        if ($cd->month() > 0) {
+            return $cd->format('%m.%Y');
+        }
+
+        if ($cd->year() > 0) {
+            return $cd->format('%Y');
+        }
+
+        return strip_tags($date->display());
     }
 
     /**
