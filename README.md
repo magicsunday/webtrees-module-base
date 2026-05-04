@@ -51,8 +51,8 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
 
 ### `src/Model/`
-- **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, MARRIAGE_DATE_UNKNOWN sentinel, …)
-- **`Node`, `NodeData`** — tree-node value objects with D3-friendly JSON serialisation, used by chart modules' `DataFacade`
+- **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel)
+- **`NameAbbreviation`** — backed enum + `resolve()` helper for the name-abbreviation strategy used in chart labels (auto / given-first / surname-first)
 
 ### `src/Module/`
 - **`VersionInformation`** — checks GitHub releases for newer module versions, with file cache (used by the chart modules' admin pages)

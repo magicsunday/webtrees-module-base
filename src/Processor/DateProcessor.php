@@ -284,7 +284,7 @@ class DateProcessor
 
     /**
      * Returns the marriage date of the parents formatted with the generation-aware
-     * compact format. Returns Symbols::MARRIAGE_DATE_UNKNOWN ("?") when a MARR fact
+     * compact format. Returns Symbols::MarriageDateUnknown ("?") when a MARR fact
      * exists but carries no date, so consumers can distinguish "married, date unknown"
      * from "no marriage fact at all". Empty string when no parent family exists.
      *
@@ -300,7 +300,7 @@ class DateProcessor
         }
 
         if (($family !== null) && $family->facts(['MARR'])->isNotEmpty()) {
-            return Symbols::MARRIAGE_DATE_UNKNOWN;
+            return Symbols::MarriageDateUnknown->value;
         }
 
         return '';

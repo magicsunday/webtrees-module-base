@@ -1,5 +1,5 @@
 ## Overview
-This repository hosts `magicsunday/webtrees-module-base` — a shared PHP library consumed by `webtrees-fan-chart`, `webtrees-pedigree-chart`, and `webtrees-descendants-chart`. It contains the common processors (Date, Name, Image, Place), models (Node, Symbols), and module helpers (VersionInformation) those modules use to render genealogy charts. No JavaScript, no asset pipeline — pure PHP.
+This repository hosts `magicsunday/webtrees-module-base` — a shared PHP library consumed by `webtrees-fan-chart`, `webtrees-pedigree-chart`, and `webtrees-descendants-chart`. It contains the common processors (Date, Name, Image, Place), models (Symbols, NameAbbreviation), and module helpers (VersionInformation) those modules use to render genealogy charts. No JavaScript, no asset pipeline — pure PHP.
 
 ## Setup/env
 - PHP 8.3 - 8.5 with extension `dom` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
@@ -39,8 +39,8 @@ tests/
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels.
 
 ### Models
-- **`Model/Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, etc.) plus the `MARRIAGE_DATE_UNKNOWN` sentinel.
-- **`Model/Node`, `Model/NodeData`** — used by chart modules for tree-node serialization to D3 (each module wraps these in its own DataFacade).
+- **`Model/Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel).
+- **`Model/NameAbbreviation`** — backed enum + `resolve()` helper for the chart-label name-abbreviation strategy (auto / given / surname). Each chart module wires its own NodeData class; this base library only ships the strategy enum.
 
 ### Modules
 - **`Module/VersionInformation`** — checks GitHub releases for newer module versions, with file cache. Used by all three chart modules' admin pages.

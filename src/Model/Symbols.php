@@ -21,7 +21,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Model;
 enum Symbols: string
 {
     /**
-     * Birth symbol (asterisk).
+     * Birth symbol (black star).
      */
     case Birth = "\u{2605}";
 
@@ -40,5 +40,5 @@ enum Symbols: string
      * Consumers that render the marriage symbol can check for this sentinel
      * to display the symbol without an accompanying date string.
      */
-    public const string MARRIAGE_DATE_UNKNOWN = '?';
+    case MarriageDateUnknown = '?';
 }
