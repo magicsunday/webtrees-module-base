@@ -27,6 +27,11 @@
         "sort-packages": true,
         "optimize-autoloader": true
     },
+    "extra": {
+        "branch-alias": {
+            "dev-45-more-data-on-the-chart": "2.5.x-dev"
+        }
+    },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
