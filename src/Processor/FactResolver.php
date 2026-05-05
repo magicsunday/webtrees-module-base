@@ -177,18 +177,18 @@ final readonly class FactResolver
             return strip_tags($date->display());
         }
 
-        $cd = $date->minimumDate();
+        $minimumDate = $date->minimumDate();
 
-        if ($cd->day() > 0 && $cd->month() > 0) {
-            return $cd->format('%d.%m.%Y');
+        if ($minimumDate->day() > 0 && $minimumDate->month() > 0) {
+            return $minimumDate->format('%d.%m.%Y');
         }
 
-        if ($cd->month() > 0) {
-            return $cd->format('%m.%Y');
+        if ($minimumDate->month() > 0) {
+            return $minimumDate->format('%m.%Y');
         }
 
-        if ($cd->year() > 0) {
-            return $cd->format('%Y');
+        if ($minimumDate->year() > 0) {
+            return $minimumDate->format('%Y');
         }
 
         return strip_tags($date->display());
