@@ -234,6 +234,7 @@ class NameProcessor
         return $this->injectNickname(
             $this->getFullName(),
             $this->getFirstNames(),
+            $this->getLastNames(),
             $nick
         );
     }
@@ -250,25 +251,47 @@ class NameProcessor
      * the given-name area when they sit outside `/SURN/` slashes -- attached to the
      * surname they belong to instead of letting the nickname split them off.
      *
+     * The strrpos search is constrained to the given-name region of the string
+     * (everything before the first surname token). Without that bound, a last
+     * given name that happens to be a substring of the surname would anchor the
+     * insertion inside the surname — for "Hendrik Jan /Jansen/" with last given
+     * name "Jan", strrpos would otherwise hit "Jan" inside "Jansen".
+     *
      * @param string   $fullName   Plain full name (e.g. "John Doe")
      * @param string[] $firstNames Given-name tokens as returned by getFirstNames()
+     * @param string[] $lastNames  Surname tokens as returned by getLastNames()
      * @param string   $nick       Nickname without quotes (e.g. "Jonny")
      *
      * @return string
      */
-    private function injectNickname(string $fullName, array $firstNames, string $nick): string
-    {
-        if ($nick === '' || str_contains($fullName, '"' . $nick . '"')) {
+    private function injectNickname(
+        string $fullName,
+        array $firstNames,
+        array $lastNames,
+        string $nick,
+    ): string {
+        if (($nick === '') || str_contains($fullName, '"' . $nick . '"')) {
             return $fullName;
         }
 
         $lastGivenName = end($firstNames);
 
-        if ($lastGivenName === false || $lastGivenName === '') {
+        if (($lastGivenName === false) || ($lastGivenName === '')) {
             return $fullName . ' "' . $nick . '"';
         }
 
-        $position = strrpos($fullName, $lastGivenName);
+        $searchHaystack = $fullName;
+        $firstSurname   = $lastNames[0] ?? '';
+
+        if ($firstSurname !== '') {
+            $surnamePos = strpos($fullName, $firstSurname);
+
+            if ($surnamePos !== false) {
+                $searchHaystack = substr($fullName, 0, $surnamePos);
+            }
+        }
+
+        $position = strrpos($searchHaystack, $lastGivenName);
 
         if ($position === false) {
             return $fullName . ' "' . $nick . '"';

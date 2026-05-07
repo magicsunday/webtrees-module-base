@@ -386,57 +386,94 @@ class NameProcessorTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, list<string>, string, string}>
+     * @return array<string, array{string, list<string>, list<string>, string, string}>
      */
     public static function injectNicknameDataProvider(): array
     {
-        // [ fullName, firstNames, nick, expected ]
+        // [ fullName, firstNames, lastNames, nick, expected ]
         return [
             'Empty nick returns input unchanged' => [
-                'John Doe', ['John'], '', 'John Doe',
+                'John Doe', ['John'], ['Doe'], '', 'John Doe',
             ],
             'Inserts after last given name (single-word surname)' => [
-                'John Doe', ['John'], 'Jonny', 'John "Jonny" Doe',
+                'John Doe', ['John'], ['Doe'], 'Jonny', 'John "Jonny" Doe',
             ],
             'Multiple given names: inserts after the last one' => [
                 'Friedrich Wilhelm August von Habsburg-Lothringen',
                 ['Friedrich', 'Wilhelm', 'August'],
+                ['von', 'Habsburg-Lothringen'],
                 'Fritz',
                 'Friedrich Wilhelm August "Fritz" von Habsburg-Lothringen',
             ],
             'Surname particle in given-name area: nickname stays before particle+surname' => [
                 'Friedrich von Berg',
                 ['Friedrich', 'von'],
+                ['Berg'],
                 'Fritz',
                 'Friedrich von "Fritz" Berg',
             ],
             'Idempotent: nick already inline' => [
-                'John "Jonny" Doe', ['John'], 'Jonny', 'John "Jonny" Doe',
+                'John "Jonny" Doe', ['John'], ['Doe'], 'Jonny', 'John "Jonny" Doe',
             ],
             'No given names: appends nick' => [
-                'Anonymous', [], 'Jonny', 'Anonymous "Jonny"',
+                'Anonymous', [], [], 'Jonny', 'Anonymous "Jonny"',
             ],
             'Hits last occurrence when given name repeats' => [
                 'Maria Anna Maria Schmidt',
                 ['Maria', 'Anna', 'Maria'],
+                ['Schmidt'],
                 'Mimi',
                 'Maria Anna Maria "Mimi" Schmidt',
+            ],
+            'Last given name is substring of surname' => [
+                // Issue 199: strrpos used to anchor on "Jan" inside "Jansen",
+                // splitting the surname and producing "Hendrik Jan Jan \"Henk\"sen".
+                'Hendrik Jan Jansen',
+                ['Hendrik', 'Jan'],
+                ['Jansen'],
+                'Henk',
+                'Hendrik Jan "Henk" Jansen',
+            ],
+            'Last given name is substring of surname (second sample)' => [
+                'Pieter Jan Jansen',
+                ['Pieter', 'Jan'],
+                ['Jansen'],
+                'Piet',
+                'Pieter Jan "Piet" Jansen',
+            ],
+            'Empty last names list falls back to whole-string search' => [
+                // No surname tokens supplied (e.g. mononym): the search range
+                // stays the whole string, anchoring on the last given name.
+                'Madonna',
+                ['Madonna'],
+                [],
+                'Madge',
+                'Madonna "Madge"',
             ],
         ];
     }
 
     /**
+     * Tests that injectNickname inserts the quoted nickname after the last given name without
+     * splitting the surname when the given name is a substring of it.
+     *
      * @param list<string> $firstNames
+     * @param list<string> $lastNames
      *
      * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('injectNicknameDataProvider')]
-    public function injectNickname(string $fullName, array $firstNames, string $nick, string $expected): void
-    {
+    public function injectNickname(
+        string $fullName,
+        array $firstNames,
+        array $lastNames,
+        string $nick,
+        string $expected,
+    ): void {
         $processorStub    = self::createStub(NameProcessor::class);
         $reflectionMethod = (new ReflectionClass(NameProcessor::class))->getMethod('injectNickname');
-        $result           = $reflectionMethod->invoke($processorStub, $fullName, $firstNames, $nick);
+        $result           = $reflectionMethod->invoke($processorStub, $fullName, $firstNames, $lastNames, $nick);
 
         self::assertSame($expected, $result);
     }
