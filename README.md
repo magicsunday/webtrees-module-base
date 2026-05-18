@@ -79,6 +79,17 @@ composer ci:cgl
 composer ci:rector
 ```
 
+## Migration Notes
+
+For the shared chart-core extraction used by fan/pedigree/descendants, including:
+
+- extracted shared traits/facade helpers,
+- asset-version strategy,
+- smoke checklist, and
+- rollback instructions,
+
+see [CHART_CORE_MIGRATION.md](CHART_CORE_MIGRATION.md).
+
 ## License
 
 GPL-3.0-or-later — see [LICENSE](LICENSE).
