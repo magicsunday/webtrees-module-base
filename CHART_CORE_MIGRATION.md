@@ -15,6 +15,21 @@ The following logic now lives in `magicsunday/webtrees-module-base` and is consu
 - `src/Support/TextDirection.php`
   - shared RTL detection helper
 
+## JS chart-core follow-up (WEB-21)
+
+The page bootstrap helpers are now shared from `@magicsunday/webtrees-chart-lib/chart-core`:
+
+- `buildChartAjaxUrl()` for shared URL/query assembly (xref + typed query params)
+- `syncCollapseToggle()` for persisted "show more options" collapse state
+- `setChartAjaxUrl()` for `data-wt-ajax-url` container wiring
+- `setChartOptionsGlobal()` for UMD namespace chartOptions publishing
+
+Consumers migrated:
+
+- `webtrees-pedigree-chart/resources/js/modules/page-init.js`
+- `webtrees-fan-chart/resources/js/modules/page-init.js`
+- `webtrees-descendants-chart/resources/js/modules/page-init.js`
+
 ## Asset Version Strategy
 
 Versioned JS bundles are still generated from `package.json` version fields by Rollup (`*-<version>.min.js`).  
@@ -46,3 +61,9 @@ If regressions appear after this extraction:
    - `Traits/ModuleCustomTrait.php`
    - DataFacade route/RTL helper methods
 3. Rebuild JS assets (`make build`) and rerun module smoke checks.
+
+If the JS chart-core follow-up regresses:
+
+1. Revert the `@magicsunday/webtrees-chart-lib/chart-core` helper import changes in each module `page-init.js`.
+2. Restore module-local page bootstrap functions (`getUrl`, collapse toggle handler, namespace assignment).
+3. Pin all three modules back to the prior chart-lib tag and rebuild page bundles.
