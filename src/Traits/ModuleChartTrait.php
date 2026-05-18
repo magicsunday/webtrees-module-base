@@ -29,7 +29,7 @@ trait ModuleChartTrait
     }
 
     /**
-     * @param array<string, int|string> $parameters
+     * @param array<string, bool|int|string> $parameters
      */
     public function chartUrl(Individual $individual, array $parameters = []): string
     {
