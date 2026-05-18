@@ -23,3 +23,11 @@ parameters:
 
     excludePaths:
         - %currentWorkingDirectory%/.build/
+
+    ignoreErrors:
+        # Library-export traits: consumed by downstream modules, not within module-base itself.
+        - identifier: trait.unused
+          paths:
+              - %currentWorkingDirectory%/src/Traits/ModuleChartTrait.php
+              - %currentWorkingDirectory%/src/Traits/ModuleCustomTrait.php
+              - %currentWorkingDirectory%/src/Facade/RouteAwareDataFacadeTrait.php
