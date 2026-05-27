@@ -77,9 +77,6 @@ final class RouteAwareDataFacadeTraitTest extends TestCase
         $reflection = new ReflectionClass(RouteAwareDataFacadeTrait::class);
 
         self::assertTrue($reflection->hasMethod('chartUrl'));
-        self::assertTrue($reflection->hasMethod('isRtl'));
-
         self::assertTrue($reflection->getMethod('chartUrl')->isPrivate());
-        self::assertTrue($reflection->getMethod('isRtl')->isPrivate());
     }
 }

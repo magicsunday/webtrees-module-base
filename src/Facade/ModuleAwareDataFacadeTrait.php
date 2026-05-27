@@ -13,7 +13,6 @@ namespace MagicSunday\Webtrees\ModuleBase\Facade;
 
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
-use MagicSunday\Webtrees\ModuleBase\Support\TextDirection;
 
 /**
  * Shared module-injection helper for chart DataFacade implementations
@@ -34,15 +33,5 @@ trait ModuleAwareDataFacadeTrait
         $this->module = $module;
 
         return $this;
-    }
-
-    /**
-     * Convenience wrapper around the TextDirection support helper, used by
-     * name and place renderers to decide on bidi isolates and arrow direction
-     * for mixed-script content.
-     */
-    private function isRtl(string $text): bool
-    {
-        return TextDirection::isRtl($text);
     }
 }

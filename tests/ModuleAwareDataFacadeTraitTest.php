@@ -69,30 +69,9 @@ final class ModuleAwareDataFacadeTraitTest extends TestCase
     }
 
     /**
-     * Locks isRtl() as a trait-private helper returning bool so external
-     * callers reach for TextDirection::isRtl() directly instead of bypassing
-     * the trait surface.
-     */
-    #[Test]
-    public function isRtlIsPrivateAndReturnsBool(): void
-    {
-        $reflection = new ReflectionClass(ModuleAwareDataFacadeTrait::class);
-
-        self::assertTrue($reflection->hasMethod('isRtl'));
-
-        $method = $reflection->getMethod('isRtl');
-
-        self::assertTrue($method->isPrivate());
-
-        $returnType = $method->getReturnType();
-        self::assertInstanceOf(ReflectionNamedType::class, $returnType);
-        self::assertSame('bool', $returnType->getName());
-    }
-
-    /**
      * Guards the trait-split contract: RouteAwareDataFacadeTrait must keep
      * composing ModuleAwareDataFacadeTrait so existing consumers continue
-     * to get setModule()/isRtl() when they only opt into RouteAware.
+     * to get setModule() when they only opt into RouteAware.
      */
     #[Test]
     public function routeAwareTraitComposesModuleAwareTrait(): void
