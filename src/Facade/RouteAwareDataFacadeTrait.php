@@ -12,30 +12,23 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Facade;
 
 use Fisharebest\Webtrees\Individual;
-use Fisharebest\Webtrees\Module\ModuleCustomInterface;
-use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
-use MagicSunday\Webtrees\ModuleBase\Support\TextDirection;
 
 /**
  * Shared route/module helpers for chart DataFacade implementations.
+ *
+ * Extends ModuleAwareDataFacadeTrait with a route reference and a
+ * canonical chartUrl() builder for consumers that drive their AJAX
+ * updates through the chart's own routed URL.
  */
 trait RouteAwareDataFacadeTrait
 {
-    private ModuleCustomInterface&ModuleAssetUrlInterface $module;
+    use ModuleAwareDataFacadeTrait;
 
     private string $route;
 
     /**
-     * @return static
-     */
-    public function setModule(ModuleCustomInterface&ModuleAssetUrlInterface $module): static
-    {
-        $this->module = $module;
-
-        return $this;
-    }
-
-    /**
+     * Sets the canonical chart route used by chartUrl().
+     *
      * @return static
      */
     public function setRoute(string $route): static
@@ -46,6 +39,9 @@ trait RouteAwareDataFacadeTrait
     }
 
     /**
+     * Builds the canonical chart URL for an individual, optionally with
+     * extra query parameters (e.g. layout / generations toggles).
+     *
      * @param array<string, int|string> $parameters
      */
     private function chartUrl(Individual $individual, array $parameters = []): string
@@ -57,13 +53,5 @@ trait RouteAwareDataFacadeTrait
                 'tree' => $individual->tree()->name(),
             ] + $parameters
         );
-    }
-
-    /**
-     * Returns whether the given text is in RTL style or not.
-     */
-    private function isRtl(string $text): bool
-    {
-        return TextDirection::isRtl($text);
     }
 }

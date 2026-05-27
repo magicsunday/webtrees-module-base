@@ -29,4 +29,5 @@ parameters:
           paths:
               - %currentWorkingDirectory%/src/Traits/ModuleChartTrait.php
               - %currentWorkingDirectory%/src/Traits/ModuleCustomTrait.php
+              - %currentWorkingDirectory%/src/Facade/ModuleAwareDataFacadeTrait.php
               - %currentWorkingDirectory%/src/Facade/RouteAwareDataFacadeTrait.php
