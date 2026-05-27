@@ -57,7 +57,10 @@ trait ModuleCustomTrait
     }
 
     /**
-     * Returns the URL of the module's GitHub issue tracker.
+     * Returns the URL admins follow from the "An upgrade is available" notice
+     * on the control panel and module-admin pages — typically the module's
+     * `/releases/latest` page so admins land directly on the release notes
+     * and install-ready asset zip rather than the issue tracker.
      */
     public function customModuleSupportUrl(): string
     {
