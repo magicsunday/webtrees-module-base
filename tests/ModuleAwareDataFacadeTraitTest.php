@@ -32,7 +32,8 @@ use function trait_exists;
 final class ModuleAwareDataFacadeTraitTest extends TestCase
 {
     /**
-     * Verifies the new lightweight facade trait is loadable under its PSR-4 path.
+     * Verifies the new lightweight facade trait is loadable under its PSR-4
+     * path.
      */
     #[Test]
     public function traitExists(): void
@@ -70,8 +71,8 @@ final class ModuleAwareDataFacadeTraitTest extends TestCase
 
     /**
      * Guards the trait-split contract: RouteAwareDataFacadeTrait must keep
-     * composing ModuleAwareDataFacadeTrait so existing consumers continue
-     * to get setModule() when they only opt into RouteAware.
+     * composing ModuleAwareDataFacadeTrait so existing consumers continue to
+     * get setModule() when they only opt into RouteAware.
      */
     #[Test]
     public function routeAwareTraitComposesModuleAwareTrait(): void

@@ -16,13 +16,12 @@ namespace MagicSunday\Webtrees\ModuleBase\Contract;
  *
  * webtrees' assetUrl() lives in ModuleCustomTrait, not in any interface.
  * Module-base processors that need the helper (e.g. ImageProcessor for
- * silhouettes) cannot rely on ModuleCustomInterface alone — they must
- * be handed an object that provides assetUrl().
+ * silhouettes) cannot rely on ModuleCustomInterface alone — they must be handed
+ * an object that provides assetUrl().
  *
- * Any custom module that uses ModuleCustomTrait already has the method
- * with the right signature; declaring `implements ModuleAssetUrlInterface`
- * is sufficient (the trait method satisfies the interface contract
- * without further wiring).
+ * Any custom module that uses ModuleCustomTrait already has the method with the
+ * right signature; declaring `implements ModuleAssetUrlInterface` is sufficient
+ * (the trait method satisfies the interface contract without further wiring).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

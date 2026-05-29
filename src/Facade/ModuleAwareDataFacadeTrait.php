@@ -15,9 +15,9 @@ use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 
 /**
- * Shared module-injection helper for chart DataFacade implementations
- * that need access to the owning module (for asset URLs, custom module
- * metadata, etc.) but do not need the trait's route helpers.
+ * Shared module-injection helper for chart DataFacade implementations that need
+ * access to the owning module (for asset URLs, custom module metadata, etc.)
+ * but do not need the trait's route helpers.
  */
 trait ModuleAwareDataFacadeTrait
 {

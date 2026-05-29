@@ -454,8 +454,9 @@ class NameProcessorTest extends TestCase
     }
 
     /**
-     * Tests that injectNickname inserts the quoted nickname after the last given name without
-     * splitting the surname when the given name is a substring of it.
+     * Tests that injectNickname inserts the quoted nickname after the last
+     * given name without splitting the surname when the given name is a
+     * substring of it.
      *
      * @param list<string> $firstNames
      * @param list<string> $lastNames

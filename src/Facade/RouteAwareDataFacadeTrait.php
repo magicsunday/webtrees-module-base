@@ -16,9 +16,9 @@ use Fisharebest\Webtrees\Individual;
 /**
  * Shared route/module helpers for chart DataFacade implementations.
  *
- * Extends ModuleAwareDataFacadeTrait with a route reference and a
- * canonical chartUrl() builder for consumers that drive their AJAX
- * updates through the chart's own routed URL.
+ * Extends ModuleAwareDataFacadeTrait with a route reference and a canonical
+ * chartUrl() builder for consumers that drive their AJAX updates through the
+ * chart's own routed URL.
  */
 trait RouteAwareDataFacadeTrait
 {
@@ -39,8 +39,8 @@ trait RouteAwareDataFacadeTrait
     }
 
     /**
-     * Builds the canonical chart URL for an individual, optionally with
-     * extra query parameters (e.g. layout / generations toggles).
+     * Builds the canonical chart URL for an individual, optionally with extra
+     * query parameters (e.g. layout / generations toggles).
      *
      * @param array<string, int|string> $parameters
      */

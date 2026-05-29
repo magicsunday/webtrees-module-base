@@ -40,8 +40,9 @@ class VersionInformation
     }
 
     /**
-     * This method an extended version of ModuleCustomTrait::customModuleLatestVersion,
-     * allowing to automatically use the latest GitHub release version.
+     * This method an extended version of
+     * ModuleCustomTrait::customModuleLatestVersion, allowing to automatically
+     * use the latest GitHub release version.
      *
      * @return string The latest version number
      *

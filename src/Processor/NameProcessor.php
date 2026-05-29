@@ -36,13 +36,15 @@ class NameProcessor
     private const string FULL_NAME = 'full';
 
     /**
-     * The XPath identifier to extract the first name parts (including the prefix).
+     * The XPath identifier to extract the first name parts (including the
+     * prefix).
      */
     private const string XPATH_FIRST_NAMES
         = '//text()[not(ancestor::q[@class="wt-nickname"]) and not(preceding::span[@class="SURN"] or ancestor::span[@class="SURN"])]';
 
     /**
-     * The XPath identifier to extract the last name parts (surname + surname suffix).
+     * The XPath identifier to extract the last name parts (surname + surname
+     * suffix).
      */
     private const string XPATH_LAST_NAMES = '//span[@class="NAME"]//span[@class="SURN"]/text()|//span[@class="SURN"]/following::text()';
 
@@ -170,8 +172,9 @@ class NameProcessor
     }
 
     /**
-     * Returns the full name of the individual without formatting of the individual parts of the name.
-     * All placeholders were removed as we do not need them in this module.
+     * Returns the full name of the individual without formatting of the
+     * individual parts of the name. All placeholders were removed as we do not
+     * need them in this module.
      *
      * @return string
      */
@@ -183,11 +186,12 @@ class NameProcessor
     }
 
     /**
-     * Returns the GEDCOM `2 NICK` value of the individual's *primary* NAME fact, or
-     * an empty string when no nickname is set there. NAME facts whose `2 TYPE` is
-     * something other than the primary identity (e.g. `_MARNM`, `aka`) are skipped:
-     * a nickname attached to the married name belongs to the married identity, not
-     * the birth identity that `getFullName()` returns by default.
+     * Returns the GEDCOM `2 NICK` value of the individual's *primary* NAME
+     * fact, or an empty string when no nickname is set there. NAME facts whose
+     * `2 TYPE` is something other than the primary identity (e.g. `_MARNM`,
+     * `aka`) are skipped: a nickname attached to the married name belongs to
+     * the married identity, not the birth identity that `getFullName()` returns
+     * by default.
      *
      * @return string
      */
@@ -213,13 +217,14 @@ class NameProcessor
     }
 
     /**
-     * Returns the full name with the nickname injected in quotes between the given
-     * names and the surname (e.g. `John "Jonny" Doe`). When the GEDCOM has no
-     * NICK, or when the displayed name already contains the nickname inline, the
-     * unmodified full name is returned.
+     * Returns the full name with the nickname injected in quotes between the
+     * given names and the surname (e.g. `John "Jonny" Doe`). When the GEDCOM
+     * has no NICK, or when the displayed name already contains the nickname
+     * inline, the unmodified full name is returned.
      *
-     * Mirrors the legacy webtrees ≤ 1.x behaviour and the `BertKoor/wt-module-old-nicknames`
-     * data-fix output, but operates at display time without modifying the GEDCOM.
+     * Mirrors the legacy webtrees ≤ 1.x behaviour and the
+     * `BertKoor/wt-module-old-nicknames` data-fix output, but operates at
+     * display time without modifying the GEDCOM.
      *
      * @return string
      */
@@ -240,16 +245,17 @@ class NameProcessor
     }
 
     /**
-     * Inserts the quoted nickname after the last given name in a flat name string,
-     * which lands it before whatever comes next (a surname particle like `von`
-     * followed by the surname, the surname itself, a married-name suffix, etc.).
-     * Idempotent: if the nickname is already present in quotes, the input is
-     * returned unchanged.
+     * Inserts the quoted nickname after the last given name in a flat name
+     * string, which lands it before whatever comes next (a surname particle
+     * like `von` followed by the surname, the surname itself, a married-name
+     * suffix, etc.). Idempotent: if the nickname is already present in quotes,
+     * the input is returned unchanged.
      *
-     * Anchoring on the last given name (rather than the first surname token) keeps
-     * particles like `von`, `de la`, `van der` -- which webtrees renders inside
-     * the given-name area when they sit outside `/SURN/` slashes -- attached to the
-     * surname they belong to instead of letting the nickname split them off.
+     * Anchoring on the last given name (rather than the first surname token)
+     * keeps particles like `von`, `de la`, `van der` -- which webtrees renders
+     * inside the given-name area when they sit outside `/SURN/` slashes --
+     * attached to the surname they belong to instead of letting the nickname
+     * split them off.
      *
      * The strrpos search is constrained to the given-name region of the string
      * (everything before the first surname token). Without that bound, a last
@@ -372,15 +378,15 @@ class NameProcessor
     }
 
     /**
-     * Returns the married surname parts (from a `_MARNM` GEDCOM record), or an empty
-     * array when no married-name record matches. When $spouse is given, only `_MARNM`
-     * records whose `surn` matches the spouse's `surn` are considered; otherwise any
-     * `_MARNM` is returned.
+     * Returns the married surname parts (from a `_MARNM` GEDCOM record), or an
+     * empty array when no married-name record matches. When $spouse is given,
+     * only `_MARNM` records whose `surn` matches the spouse's `surn` are
+     * considered; otherwise any `_MARNM` is returned.
      *
-     * Use this in a chart consumer that already shows the birth name and wants to
-     * append the married surname (e.g. "Schmidt (Müller)") — separate from the
-     * `useMarriedName` constructor flag, which switches the primary name out
-     * entirely.
+     * Use this in a chart consumer that already shows the birth name and wants
+     * to append the married surname (e.g. "Schmidt (Müller)") — separate from
+     * the `useMarriedName` constructor flag, which switches the primary name
+     * out entirely.
      *
      * @param Individual|null $spouse Optional spouse to scope the surname match
      *

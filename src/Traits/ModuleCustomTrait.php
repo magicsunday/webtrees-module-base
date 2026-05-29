@@ -48,8 +48,9 @@ trait ModuleCustomTrait
     }
 
     /**
-     * Fetches the latest published release version from GitHub, with a 24-hour file cache.
-     * Falls back to the installed version when the API is unreachable.
+     * Fetches the latest published release version from GitHub, with a 24-hour
+     * file cache. Falls back to the installed version when the API is
+     * unreachable.
      */
     public function customModuleLatestVersion(): string
     {
@@ -59,8 +60,8 @@ trait ModuleCustomTrait
     /**
      * Returns the URL admins follow from the "An upgrade is available" notice
      * on the control panel and module-admin pages — typically the module's
-     * `/releases/latest` page so admins land directly on the release notes
-     * and install-ready asset zip rather than the issue tracker.
+     * `/releases/latest` page so admins land directly on the release notes and
+     * install-ready asset zip rather than the issue tracker.
      */
     public function customModuleSupportUrl(): string
     {

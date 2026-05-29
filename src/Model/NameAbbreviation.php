@@ -12,9 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Model;
 
 /**
- * Name abbreviation strategy used by chart modules when a name does not fit
- * the available width. Resolves the AUTO setting against a tree's surname
- * tradition so the JS layer always receives a concrete GIVEN or SURNAME value.
+ * Name abbreviation strategy used by chart modules when a name does not fit the
+ * available width. Resolves the AUTO setting against a tree's surname tradition
+ * so the JS layer always receives a concrete GIVEN or SURNAME value.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

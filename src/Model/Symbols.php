@@ -37,8 +37,8 @@ enum Symbols: string
 
     /**
      * Placeholder returned when a marriage fact exists but has no date.
-     * Consumers that render the marriage symbol can check for this sentinel
-     * to display the symbol without an accompanying date string.
+     * Consumers that render the marriage symbol can check for this sentinel to
+     * display the symbol without an accompanying date string.
      */
     case MarriageDateUnknown = '?';
 }

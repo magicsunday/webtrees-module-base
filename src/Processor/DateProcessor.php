@@ -21,15 +21,15 @@ use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
  * Extracts and formats birth, death, and marriage dates from an Individual.
  *
  * The legacy methods (getBirthDate, getDeathDate, getLifetimeDescription,
- * getMarriageDate, getMarriageDateOfParents) preserve the locale-aware
- * webtrees display() output for backwards compatibility.
+ * getMarriageDate, getMarriageDateOfParents) preserve the locale-aware webtrees
+ * display() output for backwards compatibility.
  *
  * Generation-aware "compact" methods (added in 1.1.0 — getFormattedBirthDate,
- * getFormattedDeathDate, getBirthDateFull, getDeathDateFull, getMarriageDateFull,
- * getCompactLifetimeDescription, formatMarriageDate) format dates as DD.MM.YYYY
- * or year-only depending on the individual's generation depth, suitable for
- * arc text where space is constrained. They use the Symbols enum for
- * birth/death markers.
+ * getFormattedDeathDate, getBirthDateFull, getDeathDateFull,
+ * getMarriageDateFull, getCompactLifetimeDescription, formatMarriageDate)
+ * format dates as DD.MM.YYYY or year-only depending on the individual's
+ * generation depth, suitable for arc text where space is constrained. They use
+ * the Symbols enum for birth/death markers.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -88,7 +88,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the formatted birth date without HTML tags using webtrees' locale-aware display.
+     * Returns the formatted birth date without HTML tags using webtrees'
+     * locale-aware display.
      *
      * @return string
      */
@@ -98,7 +99,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the formatted death date without HTML tags using webtrees' locale-aware display.
+     * Returns the formatted death date without HTML tags using webtrees'
+     * locale-aware display.
      *
      * @return string
      */
@@ -108,7 +110,8 @@ class DateProcessor
     }
 
     /**
-     * Returns a localised lifetime label ("1853-1933", "Born: 1853", "Died: 1933", "Deceased").
+     * Returns a localised lifetime label ("1853-1933", "Born: 1853", "Died:
+     * 1933", "Deceased").
      *
      * @return string
      */
@@ -134,7 +137,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the marriage date of the individual using webtrees' locale-aware display.
+     * Returns the marriage date of the individual using webtrees' locale-aware
+     * display.
      *
      * @return string
      */
@@ -151,7 +155,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the marriage date of the parents using webtrees' locale-aware display.
+     * Returns the marriage date of the parents using webtrees' locale-aware
+     * display.
      *
      * @return string
      */
@@ -192,8 +197,8 @@ class DateProcessor
     }
 
     /**
-     * Returns true when webtrees considers the individual to be deceased,
-     * even if no explicit death date is recorded.
+     * Returns true when webtrees considers the individual to be deceased, even
+     * if no explicit death date is recorded.
      *
      * @return bool
      */
@@ -225,8 +230,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the full compact birth date (DD.MM.YYYY), regardless of
-     * the generation detail setting. Suitable for tooltip display.
+     * Returns the full compact birth date (DD.MM.YYYY), regardless of the
+     * generation detail setting. Suitable for tooltip display.
      *
      * @return string
      */
@@ -236,8 +241,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the full compact death date (DD.MM.YYYY), regardless of
-     * the generation detail setting. Suitable for tooltip display.
+     * Returns the full compact death date (DD.MM.YYYY), regardless of the
+     * generation detail setting. Suitable for tooltip display.
      *
      * @return string
      */
@@ -247,8 +252,8 @@ class DateProcessor
     }
 
     /**
-     * Returns the full compact marriage date (DD.MM.YYYY), regardless of
-     * the generation detail setting. Suitable for tooltip display.
+     * Returns the full compact marriage date (DD.MM.YYYY), regardless of the
+     * generation detail setting. Suitable for tooltip display.
      *
      * @return string
      */
@@ -264,9 +269,9 @@ class DateProcessor
     }
 
     /**
-     * Returns the marriage date of the individual's own spouse family, formatted with
-     * the generation-aware compact format. Empty string when there is no spouse family
-     * or the marriage date is unknown.
+     * Returns the marriage date of the individual's own spouse family,
+     * formatted with the generation-aware compact format. Empty string when
+     * there is no spouse family or the marriage date is unknown.
      *
      * @return string
      */
@@ -283,10 +288,11 @@ class DateProcessor
     }
 
     /**
-     * Returns the marriage date of the parents formatted with the generation-aware
-     * compact format. Returns Symbols::MarriageDateUnknown ("?") when a MARR fact
-     * exists but carries no date, so consumers can distinguish "married, date unknown"
-     * from "no marriage fact at all". Empty string when no parent family exists.
+     * Returns the marriage date of the parents formatted with the
+     * generation-aware compact format. Returns Symbols::MarriageDateUnknown
+     * ("?") when a MARR fact exists but carries no date, so consumers can
+     * distinguish "married, date unknown" from "no marriage fact at all". Empty
+     * string when no parent family exists.
      *
      * @return string
      */
@@ -338,14 +344,15 @@ class DateProcessor
     }
 
     /**
-     * Formats a marriage date for chart display based on generation depth and the
-     * configured detail threshold. Static so callers can format marriage dates from
-     * arbitrary family records without instantiating a DateProcessor.
+     * Formats a marriage date for chart display based on generation depth and
+     * the configured detail threshold. Static so callers can format marriage
+     * dates from arbitrary family records without instantiating a
+     * DateProcessor.
      *
-     * Marriage arcs sit one level deeper than the individual itself; the effective
-     * depth therefore equals generation + 1. Returns empty when the effective depth
-     * exceeds 8 (no space available). Uses DD.MM.YYYY up to generation 6, year-only
-     * beyond.
+     * Marriage arcs sit one level deeper than the individual itself; the
+     * effective depth therefore equals generation + 1. Returns empty when the
+     * effective depth exceeds 8 (no space available). Uses DD.MM.YYYY up to
+     * generation 6, year-only beyond.
      *
      * @param Date $date                    The marriage date to format
      * @param int  $generation              1-based generation depth of the individual
@@ -375,7 +382,8 @@ class DateProcessor
     // -----------------------------------------------------------------------
 
     /**
-     * Removes HTML tags and converts/decodes HTML entities to their corresponding characters.
+     * Removes HTML tags and converts/decodes HTML entities to their
+     * corresponding characters.
      *
      * @param string $value
      *
