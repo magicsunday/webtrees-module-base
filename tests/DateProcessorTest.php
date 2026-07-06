@@ -286,8 +286,8 @@ class DateProcessorTest extends TestCase
 
     /**
      * The constructor's compactDateFormat parameter is threaded through the
-     * generation-aware instance methods (here getBirthDateFull()), not only the
-     * static formatMarriageDate().
+     * instance methods (here getBirthDateFull()), not only the static
+     * formatMarriageDate().
      *
      * @return void
      */
