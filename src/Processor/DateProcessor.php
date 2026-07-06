@@ -164,6 +164,10 @@ class DateProcessor
      * Returns the marriage date of the parents using webtrees' locale-aware
      * display.
      *
+     * @deprecated since 2.6.0 — unused by every bundled chart module; use the
+     *             generation-aware getFormattedMarriageDateOfParents() instead.
+     *             Scheduled for removal in the next major release.
+     *
      * @return string
      */
     public function getMarriageDateOfParents(): string
