@@ -57,8 +57,8 @@ class DateProcessor
      *                                            calls without explicit values always behave as "detailed"
      * @param string     $compactDateFormat       The webtrees calendar format string for the compact full-date
      *                                            branch (e.g. "%d.%m.%Y"). Callers pass a locale-aware pattern so
-     *                                            non-German locales get their own field order; defaults to the
-     *                                            German numeric format for backwards compatibility
+     *                                            each locale gets its own field order; defaults to
+     *                                            CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
      */
     public function __construct(
         private readonly Individual $individual,
@@ -379,7 +379,7 @@ class DateProcessor
      * @param int    $generation              1-based generation depth of the individual
      * @param int    $detailedDateGenerations Generations at or below this depth show the compact full date
      * @param string $compactDateFormat       The webtrees calendar format string for the full-date branch; defaults
-     *                                        to the German numeric format for backwards compatibility
+     *                                        to CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
      *
      * @return string
      */
