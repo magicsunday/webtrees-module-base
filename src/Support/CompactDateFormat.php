@@ -15,7 +15,6 @@ use IntlDateFormatter;
 use Throwable;
 
 use function extension_loaded;
-use function preg_replace;
 use function str_contains;
 use function str_repeat;
 use function str_replace;
@@ -106,8 +105,9 @@ final class CompactDateFormat
     /**
      * Translates a CLDR/ICU short-date pattern into a webtrees calendar format string.
      *
-     * ICU field letters map as: y→%Y (widened to four digits), MM→%m / M→%n,
-     * dd→%d / d→%j. Quoted literals and separators are passed through unchanged.
+     * ICU field letters map as: any run of y→%Y (webtrees' four-digit long year,
+     * so a two-digit ICU short year is widened here too), MM→%m / M→%n, dd→%d /
+     * d→%j. Quoted literals and separators are passed through unchanged.
      *
      * @param string $pattern The ICU short-date pattern (e.g. "dd.MM.yy")
      *
@@ -115,9 +115,6 @@ final class CompactDateFormat
      */
     private static function icuToWebtrees(string $pattern): string
     {
-        // Always widen the year to four digits, regardless of the locale default.
-        $pattern = preg_replace('/y+/', 'yyyy', $pattern) ?? $pattern;
-
         $out     = '';
         $length  = strlen($pattern);
         $index   = 0;
