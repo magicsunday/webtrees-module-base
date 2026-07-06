@@ -27,9 +27,10 @@ use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
  * Generation-aware "compact" methods (added in 1.1.0 — getFormattedBirthDate,
  * getFormattedDeathDate, getBirthDateFull, getDeathDateFull,
  * getMarriageDateFull, getCompactLifetimeDescription, formatMarriageDate)
- * format dates as DD.MM.YYYY or year-only depending on the individual's
- * generation depth, suitable for arc text where space is constrained. They use
- * the Symbols enum for birth/death markers.
+ * format dates in a caller-supplied compact format (default "%d.%m.%Y", but
+ * consumers pass a locale-aware pattern) or year-only depending on the
+ * individual's generation depth, suitable for arc text where space is
+ * constrained. They use the Symbols enum for birth/death markers.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -50,14 +51,19 @@ class DateProcessor
     /**
      * @param Individual $individual              The individual to process
      * @param int        $generation              1-based generation depth of this individual in the tree (0 = unset)
-     * @param int        $detailedDateGenerations Generations at or below this depth show DD.MM.YYYY in the
+     * @param int        $detailedDateGenerations Generations at or below this depth show the full compact date in the
      *                                            generation-aware methods; defaults to PHP_INT_MAX so that
      *                                            calls without explicit values always behave as "detailed"
+     * @param string     $compactDateFormat       The webtrees calendar format string for the compact full-date
+     *                                            branch (e.g. "%d.%m.%Y"). Callers pass a locale-aware pattern so
+     *                                            non-German locales get their own field order; defaults to the
+     *                                            German numeric format for backwards compatibility
      */
     public function __construct(
         private readonly Individual $individual,
         private readonly int $generation = 0,
         private readonly int $detailedDateGenerations = PHP_INT_MAX,
+        private readonly string $compactDateFormat = '%d.%m.%Y',
     ) {
         $this->birthDate = $this->individual->getBirthDate();
         $this->deathDate = $this->individual->getDeathDate();
@@ -281,7 +287,12 @@ class DateProcessor
         $family = $this->individual->spouseFamilies()->first();
 
         if (($family !== null) && $family->getMarriageDate()->isOK()) {
-            return self::formatMarriageDate($family->getMarriageDate(), $this->generation, $this->detailedDateGenerations);
+            return self::formatMarriageDate(
+                $family->getMarriageDate(),
+                $this->generation,
+                $this->detailedDateGenerations,
+                $this->compactDateFormat,
+            );
         }
 
         return '';
@@ -302,7 +313,12 @@ class DateProcessor
         $family = $this->individual->childFamilies()->first();
 
         if (($family !== null) && $family->getMarriageDate()->isOK()) {
-            return self::formatMarriageDate($family->getMarriageDate(), $this->generation, $this->detailedDateGenerations);
+            return self::formatMarriageDate(
+                $family->getMarriageDate(),
+                $this->generation,
+                $this->detailedDateGenerations,
+                $this->compactDateFormat,
+            );
         }
 
         if (($family !== null) && $family->facts(['MARR'])->isNotEmpty()) {
@@ -351,17 +367,23 @@ class DateProcessor
      *
      * Marriage arcs sit one level deeper than the individual itself; the
      * effective depth therefore equals generation + 1. Returns empty when the
-     * effective depth exceeds 8 (no space available). Uses DD.MM.YYYY up to
-     * generation 6, year-only beyond.
+     * effective depth exceeds 8 (no space available). Uses the compact full-date
+     * format up to generation 6, year-only beyond.
      *
-     * @param Date $date                    The marriage date to format
-     * @param int  $generation              1-based generation depth of the individual
-     * @param int  $detailedDateGenerations Generations at or below this depth show DD.MM.YYYY
+     * @param Date   $date                    The marriage date to format
+     * @param int    $generation              1-based generation depth of the individual
+     * @param int    $detailedDateGenerations Generations at or below this depth show the compact full date
+     * @param string $compactDateFormat       The webtrees calendar format string for the full-date branch; defaults
+     *                                        to the German numeric format for backwards compatibility
      *
      * @return string
      */
-    public static function formatMarriageDate(Date $date, int $generation, int $detailedDateGenerations): string
-    {
+    public static function formatMarriageDate(
+        Date $date,
+        int $generation,
+        int $detailedDateGenerations,
+        string $compactDateFormat = '%d.%m.%Y',
+    ): string {
         $effectiveDepth = $generation + 1;
 
         if ($effectiveDepth > 8) {
@@ -371,7 +393,7 @@ class DateProcessor
         $calendarDate = $date->minimumDate();
 
         if ($effectiveDepth <= min($detailedDateGenerations, 6)) {
-            return $calendarDate->format('%d.%m.%Y');
+            return $calendarDate->format($compactDateFormat);
         }
 
         return (string) $calendarDate->year();
@@ -395,7 +417,7 @@ class DateProcessor
     }
 
     /**
-     * Formats a Date as DD.MM.YYYY using its minimum date.
+     * Formats a Date in the configured compact format using its minimum date.
      *
      * @param Date $date
      *
@@ -403,7 +425,7 @@ class DateProcessor
      */
     private function formatCompactDate(Date $date): string
     {
-        return $date->minimumDate()->format('%d.%m.%Y');
+        return $date->minimumDate()->format($this->compactDateFormat);
     }
 
     /**
