@@ -61,6 +61,12 @@ final class CompactDateFormat
      */
     public static function forLocale(string $localeTag): string
     {
+        // An empty tag would make IntlDateFormatter fall back to the host's default
+        // locale (non-deterministic across environments); return the fixed fallback.
+        if ($localeTag === '') {
+            return self::FALLBACK;
+        }
+
         if (!extension_loaded('intl')) {
             return self::FALLBACK;
         }

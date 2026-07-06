@@ -97,4 +97,16 @@ class CompactDateFormatTest extends TestCase
     {
         self::assertSame(CompactDateFormat::FALLBACK, CompactDateFormat::forLocale("a\0b"));
     }
+
+    /**
+     * An empty locale tag falls back to the German numeric format rather than being
+     * passed to IntlDateFormatter, which would resolve the host's default locale.
+     *
+     * @return void
+     */
+    #[Test]
+    public function forEmptyLocaleFallsBackToGermanNumeric(): void
+    {
+        self::assertSame(CompactDateFormat::FALLBACK, CompactDateFormat::forLocale(''));
+    }
 }
