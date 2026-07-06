@@ -15,6 +15,7 @@ use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
+use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -281,5 +282,24 @@ class DateProcessorTest extends TestCase
         );
 
         self::assertSame($expected, $result);
+    }
+
+    /**
+     * The constructor's compactDateFormat parameter is threaded through the
+     * generation-aware instance methods (here getBirthDateFull()), not only the
+     * static formatMarriageDate().
+     *
+     * @return void
+     */
+    #[Test]
+    public function constructorCompactDateFormatIsUsedByInstanceMethods(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthDate')->willReturn(new Date('12 FEB 1850'));
+        $individual->method('getDeathDate')->willReturn(new Date(''));
+
+        $processor = new DateProcessor($individual, 1, PHP_INT_MAX, '%Y-%m-%d');
+
+        self::assertSame('1850-02-12', $processor->getBirthDateFull());
     }
 }
