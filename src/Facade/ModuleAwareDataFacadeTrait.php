@@ -25,8 +25,6 @@ trait ModuleAwareDataFacadeTrait
 
     /**
      * Sets the owning module reference used by downstream processors.
-     *
-     * @return static
      */
     public function setModule(ModuleCustomInterface&ModuleAssetUrlInterface $module): static
     {

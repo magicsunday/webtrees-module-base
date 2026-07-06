@@ -27,12 +27,17 @@ use Fisharebest\Webtrees\Place;
 class PlaceProcessor
 {
     /**
-     * @param Individual $individual The individual to process
-     * @param int        $placeParts Number of place hierarchy parts to show (0 = full)
+     * @param Individual $individual  The individual to process
+     * @param int        $placeParts  Number of place hierarchy parts to show (0 = full)
+     * @param bool       $placeSuffix When true, keep the LAST $placeParts parts (country end,
+     *                                Place::lastParts()); when false, keep the first (locality end,
+     *                                Place::firstParts()). Mirrors the SHOW_PEDIGREE_PLACES_SUFFIX
+     *                                tree preference; defaults to false for backwards compatibility
      */
     public function __construct(
         private readonly Individual $individual,
         private readonly int $placeParts,
+        private readonly bool $placeSuffix = false,
     ) {
     }
 
@@ -110,8 +115,9 @@ class PlaceProcessor
 
     /**
      * Returns a shortened place name according to the configured number of
-     * hierarchy parts. This method is stateless — it only uses the placeParts
-     * scalar.
+     * hierarchy parts. With $placeSuffix the last parts (country end) are kept,
+     * otherwise the first parts (locality end). This method only uses the
+     * placeParts/placeSuffix scalars.
      *
      * @param Place $place
      *
@@ -129,6 +135,10 @@ class PlaceProcessor
             return $placeName;
         }
 
-        return $place->firstParts($this->placeParts)->implode(', ');
+        $parts = $this->placeSuffix
+            ? $place->lastParts($this->placeParts)
+            : $place->firstParts($this->placeParts);
+
+        return $parts->implode(', ');
     }
 }
