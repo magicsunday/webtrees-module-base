@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Support;
 
 use IntlDateFormatter;
-use ValueError;
+use Throwable;
 
 use function extension_loaded;
 use function preg_replace;
@@ -74,12 +74,15 @@ final class CompactDateFormat
                 'UTC',
                 IntlDateFormatter::GREGORIAN
             );
-        } catch (ValueError) {
-            // An unparseable locale tag (never emitted by webtrees at runtime).
+
+            $pattern = $formatter->getPattern();
+        } catch (Throwable) {
+            // ext-intl variance for an unparseable locale (never emitted by webtrees
+            // at runtime): PHP 8.5 throws a ValueError from the constructor, while PHP
+            // 8.3/8.4 leave an unconstructed formatter whose getPattern() raises an
+            // Error. Either way, fall back to the German numeric format.
             return self::FALLBACK;
         }
-
-        $pattern = $formatter->getPattern();
 
         if (($pattern === false) || ($pattern === '')) {
             return self::FALLBACK;
