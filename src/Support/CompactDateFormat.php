@@ -40,10 +40,12 @@ use function strlen;
 final class CompactDateFormat
 {
     /**
-     * The fallback compact format (German numeric order) used when ICU is unavailable
-     * or produces a pattern that does not carry a full day/month/year triple.
+     * The fallback compact format (ISO 8601, "%Y-%m-%d") used when ICU is unavailable
+     * or produces a pattern that does not carry a full day/month/year triple. ISO is
+     * chosen as a locale-neutral, unambiguous default, since this value is only reached
+     * for locales ICU cannot resolve at all.
      */
-    public const string FALLBACK = '%d.%m.%Y';
+    public const string FALLBACK = '%Y-%m-%d';
 
     /**
      * Static-only utility.
@@ -85,7 +87,7 @@ final class CompactDateFormat
             // ext-intl variance for an unparseable locale (never emitted by webtrees
             // at runtime): PHP 8.5 throws a ValueError from the constructor, while PHP
             // 8.3/8.4 leave an unconstructed formatter whose getPattern() raises an
-            // Error. Either way, fall back to the German numeric format.
+            // Error. Either way, fall back to the ISO 8601 format.
             return self::FALLBACK;
         }
 

@@ -85,27 +85,27 @@ class CompactDateFormatTest extends TestCase
 
     /**
      * An unparseable locale tag (a NUL byte, which ICU rejects with a ValueError)
-     * falls back to the German numeric format. Deliberately NOT guarded by the
-     * ext-intl skip: with intl present the ValueError branch is exercised, with intl
-     * absent the early extension_loaded() branch returns the same FALLBACK — so this
-     * pins the FALLBACK contract on every CI leg, including one without ext-intl.
+     * falls back to the FALLBACK format. Deliberately NOT guarded by the ext-intl
+     * skip: with intl present the ValueError branch is exercised, with intl absent
+     * the early extension_loaded() branch returns the same FALLBACK — so this pins
+     * the FALLBACK contract on every CI leg, including one without ext-intl.
      *
      * @return void
      */
     #[Test]
-    public function forUnparseableLocaleFallsBackToGermanNumeric(): void
+    public function forUnparseableLocaleUsesTheFallbackFormat(): void
     {
         self::assertSame(CompactDateFormat::FALLBACK, CompactDateFormat::forLocale("a\0b"));
     }
 
     /**
-     * An empty locale tag falls back to the German numeric format rather than being
-     * passed to IntlDateFormatter, which would resolve the host's default locale.
+     * An empty locale tag falls back to the FALLBACK format rather than being passed
+     * to IntlDateFormatter, which would resolve the host's default locale.
      *
      * @return void
      */
     #[Test]
-    public function forEmptyLocaleFallsBackToGermanNumeric(): void
+    public function forEmptyLocaleUsesTheFallbackFormat(): void
     {
         self::assertSame(CompactDateFormat::FALLBACK, CompactDateFormat::forLocale(''));
     }
