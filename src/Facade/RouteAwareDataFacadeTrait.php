@@ -28,8 +28,6 @@ trait RouteAwareDataFacadeTrait
 
     /**
      * Sets the canonical chart route used by chartUrl().
-     *
-     * @return static
      */
     public function setRoute(string $route): static
     {

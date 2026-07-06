@@ -15,6 +15,7 @@ use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use ReflectionIntersectionType;
 use ReflectionMethod;
 use ReflectionNamedType;
 
@@ -59,12 +60,10 @@ final class RouteAwareDataFacadeTraitTest extends TestCase
         self::assertTrue($method->isPublic());
         self::assertCount(1, $method->getParameters());
 
-        $moduleType = $method->getParameters()[0]->getType();
-        self::assertNotNull($moduleType);
-        // setModule uses an intersection type (ModuleCustomInterface&ModuleAssetUrlInterface).
-        // We assert it stays a non-trivial type bound rather than pinning the exact
-        // intersection so the trait can evolve safely.
-        self::assertNotSame('', (string) $moduleType);
+        // setModule uses an intersection type (ModuleCustomInterface&ModuleAssetUrlInterface);
+        // assert a type is declared without pinning the exact intersection, so the trait can
+        // evolve safely. Avoids the PHP 8.5-deprecated (string) cast of a ReflectionType.
+        self::assertInstanceOf(ReflectionIntersectionType::class, $method->getParameters()[0]->getType());
 
         $returnType = $method->getReturnType();
         self::assertInstanceOf(ReflectionNamedType::class, $returnType);
