@@ -16,6 +16,7 @@ use Fisharebest\Webtrees\Family;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
+use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 
 /**
  * Extracts and formats birth, death, and marriage dates from an Individual.
@@ -63,7 +64,7 @@ class DateProcessor
         private readonly Individual $individual,
         private readonly int $generation = 0,
         private readonly int $detailedDateGenerations = PHP_INT_MAX,
-        private readonly string $compactDateFormat = '%d.%m.%Y',
+        private readonly string $compactDateFormat = CompactDateFormat::FALLBACK,
     ) {
         $this->birthDate = $this->individual->getBirthDate();
         $this->deathDate = $this->individual->getDeathDate();
@@ -386,7 +387,7 @@ class DateProcessor
         Date $date,
         int $generation,
         int $detailedDateGenerations,
-        string $compactDateFormat = '%d.%m.%Y',
+        string $compactDateFormat = CompactDateFormat::FALLBACK,
     ): string {
         $effectiveDepth = $generation + 1;
 
