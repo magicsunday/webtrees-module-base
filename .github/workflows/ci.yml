@@ -78,6 +78,12 @@ jobs:
               run: |
                   composer ci:test:php:unit
 
+            - id: cpd
+              name: Copy-Paste Detection
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  composer ci:test:php:cpd
+
             - id: cgl
               name: CGL
               if: ${{ always() && steps.install.conclusion == 'success' }}
