@@ -20,6 +20,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
+use function preg_quote;
+
 /**
  * PlaceFormatSpecTest.
  *
@@ -34,6 +36,9 @@ class PlaceFormatSpecTest extends TestCase
     /**
      * A level count of zero for PlaceStyle::Full, and a level count of one for
      * PlaceStyle::Levels, are both valid boundary values and must not throw.
+     * PlaceStyle::CityCountry ignores the level count entirely, so zero is
+     * valid there too — {@see PlaceFormatChoice::CityCountry::toSpec()} relies
+     * on exactly that to construct the spec without a level argument.
      *
      * @param PlaceStyle $style
      * @param int        $levels
@@ -57,6 +62,7 @@ class PlaceFormatSpecTest extends TestCase
         return [
             'zero is the only sensible value for Full' => [PlaceStyle::Full, 0],
             'one is the minimum for Levels'            => [PlaceStyle::Levels, 1],
+            'zero is valid for CityCountry'            => [PlaceStyle::CityCountry, 0],
         ];
     }
 
@@ -82,7 +88,7 @@ class PlaceFormatSpecTest extends TestCase
     public function anInvalidLevelCountIsRejected(PlaceStyle $style, int $levels, string $expectedMessage): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains($expectedMessage);
+        $this->expectExceptionMessageMatches('/' . preg_quote($expectedMessage, '/') . '/');
 
         new PlaceFormatSpec($style, $levels);
     }

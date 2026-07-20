@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test;
 
+use Fisharebest\Webtrees\Family;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
 use Illuminate\Support\Collection;
@@ -118,7 +119,10 @@ class PlaceProcessorTest extends TestCase
     }
 
     /**
-     * The Full style returns the untouched recorded name.
+     * The Full style returns the untouched recorded name. The gedcomName
+     * deliberately lacks the spaces `implode(', ', $parts)` would add, so an
+     * implementation that reassembles the parts instead of returning the
+     * recorded name fails this test.
      *
      * @return void
      */
@@ -131,9 +135,9 @@ class PlaceProcessorTest extends TestCase
             new IsoCountryMap('en_US')
         );
 
-        $place = $this->placeStub('Mitte, Berlin, Germany', ['Mitte', 'Berlin', 'Germany']);
+        $place = $this->placeStub('Mitte,Berlin,Germany', ['Mitte', 'Berlin', 'Germany']);
 
-        self::assertSame('Mitte, Berlin, Germany', $processor->shortPlaceName($place));
+        self::assertSame('Mitte,Berlin,Germany', $processor->shortPlaceName($place));
     }
 
     /**
@@ -146,7 +150,7 @@ class PlaceProcessorTest extends TestCase
     {
         $processor = new PlaceProcessor(
             self::createStub(Individual::class),
-            new PlaceFormatSpec(PlaceStyle::Levels, 1),
+            new PlaceFormatSpec(PlaceStyle::Levels, 2),
             new IsoCountryMap('en_US')
         );
 
@@ -266,7 +270,7 @@ class PlaceProcessorTest extends TestCase
                 ['Hamburg', 'DEU'],
                 'Hamburg, Germany',
             ],
-            'a Chapman home-nation code folds onto the state' => [
+            'a Chapman home-nation code folds onto the country' => [
                 'London, ENG',
                 ['London', 'ENG'],
                 'London, United Kingdom',
@@ -348,5 +352,76 @@ class PlaceProcessorTest extends TestCase
         );
 
         self::assertSame('Hamburg, Deutschland', $processor->getBirthPlaceShort());
+    }
+
+    /**
+     * getMarriagePlace() has a branch no other accessor shares: it reads the
+     * individual's FIRST spouse family rather than a direct place accessor, and
+     * returns an empty string when there is none. Both outcomes went through
+     * the constructor rewrite untested.
+     *
+     * @param string|null $familyPlaceName Recorded marriage place of the stubbed spouse family, or null for no family
+     * @param string      $expected        Expected return value of getMarriagePlace()
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('marriagePlaceProvider')]
+    public function getMarriagePlaceReflectsTheFirstSpouseFamily(?string $familyPlaceName, string $expected): void
+    {
+        $individual = self::createStub(Individual::class);
+
+        if ($familyPlaceName === null) {
+            $individual->method('spouseFamilies')->willReturn(new Collection());
+        } else {
+            $family = self::createStub(Family::class);
+            $family->method('getMarriagePlace')->willReturn($this->placeStub($familyPlaceName, []));
+
+            $individual->method('spouseFamilies')->willReturn(new Collection([$family]));
+        }
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::Full),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame($expected, $processor->getMarriagePlace());
+    }
+
+    /**
+     * @return array<string, array{0: string|null, 1: string}>
+     */
+    public static function marriagePlaceProvider(): array
+    {
+        return [
+            'a spouse family returns its recorded marriage place' => ['Hamburg, Germany', 'Hamburg, Germany'],
+            'no spouse family yields an empty string'             => [null, ''],
+        ];
+    }
+
+    /**
+     * getDeathPlaceShort() went through the same constructor rewrite as
+     * getBirthPlaceShort(), but every other shortening test reads the birth
+     * place. Without this, a wiring mix-up that pointed it at the birth place
+     * instead of the death place would go uncaught.
+     *
+     * @return void
+     */
+    #[Test]
+    public function getDeathPlaceShortShortensTheDeathPlace(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getDeathPlace')->willReturn(
+            $this->placeStub('Mitte, Berlin, Germany', ['Mitte', 'Berlin', 'Germany'])
+        );
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::Levels, 2),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame('Mitte, Berlin', $processor->getDeathPlaceShort());
     }
 }

@@ -24,6 +24,8 @@ use function iterator_to_array;
 use function mb_strtolower;
 use function preg_match;
 use function preg_replace;
+use function restore_error_handler;
+use function set_error_handler;
 use function str_replace;
 use function strrpos;
 use function strtolower;
@@ -403,9 +405,13 @@ final class IsoCountryMap
      * scan, so the whole table is materialised on first use.
      *
      * ResourceBundle::create() emits an E_WARNING when the ICU data is
-     * unavailable, which the webtrees error handler turns into an exception —
-     * hence the Throwable guard, in addition to a null check on the return
-     * value.
+     * unavailable. Inside a webtrees request the framework's error handler
+     * turns that into an exception the Throwable guard below catches, but
+     * under the PHPUnit CLI runner (`failOnWarning="true"`) and on the plain
+     * CLI no such handler is installed, so the raw warning would otherwise
+     * survive and fail the caller instead of degrading gracefully. A scoped
+     * error handler that swallows every warning during the ICU access closes
+     * that gap regardless of the surrounding runtime.
      *
      * @return array<string, string>
      */
@@ -416,6 +422,8 @@ final class IsoCountryMap
         }
 
         $map = [];
+
+        set_error_handler(static fn (): bool => true);
 
         try {
             $bundle   = ResourceBundle::create('supplementalData', 'ICUDATA', false);
@@ -445,6 +453,8 @@ final class IsoCountryMap
             }
         } catch (Throwable) {
             $map = [];
+        } finally {
+            restore_error_handler();
         }
 
         return self::$alpha2ToAlpha3Map = $map;

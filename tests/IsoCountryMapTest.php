@@ -38,6 +38,23 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
+     * Several tests inject a sentinel into a private static cache via
+     * {@see ReflectionProperty} to prove memoisation. A failing assertion in
+     * one of those tests would otherwise leave the sentinel in the process-wide
+     * static, leaking into every test class that runs afterwards — resetting
+     * here, rather than at the end of the test body, guarantees the reset runs
+     * even when the test itself fails.
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        IsoCountryMap::clearCache();
+
+        parent::tearDown();
+    }
+
+    /**
      * Every variant of "Côte d?Ivoire" with a different single- quote /
      * modifier-letter character at the apostrophe position must resolve to CI.
      * The six characters covered are:
@@ -163,21 +180,35 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * The alpha-3 ICU bridge memoises its per-token result. A repeated lookup of
-     * the same code must return the identical ISO-2 from cache, and a repeated
-     * unresolvable token must stay null — exercising the cache-hit branch for
-     * both a resolved and a null-cached outcome.
+     * The alpha-3 ICU bridge memoises its per-token result in
+     * {@see IsoCountryMap::$alpha3Cache}. Asserting the same value twice, as a
+     * repeated lookup would, passes even with no memoisation at all — a fresh
+     * ICU lookup for "DEU" also yields "DE". The primed cache entry is instead
+     * replaced with a sentinel via reflection: a re-read of ICU would still
+     * yield "DE", so getting the sentinel back proves the cache entry, not
+     * ICU, was read.
+     *
+     * The null branch needs its own proof: {@see IsoCountryMap::resolveAlpha3()}
+     * distinguishes "not yet cached" from "cached as unresolved" with
+     * `array_key_exists()` rather than `??`, so "GBR" — a code ICU would
+     * happily resolve to "GB" — is forced into the cache as null. If the read
+     * ever degraded to treating a cached null as a miss, the live ICU lookup
+     * would win and "GB" would come back instead of null.
+     *
+     * @return void
      */
     #[Test]
-    public function resolveMemoisesRepeatedAlpha3Lookups(): void
+    public function resolveReadsTheMemoisedAlpha3Result(): void
     {
         $map = new IsoCountryMap();
 
         self::assertSame('DE', $map->resolve('DEU'));
-        self::assertSame('DE', $map->resolve('DEU'));
 
-        self::assertNull($map->resolve('XYZ'));
-        self::assertNull($map->resolve('XYZ'));
+        $property = new ReflectionProperty(IsoCountryMap::class, 'alpha3Cache');
+        $property->setValue(null, ['deu' => 'SENTINEL', 'gbr' => null]);
+
+        self::assertSame('SENTINEL', $map->resolve('DEU'));
+        self::assertNull($map->resolve('GBR'));
     }
 
     /**
@@ -299,8 +330,6 @@ final class IsoCountryMapTest extends TestCase
 
         self::assertSame('SENTINEL', $map->toAlpha3('DE'));
         self::assertSame('SENTINEL', (new IsoCountryMap('de_DE'))->toAlpha3('DE'));
-
-        IsoCountryMap::clearCache();
     }
 
     /**
