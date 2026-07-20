@@ -15,6 +15,10 @@ use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
+use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
+
+use function is_string;
+use function preg_match;
 
 /**
  * Extracts birth, death, and marriage place names from an individual's life
@@ -31,10 +35,12 @@ class PlaceProcessor
     /**
      * @param Individual      $individual The individual to process
      * @param PlaceFormatSpec $format     Fully resolved formatting instruction
+     * @param IsoCountryMap   $countryMap Resolver for the country segment of the city styles
      */
     public function __construct(
         private readonly Individual $individual,
         private readonly PlaceFormatSpec $format,
+        private readonly IsoCountryMap $countryMap,
     ) {
     }
 
@@ -128,8 +134,9 @@ class PlaceProcessor
         }
 
         return match ($this->format->style) {
-            PlaceStyle::Full   => $placeName,
-            PlaceStyle::Levels => $this->levelParts($place),
+            PlaceStyle::Full        => $placeName,
+            PlaceStyle::Levels      => $this->levelParts($place),
+            PlaceStyle::CityCountry => $this->cityAndCountry($place),
         };
     }
 
@@ -147,5 +154,81 @@ class PlaceProcessor
             : $place->firstParts($this->format->levels);
 
         return $parts->implode(', ');
+    }
+
+    /**
+     * Keep the first and the last segment. A country recorded as a three-letter
+     * code is spelled out in the user's language; a two-letter segment is left
+     * alone, because state and province abbreviations share that shape
+     * ("Dover, DE" is Delaware, not Germany).
+     *
+     * @param Place $place
+     *
+     * @return string
+     */
+    private function cityAndCountry(Place $place): string
+    {
+        $segments = $this->outerSegments($place);
+
+        if ($segments === null) {
+            return '';
+        }
+
+        if ($segments['last'] === null) {
+            return $segments['first'];
+        }
+
+        return $segments['first'] . ', ' . $this->spellOutCode($segments['last']);
+    }
+
+    /**
+     * The outer segments of a place: the first one, plus the last one when the
+     * place actually has a second segment. A single-segment place yields a null
+     * "last", which each city style handles its own way. Returns null when the
+     * place has no usable segment at all.
+     *
+     * @param Place $place
+     *
+     * @return array{first: string, last: string|null}|null
+     */
+    private function outerSegments(Place $place): ?array
+    {
+        $first = $place->firstParts(1)->first();
+
+        if (!is_string($first)) {
+            return null;
+        }
+
+        $last = $place->lastParts(1)->first();
+
+        if (
+            !is_string($last)
+            || ($place->firstParts(2)->count() < 2)
+        ) {
+            return ['first' => $first, 'last' => null];
+        }
+
+        return ['first' => $first, 'last' => $last];
+    }
+
+    /**
+     * Expand a three-letter country code into its localised name. Any other
+     * segment is returned unchanged. Note that the resolver also accepts the
+     * Chapman codes webtrees treats as countries, so "ENG" resolves to the
+     * United Kingdom.
+     *
+     * @param string $segment
+     *
+     * @return string
+     */
+    private function spellOutCode(string $segment): string
+    {
+        if (preg_match('/^[A-Za-z]{3}$/', $segment) !== 1) {
+            return $segment;
+        }
+
+        $iso2 = $this->countryMap->resolve($segment);
+
+        return $iso2 === null ? $segment : $this->countryMap->label($iso2);
     }
 }

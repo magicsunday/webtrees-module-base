@@ -73,6 +73,7 @@ class PlaceFormatChoiceTest extends TestCase
             'one level'                          => [PlaceFormatChoice::Levels1, PlaceStyle::Levels, 1, false],
             'two levels'                         => [PlaceFormatChoice::Levels2, PlaceStyle::Levels, 2, false],
             'three levels'                       => [PlaceFormatChoice::Levels3, PlaceStyle::Levels, 3, false],
+            'place and country'                  => [PlaceFormatChoice::CityCountry, PlaceStyle::CityCountry, 0, false],
         ];
     }
 
@@ -129,11 +130,12 @@ class PlaceFormatChoiceTest extends TestCase
     public static function storedValueProvider(): array
     {
         return [
-            'auto'     => ['auto', PlaceFormatChoice::Automatic],
-            'full'     => ['full', PlaceFormatChoice::Full],
-            'levels-1' => ['levels-1', PlaceFormatChoice::Levels1],
-            'levels-2' => ['levels-2', PlaceFormatChoice::Levels2],
-            'levels-3' => ['levels-3', PlaceFormatChoice::Levels3],
+            'auto'         => ['auto', PlaceFormatChoice::Automatic],
+            'full'         => ['full', PlaceFormatChoice::Full],
+            'levels-1'     => ['levels-1', PlaceFormatChoice::Levels1],
+            'levels-2'     => ['levels-2', PlaceFormatChoice::Levels2],
+            'levels-3'     => ['levels-3', PlaceFormatChoice::Levels3],
+            'city-country' => ['city-country', PlaceFormatChoice::CityCountry],
         ];
     }
 

@@ -17,6 +17,7 @@ use Illuminate\Support\Collection;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 use MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor;
+use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -35,8 +36,23 @@ use function array_slice;
 #[CoversClass(PlaceProcessor::class)]
 #[UsesClass(PlaceFormatSpec::class)]
 #[UsesClass(PlaceStyle::class)]
+#[UsesClass(IsoCountryMap::class)]
 class PlaceProcessorTest extends TestCase
 {
+    /**
+     * The resolver memoises into process-wide statics, and the first instance
+     * burns its locale into the shared map; without a reset the outcome would
+     * depend on test order.
+     *
+     * @return void
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        IsoCountryMap::clearCache();
+    }
+
     /**
      * Builds a Place stub whose firstParts()/lastParts() actually honour the count
      * argument by slicing the real part list. This locks BOTH the $this->format->levels
@@ -73,7 +89,8 @@ class PlaceProcessorTest extends TestCase
     {
         $processor = new PlaceProcessor(
             self::createStub(Individual::class),
-            new PlaceFormatSpec(PlaceStyle::Levels, 2)
+            new PlaceFormatSpec(PlaceStyle::Levels, 2),
+            new IsoCountryMap('en_US')
         );
 
         $place = $this->placeStub('Mitte, Berlin, Germany', ['Mitte', 'Berlin', 'Germany']);
@@ -91,7 +108,8 @@ class PlaceProcessorTest extends TestCase
     {
         $processor = new PlaceProcessor(
             self::createStub(Individual::class),
-            new PlaceFormatSpec(PlaceStyle::Levels, 2, true)
+            new PlaceFormatSpec(PlaceStyle::Levels, 2, true),
+            new IsoCountryMap('en_US')
         );
 
         $place = $this->placeStub('Mitte, Berlin, Germany', ['Mitte', 'Berlin', 'Germany']);
@@ -109,7 +127,8 @@ class PlaceProcessorTest extends TestCase
     {
         $processor = new PlaceProcessor(
             self::createStub(Individual::class),
-            new PlaceFormatSpec(PlaceStyle::Full)
+            new PlaceFormatSpec(PlaceStyle::Full),
+            new IsoCountryMap('en_US')
         );
 
         $place = $this->placeStub('Mitte, Berlin, Germany', ['Mitte', 'Berlin', 'Germany']);
@@ -127,7 +146,8 @@ class PlaceProcessorTest extends TestCase
     {
         $processor = new PlaceProcessor(
             self::createStub(Individual::class),
-            new PlaceFormatSpec(PlaceStyle::Levels, 1)
+            new PlaceFormatSpec(PlaceStyle::Levels, 1),
+            new IsoCountryMap('en_US')
         );
 
         $place = $this->placeStub('', []);
@@ -162,7 +182,8 @@ class PlaceProcessorTest extends TestCase
 
         $processor = new PlaceProcessor(
             $individual,
-            new PlaceFormatSpec(PlaceStyle::Levels, $levels)
+            new PlaceFormatSpec(PlaceStyle::Levels, $levels),
+            new IsoCountryMap('en_US')
         );
 
         self::assertSame($expected, $processor->getBirthPlaceShort());
@@ -184,5 +205,148 @@ class PlaceProcessorTest extends TestCase
                 1, 'Hamburg',
             ],
         ];
+    }
+
+    /**
+     * The place-and-country style keeps the outermost segments and drops
+     * everything between them.
+     *
+     * @param string        $gedcomName
+     * @param array<string> $parts
+     * @param string        $expected
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('cityCountryProvider')]
+    public function placeAndCountryKeepsTheOutermostSegments(
+        string $gedcomName,
+        array $parts,
+        string $expected,
+    ): void {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthPlace')->willReturn($this->placeStub($gedcomName, $parts));
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::CityCountry),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame($expected, $processor->getBirthPlaceShort());
+    }
+
+    /**
+     * The gedcomName deliberately differs from the joined parts (no space after
+     * the comma) wherever the expected output equals the whole place: without
+     * that, a plain pass-through implementation would pass too.
+     *
+     * @return array<string, array{0: string, 1: array<string>, 2: string}>
+     */
+    public static function cityCountryProvider(): array
+    {
+        return [
+            'four segments collapse to two' => [
+                'Hamburg, Wandsbek, Schleswig-Holstein, Deutschland',
+                ['Hamburg', 'Wandsbek', 'Schleswig-Holstein', 'Deutschland'],
+                'Hamburg, Deutschland',
+            ],
+            'two segments are rebuilt, not passed through' => [
+                'Berlin,Deutschland',
+                ['Berlin', 'Deutschland'],
+                'Berlin, Deutschland',
+            ],
+            'a single segment is left whole' => [
+                'Berlin',
+                ['Berlin'],
+                'Berlin',
+            ],
+            'an alpha-3 code is spelled out' => [
+                'Hamburg, DEU',
+                ['Hamburg', 'DEU'],
+                'Hamburg, Germany',
+            ],
+            'a Chapman home-nation code folds onto the state' => [
+                'London, ENG',
+                ['London', 'ENG'],
+                'London, United Kingdom',
+            ],
+            'a two-letter segment is never expanded' => [
+                'Dover, DE',
+                ['Dover', 'DE'],
+                'Dover, DE',
+            ],
+            'a German state abbreviation survives' => [
+                'Ulm, BW',
+                ['Ulm', 'BW'],
+                'Ulm, BW',
+            ],
+            'an unresolvable three-letter token stays put' => [
+                'Ulm, XYZ',
+                ['Ulm', 'XYZ'],
+                'Ulm, XYZ',
+            ],
+            'a plain country name is not translated' => [
+                'Hamburg, Deutschland',
+                ['Hamburg', 'Deutschland'],
+                'Hamburg, Deutschland',
+            ],
+            'a longer unresolvable segment stays put' => [
+                'London, Middlesex',
+                ['London', 'Middlesex'],
+                'London, Middlesex',
+            ],
+            'a place with no usable segment yields nothing' => [
+                'Foo',
+                [],
+                '',
+            ],
+        ];
+    }
+
+    /**
+     * Country names follow the interface language: the same record renders
+     * "Germany" for an English user and "Deutschland" for a German one. This is
+     * the only output path of the feature that depends on the locale.
+     *
+     * @return void
+     */
+    #[Test]
+    public function spelledOutCountriesFollowTheUserLocale(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthPlace')
+            ->willReturn($this->placeStub('Hamburg, DEU', ['Hamburg', 'DEU']));
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::CityCountry),
+            new IsoCountryMap('de_DE')
+        );
+
+        self::assertSame('Hamburg, Deutschland', $processor->getBirthPlaceShort());
+    }
+
+    /**
+     * The level count and direction belong to PlaceStyle::Levels; a city style
+     * must ignore them entirely.
+     *
+     * @return void
+     */
+    #[Test]
+    public function cityStylesIgnoreLevelSettings(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthPlace')->willReturn(
+            $this->placeStub('Hamburg, Wandsbek, Deutschland', ['Hamburg', 'Wandsbek', 'Deutschland'])
+        );
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::CityCountry, 3, true),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame('Hamburg, Deutschland', $processor->getBirthPlaceShort());
     }
 }

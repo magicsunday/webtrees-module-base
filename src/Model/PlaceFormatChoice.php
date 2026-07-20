@@ -49,6 +49,11 @@ enum PlaceFormatChoice: string
     case Levels3 = 'levels-3';
 
     /**
+     * Show the first and the last segment, both spelled out.
+     */
+    case CityCountry = 'city-country';
+
+    /**
      * Resolve this choice into a formatter instruction. The two arguments carry
      * the tree's SHOW_PEDIGREE_PLACES / SHOW_PEDIGREE_PLACES_SUFFIX preferences
      * and are read for self::Automatic only — every other case is already fully
@@ -67,11 +72,12 @@ enum PlaceFormatChoice: string
     public function toSpec(int $treeLevels, bool $treeSuffix): PlaceFormatSpec
     {
         return match ($this) {
-            self::Automatic => self::automatic($treeLevels, $treeSuffix),
-            self::Full      => new PlaceFormatSpec(PlaceStyle::Full),
-            self::Levels1   => new PlaceFormatSpec(PlaceStyle::Levels, 1),
-            self::Levels2   => new PlaceFormatSpec(PlaceStyle::Levels, 2),
-            self::Levels3   => new PlaceFormatSpec(PlaceStyle::Levels, 3),
+            self::Automatic   => self::automatic($treeLevels, $treeSuffix),
+            self::Full        => new PlaceFormatSpec(PlaceStyle::Full),
+            self::Levels1     => new PlaceFormatSpec(PlaceStyle::Levels, 1),
+            self::Levels2     => new PlaceFormatSpec(PlaceStyle::Levels, 2),
+            self::Levels3     => new PlaceFormatSpec(PlaceStyle::Levels, 3),
+            self::CityCountry => new PlaceFormatSpec(PlaceStyle::CityCountry),
         };
     }
 

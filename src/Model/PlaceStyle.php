@@ -32,4 +32,9 @@ enum PlaceStyle
      * Keep a fixed number of hierarchy levels, from either end.
      */
     case Levels;
+
+    /**
+     * Keep the first and last segment, both as plain text.
+     */
+    case CityCountry;
 }
