@@ -70,9 +70,8 @@ Quick reference — this library has no module-local container; PHP runs
 through the webtrees-docker buildbox:
 
 ```shell
-cd /path/to/webtrees-docker
-docker compose run --rm buildbox bash -c \
-    "cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer ci:test"
+cd /path/to/webtrees-docker && docker compose run --rm buildbox bash -c \
+    'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer ci:test'
 ```
 
 Substitute `composer install`, `composer update`, `composer ci:cgl` or

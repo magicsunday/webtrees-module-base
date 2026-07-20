@@ -7,8 +7,8 @@
 /phpstan.neon          export-ignore
 /phpunit.xml           export-ignore
 /rector.php            export-ignore
+.jscpd.json            export-ignore
 /tests/                export-ignore
 /Make/                 export-ignore
 /Makefile              export-ignore
 /AGENTS.md             export-ignore
-/.build/               export-ignore

@@ -5,4 +5,4 @@
 .PHONY: .logo
 
 .logo:
-	@cat Make/helper/logo.txt
+	@cat $(MAKEFILE_DIR)/Make/helper/logo.txt
