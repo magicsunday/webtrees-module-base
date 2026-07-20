@@ -32,6 +32,7 @@
     "require": {
         "php": "8.3 - 8.5",
         "ext-dom": "*",
+        "ext-intl": "*",
         "fisharebest/webtrees": "~2.2.0 || dev-main"
     },
     "require-dev": {
