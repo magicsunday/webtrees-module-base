@@ -15,6 +15,7 @@ use InvalidArgumentException;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
@@ -31,19 +32,70 @@ use PHPUnit\Framework\TestCase;
 class PlaceFormatSpecTest extends TestCase
 {
     /**
+     * A level count of zero for PlaceStyle::Full, and a level count of one for
+     * PlaceStyle::Levels, are both valid boundary values and must not throw.
+     *
+     * @param PlaceStyle $style
+     * @param int        $levels
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('validLevelCountProvider')]
+    public function aValidLevelCountIsAccepted(PlaceStyle $style, int $levels): void
+    {
+        $spec = new PlaceFormatSpec($style, $levels);
+
+        self::assertSame($levels, $spec->levels);
+    }
+
+    /**
+     * @return array<string, array{0: PlaceStyle, 1: int}>
+     */
+    public static function validLevelCountProvider(): array
+    {
+        return [
+            'zero is the only sensible value for Full' => [PlaceStyle::Full, 0],
+            'one is the minimum for Levels'            => [PlaceStyle::Levels, 1],
+        ];
+    }
+
+    /**
      * A negative level count would silently invert Place::firstParts(), which
      * drops the LAST segment instead of keeping the first N. The tree preference
      * feeding this value is an unvalidated database string, and "-1" is the old
      * automatic sentinel that really does sit in existing installations.
      *
+     * A zero level count for PlaceStyle::Levels is the removed pre-3.0 sentinel
+     * one layer down: PlaceStyle::Full now owns the "no truncation" meaning, so
+     * PlaceStyle::Levels combined with zero levels has no correct interpretation
+     * and must be rejected at construction rather than reinterpreted later.
+     *
+     * @param PlaceStyle $style
+     * @param int        $levels
+     * @param string     $expectedMessage
+     *
      * @return void
      */
     #[Test]
-    public function aNegativeLevelCountIsRejected(): void
+    #[DataProvider('invalidLevelCountProvider')]
+    public function anInvalidLevelCountIsRejected(PlaceStyle $style, int $levels, string $expectedMessage): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains('must not be negative');
+        $this->expectExceptionMessageIsOrContains($expectedMessage);
 
-        new PlaceFormatSpec(PlaceStyle::Levels, -1);
+        new PlaceFormatSpec($style, $levels);
+    }
+
+    /**
+     * @return array<string, array{0: PlaceStyle, 1: int, 2: string}>
+     */
+    public static function invalidLevelCountProvider(): array
+    {
+        return [
+            'negative is rejected for Full'   => [PlaceStyle::Full, -1, 'must not be negative'],
+            'negative is rejected for Levels' => [PlaceStyle::Levels, -1, 'must not be negative'],
+            'zero is rejected for Levels'     => [PlaceStyle::Levels, 0, 'PlaceStyle::Levels requires at least one level'],
+        ];
     }
 }

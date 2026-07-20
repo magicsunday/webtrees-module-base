@@ -19,8 +19,8 @@ use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 /**
  * Extracts birth, death, and marriage place names from an individual's life
  * events. Returns both full GEDCOM place strings (for tooltips) and shortened
- * versions truncated to a configurable number of hierarchy levels (for arc
- * text).
+ * versions formatted according to the configured {@see PlaceFormatSpec} (for
+ * arc text).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -77,8 +77,8 @@ class PlaceProcessor
     }
 
     /**
-     * Returns the birth place name truncated to the configured number of
-     * hierarchy levels.
+     * Returns the birth place name shortened according to the configured
+     * {@see PlaceFormatSpec}.
      *
      * @return string
      */
@@ -88,8 +88,8 @@ class PlaceProcessor
     }
 
     /**
-     * Returns the death place name truncated to the configured number of
-     * hierarchy levels.
+     * Returns the death place name shortened according to the configured
+     * {@see PlaceFormatSpec}.
      *
      * @return string
      */
@@ -112,8 +112,8 @@ class PlaceProcessor
 
     /**
      * Returns a shortened place name according to the configured format. The
-     * empty-name guard stays first: Place::firstParts() returns an empty
-     * collection for an empty place, and ->first() would then yield null.
+     * empty-name guard stays first: a place without a recorded name has no
+     * segments to format.
      *
      * @param Place $place
      *

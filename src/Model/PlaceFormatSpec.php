@@ -27,10 +27,11 @@ final readonly class PlaceFormatSpec
 {
     /**
      * @param PlaceStyle $style   How the place name is shortened
-     * @param int        $levels  Number of hierarchy levels to keep. Read for PlaceStyle::Levels only; must not be negative
+     * @param int        $levels  Number of hierarchy levels to keep. Read for PlaceStyle::Levels only; must not be
+     *                            negative, and must be at least 1 when style is PlaceStyle::Levels
      * @param bool       $fromEnd When true, the LAST levels are kept (country end) instead of the first. Read for PlaceStyle::Levels only
      *
-     * @throws InvalidArgumentException When the level count is negative.
+     * @throws InvalidArgumentException When the level count is negative, or zero for PlaceStyle::Levels.
      */
     public function __construct(
         public PlaceStyle $style,
@@ -39,6 +40,10 @@ final readonly class PlaceFormatSpec
     ) {
         if ($levels < 0) {
             throw new InvalidArgumentException('The place level count must not be negative.');
+        }
+
+        if (($style === PlaceStyle::Levels) && ($levels === 0)) {
+            throw new InvalidArgumentException('PlaceStyle::Levels requires at least one level to keep.');
         }
     }
 }

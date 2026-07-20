@@ -39,9 +39,9 @@ class PlaceProcessorTest extends TestCase
 {
     /**
      * Builds a Place stub whose firstParts()/lastParts() actually honour the count
-     * argument by slicing the real part list. This locks BOTH the placeParts value
-     * the processor passes to the seam and the first-vs-last selection — a stub that
-     * returned a fixed pre-truncated collection would green even if the processor
+     * argument by slicing the real part list. This locks BOTH the $this->format->levels
+     * value the processor passes to the seam and the first-vs-last selection — a stub
+     * that returned a fixed pre-truncated collection would green even if the processor
      * passed a wrong count.
      *
      * @param string        $gedcomName
