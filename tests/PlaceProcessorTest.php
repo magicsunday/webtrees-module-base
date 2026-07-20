@@ -26,6 +26,7 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_slice;
+use function explode;
 
 /**
  * Locks the {@see PlaceProcessor} contract: PlaceStyle::Full/Levels/CityCountry
@@ -42,7 +43,7 @@ use function array_slice;
 #[UsesClass(PlaceFormatSpec::class)]
 #[UsesClass(PlaceStyle::class)]
 #[UsesClass(IsoCountryMap::class)]
-class PlaceProcessorTest extends TestCase
+final class PlaceProcessorTest extends TestCase
 {
     /**
      * The resolver memoises into process-wide statics, and the first instance
@@ -407,7 +408,7 @@ class PlaceProcessorTest extends TestCase
         foreach ($familyPlaceNames as $familyPlaceName) {
             $family = self::createStub(Family::class);
             $family->method('getMarriagePlace')->willReturn(
-                $this->placeStub($familyPlaceName, ['Hamburg', 'Germany'])
+                $this->placeStub($familyPlaceName, explode(', ', $familyPlaceName))
             );
 
             $families[] = $family;

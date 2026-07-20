@@ -188,7 +188,9 @@ final class IsoCountryMap
     private static ?array $alpha2ToAlpha3Map = null;
 
     /**
-     * @param string $userLocale Optional extra locale folded into the reverse lookup. Empty string defaults to the active webtrees I18N tag — pass an explicit value only when overriding for tests or for a non-user-facing label resolution.
+     * @param string $userLocale Optional extra locale folded into the reverse lookup. Empty string defaults to the
+     *                           active webtrees I18N tag — pass an explicit value only when overriding for tests or
+     *                           for a non-user-facing label resolution.
      */
     public function __construct(
         private readonly string $userLocale = '',

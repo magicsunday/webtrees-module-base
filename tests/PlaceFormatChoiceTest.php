@@ -22,6 +22,7 @@ use PHPUnit\Framework\TestCase;
 
 use function array_column;
 use function array_map;
+use function sort;
 
 /**
  * Locks the {@see PlaceFormatChoice} contract: every choice resolves into the
@@ -148,15 +149,20 @@ final class PlaceFormatChoiceTest extends TestCase
      * value drops out of the persistence contract unnoticed. Comparing against
      * cases() keeps this self-maintaining; a bare count would pass whenever the
      * two happened to change together, and would miss a renamed value entirely.
+     * Order is NOT part of the contract (see {@see self::storedValuesRoundTripBackToTheirCase()}),
+     * so both sides are sorted before comparison.
      *
      * @return void
      */
     #[Test]
     public function theStoredValueProviderCoversEveryCase(): void
     {
-        self::assertSame(
-            array_map(static fn (PlaceFormatChoice $case): string => $case->value, PlaceFormatChoice::cases()),
-            array_column(self::storedValueProvider(), 0)
-        );
+        $caseValues     = array_map(static fn (PlaceFormatChoice $case): string => $case->value, PlaceFormatChoice::cases());
+        $providedValues = array_column(self::storedValueProvider(), 0);
+
+        sort($caseValues);
+        sort($providedValues);
+
+        self::assertSame($caseValues, $providedValues);
     }
 }

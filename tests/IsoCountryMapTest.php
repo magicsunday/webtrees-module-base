@@ -38,8 +38,17 @@ use function set_error_handler;
 #[CoversClass(IsoCountryMap::class)]
 final class IsoCountryMapTest extends TestCase
 {
+    /**
+     * The resolver memoises into process-wide statics, and the first instance
+     * burns its locale into the shared map; without a reset the outcome would
+     * depend on test order.
+     *
+     * @return void
+     */
     protected function setUp(): void
     {
+        parent::setUp();
+
         IsoCountryMap::clearCache();
     }
 
@@ -103,6 +112,8 @@ final class IsoCountryMapTest extends TestCase
     /**
      * Diacritics in the country name must round-trip without mojibake.
      * "Österreich" (German for Austria) → AT.
+     *
+     * @return void
      */
     #[Test]
     public function resolveHandlesDiacriticsInLocalisedCountryName(): void
@@ -114,6 +125,8 @@ final class IsoCountryMapTest extends TestCase
      * Manual aliases (USA, UK, Deutschland, …) must win over ICU's
      * display-region names so the resolver matches what GEDCOM authors actually
      * write rather than only ICU's canonical labels.
+     *
+     * @return void
      */
     #[Test]
     public function resolveHonoursManualAliasOverIcuLabel(): void
@@ -129,6 +142,8 @@ final class IsoCountryMapTest extends TestCase
      * `resolve()` returns null for free-text country names that don't match any
      * locale-aware label or alias — "Atlantis" is not a real country and stays
      * unresolved.
+     *
+     * @return void
      */
     #[Test]
     public function resolveReturnsNullForUnknownCountry(): void
@@ -161,6 +176,8 @@ final class IsoCountryMapTest extends TestCase
     /**
      * @param string $alpha3 Raw alpha-3 country segment
      * @param string $iso2   Expected ISO-3166-1 alpha-2 code
+     *
+     * @return void
      */
     #[Test]
     #[DataProvider('alpha3Codes')]
@@ -170,10 +187,11 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * The reporter's exact place string (issue #208) — a four-segment hierarchy
-     * whose country tail is the alpha-3 code "DEU" — must resolve to Germany via
-     * `resolveFromPlace()`, which peels the trailing comma segment before the
-     * lookup.
+     * A four-segment hierarchy whose country tail is the alpha-3 code "DEU"
+     * must resolve to Germany via `resolveFromPlace()`, which peels the
+     * trailing comma segment before the lookup.
+     *
+     * @return void
      */
     #[Test]
     public function resolveFromPlaceAcceptsAlpha3CountryTail(): void
@@ -199,10 +217,9 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * `resolve()`'s empty-normalised-name guard is reachable through
-     * `resolveFromPlace()` on realistic GEDCOM artefacts: a trailing comma
-     * leaves an empty country segment, and a punctuation-only segment
-     * `normalise()` trims down to the empty string.
+     * An empty or punctuation-only country segment yields null. Both shapes
+     * occur on realistic GEDCOM artefacts: a trailing comma leaves an empty
+     * segment, and a punctuation-only segment normalises to the empty string.
      *
      * @return iterable<string, array{0: string}>
      */
@@ -228,6 +245,8 @@ final class IsoCountryMapTest extends TestCase
      * A three-letter token that is not a valid ISO-3166-1 alpha-3 code must stay
      * unresolved — ICU echoes an unknown region subtag back unchanged, and the
      * resolver must treat that echo as "no match" rather than as a hit.
+     *
+     * @return void
      */
     #[Test]
     public function resolveReturnsNullForUnknownThreeLetterToken(): void
@@ -285,6 +304,8 @@ final class IsoCountryMapTest extends TestCase
 
     /**
      * @param string $code UK home-nation subdivision code
+     *
+     * @return void
      */
     #[Test]
     #[DataProvider('ukHomeNationCodes')]
@@ -294,20 +315,25 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * `label()` returns the active webtrees locale's name for a given ISO code.
-     * With no I18N bootstrap (the test runs outside the webtrees request
-     * lifecycle), the resolver falls back to en_US.
+     * `label()` returns the display name for the given ISO code in the
+     * resolver's own `$userLocale`, not a fixed language — an English resolver
+     * and a German resolver looking up the same code must disagree.
+     *
+     * @return void
      */
     #[Test]
-    public function labelReturnsEnglishNameWhenNoLocaleIsActive(): void
+    public function labelUsesTheResolversLocaleNotAFixedLanguage(): void
     {
-        self::assertSame('Germany', (new IsoCountryMap())->label('DE'));
+        self::assertSame('Germany', (new IsoCountryMap('en_US'))->label('DE'));
+        self::assertSame('Deutschland', (new IsoCountryMap('de_DE'))->label('DE'));
     }
 
     /**
      * `label()` echoes the ISO code unchanged when ICU has no display-region
      * name for the input. Protects the caller from ever seeing an empty label
      * string.
+     *
+     * @return void
      */
     #[Test]
     public function labelEchoesUnknownIsoCodeUnchanged(): void
