@@ -245,9 +245,13 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * ICU's table covers the CLDR user-assigned range, so "ZZ" resolves rather
-     * than failing — the null cases are codes ISO never assigned, plus inputs
-     * that are not alpha-2 at all.
+     * Only codes this class recognises resolve. ICU's own table is wider (303
+     * rows against our 249) and includes withdrawn codes and CLDR-internal
+     * pseudo-regions, so it is intersected with ISO2_CODES — otherwise "EU"
+     * would yield "QUU", which is not an ISO-3166-1 code at all.
+     *
+     * The positive expectations come from the live ICU table and can shift with
+     * an ICU upgrade; the null rows are contract and must hold regardless.
      *
      * @return array<string, array{0: string, 1: string|null}>
      */
@@ -262,7 +266,9 @@ final class IsoCountryMapTest extends TestCase
             'outlying territory'       => ['AX', 'ALA'],
             'lower case input'         => ['de', 'DEU'],
             'surrounding whitespace'   => [' de ', 'DEU'],
-            'CLDR user-assigned range' => ['ZZ', 'ZZZ'],
+            'CLDR user-assigned range' => ['ZZ', null],
+            'withdrawn code'           => ['SU', null],
+            'CLDR-internal region'     => ['EU', null],
             'unassigned code'          => ['AB', null],
             'digit in the code'        => ['D1', null],
             'three letters in'         => ['DEU', null],
@@ -293,6 +299,8 @@ final class IsoCountryMapTest extends TestCase
 
         self::assertSame('SENTINEL', $map->toAlpha3('DE'));
         self::assertSame('SENTINEL', (new IsoCountryMap('de_DE'))->toAlpha3('DE'));
+
+        IsoCountryMap::clearCache();
     }
 
     /**
@@ -313,6 +321,8 @@ final class IsoCountryMapTest extends TestCase
         $map = new IsoCountryMap('en_US');
         $map->resolve('DEU');
         $map->toAlpha3('DE');
+        $map->label('DE');
+        $map->resolveFromPlace('Berlin, DE');
 
         self::assertNotSame(
             $pristine,

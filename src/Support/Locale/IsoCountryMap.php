@@ -18,6 +18,7 @@ use Throwable;
 
 use function array_key_exists;
 use function array_unique;
+use function in_array;
 use function is_string;
 use function iterator_to_array;
 use function mb_strtolower;
@@ -403,7 +404,8 @@ final class IsoCountryMap
      *
      * ResourceBundle::create() emits an E_WARNING when the ICU data is
      * unavailable, which the webtrees error handler turns into an exception —
-     * hence the Throwable guard rather than a null check on the return value.
+     * hence the Throwable guard, in addition to a null check on the return
+     * value.
      *
      * @return array<string, string>
      */
@@ -429,9 +431,13 @@ final class IsoCountryMap
                     $alpha2  = $entries[0] ?? null;
                     $alpha3  = $entries[2] ?? null;
 
+                    // Intersect with the curated set: ICU also lists withdrawn
+                    // codes (SU, AN, YU) and CLDR-internal regions (EU -> QUU),
+                    // which this class does not treat as countries anywhere else.
                     if (
                         is_string($alpha2)
                         && is_string($alpha3)
+                        && in_array($alpha2, self::ISO2_CODES, true)
                     ) {
                         $map[$alpha2] = $alpha3;
                     }
