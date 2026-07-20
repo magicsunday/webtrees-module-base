@@ -7,10 +7,12 @@
 .PHONY: clean
 
 clean: .logo ## Remove .build/ (vendor + caches).
-	@test -d $(MAKEFILE_DIR)/.build \
-		&& rm -rf $(MAKEFILE_DIR)/.build \
-		&& echo -e "${FGREEN} ✔${FRESET} .build/ removed" \
-		|| echo -e "${FGREEN} ✔${FRESET} .build/ already absent"
+	@if [ -e $(MAKEFILE_DIR)/.build ]; then \
+		rm -rf $(MAKEFILE_DIR)/.build \
+			&& echo -e "${FGREEN} ✔${FRESET} .build/ removed"; \
+	else \
+		echo -e "${FGREEN} ✔${FRESET} .build/ already absent"; \
+	fi
 
 # =============================================================================
 # Removed targets
@@ -21,9 +23,11 @@ clean: .logo ## Remove .build/ (vendor + caches).
 # through a now-removed compose `php` service. Fail loudly instead of letting
 # an unmatched target silently report success.
 
+#### Removed targets
+
 define REMOVED_TARGET
 	@echo -e "${FRED} ✖${FRESET} Removed — this repo has no local PHP container."
-	@echo -e "   Run instead: cd <webtrees-docker root> && docker compose run --rm buildbox bash -c 'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && $(1)'"
+	@echo -e "   Run instead: cd /path/to/webtrees-docker && docker compose run --rm buildbox bash -c 'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && $(1)'"
 	@exit 1
 endef
 
@@ -48,5 +52,5 @@ ci-rector: .logo ## Removed — run composer ci:rector via the buildbox containe
 	$(call REMOVED_TARGET,composer ci:rector)
 
 ci-phpstan-baseline: .logo ## Removed — the phpstan baseline was retired, no replacement command.
-	@echo -e "${FRED} ✖${FRESET} Removed — the phpstan baseline was retired; no composer script regenerates it (see AGENTS.md \"Common pitfalls\")."
+	@echo -e "${FRED} ✖${FRESET} Removed — the phpstan baseline was retired; no composer script regenerates it (see AGENTS.md \"Code style\")."
 	@exit 1

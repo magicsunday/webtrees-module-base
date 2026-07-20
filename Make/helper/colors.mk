@@ -19,17 +19,17 @@ ifneq ($(TERM),)
 	FCYAN         := $(shell tput setaf 6)
 	FWHITE        := $(shell tput setaf 7)
 else
-	FBOLD         := ""
-	FDIM          := ""
-	FRESET        := ""
+	FBOLD         :=
+	FDIM          :=
+	FRESET        :=
 
-	FBLACK        := ""
-	FRED          := ""
-	FGREEN        := ""
-	FYELLOW       := ""
-	FBLUE         := ""
-	FPURPLE       := ""
-	FCYAN         := ""
-	FWHITE        := ""
-	FRESET        := ""
+	FBLACK        :=
+	FRED          :=
+	FGREEN        :=
+	FYELLOW       :=
+	FBLUE         :=
+	FPURPLE       :=
+	FCYAN         :=
+	FWHITE        :=
+	FRESET        :=
 endif

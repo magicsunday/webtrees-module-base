@@ -18,5 +18,10 @@ MAKEFILE_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 
 # A renamed/sparse/stray checkout that loses Make/ would otherwise silently
 # fall back to "No rule to make target" for every real target without
-# explaining why — make the missing includes loud instead.
-$(if $(wildcard $(MAKEFILE_DIR)/Make/dev.mk),,$(error Make/ includes are missing — incomplete checkout?))
+# explaining why — make the missing includes loud instead. dev.mk provides the
+# quality-gate targets, helper/ui.mk provides .logo (a dependency of nearly
+# every target), and helper/help.mk provides the default `help` goal — all
+# three are equally load-bearing.
+REQUIRED_MAKE_INCLUDES := Make/dev.mk Make/helper/ui.mk Make/helper/help.mk
+MISSING_MAKE_INCLUDES  := $(filter-out $(wildcard $(addprefix $(MAKEFILE_DIR)/,$(REQUIRED_MAKE_INCLUDES))),$(addprefix $(MAKEFILE_DIR)/,$(REQUIRED_MAKE_INCLUDES)))
+$(if $(MISSING_MAKE_INCLUDES),$(error Make/ includes are missing — incomplete checkout?))
