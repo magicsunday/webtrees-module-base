@@ -55,6 +55,21 @@ class PlaceProcessorTest extends TestCase
     }
 
     /**
+     * Symmetric to setUp(): the last test in this class would otherwise leave a
+     * locale-primed map behind in the process-wide static, leaking into
+     * whichever test class runs next — {@see IsoCountryMapTest::tearDown()}
+     * guards the same statics for the same reason.
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        IsoCountryMap::clearCache();
+
+        parent::tearDown();
+    }
+
+    /**
      * Builds a Place stub whose firstParts()/lastParts() actually honour the count
      * argument by slicing the real part list. This locks BOTH the $this->format->levels
      * value the processor passes to the seam and the first-vs-last selection — a stub
@@ -360,6 +375,14 @@ class PlaceProcessorTest extends TestCase
      * returns an empty string when there is none. Both outcomes went through
      * the constructor rewrite untested.
      *
+     * The spec deliberately uses PlaceStyle::Levels, 1 rather than
+     * PlaceStyle::Full: under Full, fullPlaceName() and shortPlaceName() return
+     * the same string by construction, so a regression that routed
+     * getMarriagePlace() through the shortening path would stay green. With
+     * Levels(1) the two paths diverge — the full accessor must still return the
+     * whole recorded name ('Hamburg, Germany') while the shortened path would
+     * truncate to the first segment ('Hamburg').
+     *
      * @param string|null $familyPlaceName Recorded marriage place of the stubbed spouse family, or null for no family
      * @param string      $expected        Expected return value of getMarriagePlace()
      *
@@ -375,14 +398,16 @@ class PlaceProcessorTest extends TestCase
             $individual->method('spouseFamilies')->willReturn(new Collection());
         } else {
             $family = self::createStub(Family::class);
-            $family->method('getMarriagePlace')->willReturn($this->placeStub($familyPlaceName, []));
+            $family->method('getMarriagePlace')->willReturn(
+                $this->placeStub($familyPlaceName, ['Hamburg', 'Germany'])
+            );
 
             $individual->method('spouseFamilies')->willReturn(new Collection([$family]));
         }
 
         $processor = new PlaceProcessor(
             $individual,
-            new PlaceFormatSpec(PlaceStyle::Full),
+            new PlaceFormatSpec(PlaceStyle::Levels, 1),
             new IsoCountryMap('en_US')
         );
 

@@ -35,7 +35,9 @@ use function trim;
 
 /**
  * Maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 alpha-2
- * codes (e.g. "Germany" → "DE", "Deutschland" → "DE").
+ * codes (e.g. "Germany" → "DE", "Deutschland" → "DE"), and separately converts
+ * between alpha-2 and alpha-3 codes via ICU's supplemental `codeMappings`
+ * table (e.g. "DE" → "DEU").
  *
  * Built on PHP's intl extension (Locale::getDisplayRegion) which provides the
  * localised country-name dictionary that ships with ICU. The resolver tries a
@@ -164,7 +166,7 @@ final class IsoCountryMap
     /**
      * Memoised results of the alpha-3 ICU bridge, keyed by normalised token →
      * resolved ISO-2 code (or `null` for a token the bridge cannot resolve).
-     * {@see resolveAlpha3()} calls into ICU, so without this a whole-tree scan
+     * {@see self::resolveAlpha3()} calls into ICU, so without this a whole-tree scan
      * of individuals recorded in one country (e.g. every PLAC ending in "DEU")
      * would repeat the same `getDisplayRegion()` lookup for every record. The
      * bridge fixes the en_US locale, so the result is locale-independent and the
@@ -215,6 +217,35 @@ final class IsoCountryMap
     }
 
     /**
+     * Whether $value has the shape of an ISO-3166-1 alpha-2 country code: exactly
+     * two letters, case-insensitive. Purely a shape test — it does not check
+     * whether the code is actually recognised, callers combine this with a
+     * lookup for that. Shared with {@see \MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor}
+     * so the case tolerance cannot drift between the two consumers.
+     *
+     * @param string $value Candidate token
+     */
+    public static function isAlpha2Shape(string $value): bool
+    {
+        return preg_match('/^[A-Za-z]{2}$/', $value) === 1;
+    }
+
+    /**
+     * Whether $value has the shape of an ISO-3166-1 alpha-3 country code:
+     * exactly three letters, case-insensitive. Purely a shape test — it does
+     * not check whether the code is actually recognised, callers combine this
+     * with a lookup for that. Shared with
+     * {@see \MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor} so the
+     * case tolerance cannot drift between the two consumers.
+     *
+     * @param string $value Candidate token
+     */
+    public static function isAlpha3Shape(string $value): bool
+    {
+        return preg_match('/^[A-Za-z]{3}$/', $value) === 1;
+    }
+
+    /**
      * Resolve a free-text country name to its ISO-3166-1 alpha-2 code. Returns
      * null when the name doesn't match any known country for any of the
      * pre-seeded locales.
@@ -238,11 +269,15 @@ final class IsoCountryMap
      * Resolve an ISO-3166-1 alpha-3 country code ("DEU", "FRA", "GBR") to its
      * alpha-2 sibling. ICU canonicalises an alpha-3 region subtag onto the same
      * display name as the alpha-2 code (`-DEU` and `-DE` both yield "Germany"),
-     * so the alpha-3 code is bridged through the existing name → ISO-2 map rather
-     * than carrying a separate alpha-3 table that could drift from
-     * {@see self::ISO2_CODES}. Returns null for any token ICU does not recognise
-     * as a region — it echoes an unknown subtag back unchanged, which is treated
-     * as "no match". The per-token result (hit or null) is memoised in
+     * so the alpha-3 code is bridged through the existing name → ISO-2 map that
+     * backs {@see self::resolve()}, rather than through
+     * {@see self::alpha2ToAlpha3Map()} — that table runs the opposite direction
+     * (alpha-2 → alpha-3, for {@see self::toAlpha3()}), and reusing the
+     * display-name lookup this method already shares with the primary resolver
+     * is shorter than inverting a second table. Returns null for any token ICU
+     * does not recognise as a region — it echoes an unknown subtag back
+     * unchanged, which is treated as "no match". The per-token result (hit or
+     * null) is memoised in
      * {@see self::$alpha3Cache} so a whole-tree scan resolves each distinct code
      * through ICU only once.
      *
@@ -257,14 +292,18 @@ final class IsoCountryMap
 
         $resolved = null;
 
-        if (preg_match('/^[a-z]{3}$/', $normalised) === 1) {
+        if (self::isAlpha3Shape($normalised)) {
             // Bridge through a fixed locale so the canonical display name
             // matches the en_US key the reverse map is always seeded with
             // first. ICU echoes an unknown subtag back unchanged (uppercased),
             // so an echo equal to the token means "no region".
             $name = (string) Locale::getDisplayRegion('-' . strtoupper($normalised), 'en_US');
 
-            if (($name !== '') && (strtolower($name) !== $normalised)) {
+            // mb_strtolower(), not strtolower(): the display name can contain
+            // non-ASCII letters (e.g. the echoed-back subtag is always ASCII,
+            // but a resolved region name like "Åland Islands" is not), and
+            // byte-based lowercasing would corrupt those before the comparison.
+            if (($name !== '') && (mb_strtolower($name, 'UTF-8') !== $normalised)) {
                 $resolved = $map[$this->normalise($name)] ?? null;
             }
         }
@@ -315,7 +354,7 @@ final class IsoCountryMap
     {
         $key = strtoupper(trim($iso2));
 
-        if (preg_match('/^[A-Z]{2}$/', $key) !== 1) {
+        if (!self::isAlpha2Shape($key)) {
             return null;
         }
 
@@ -323,8 +362,9 @@ final class IsoCountryMap
     }
 
     /**
-     * Test-only: clear the static reverse-lookup cache so each test starts from
-     * a clean slate. Not part of the public API.
+     * Test-only: clear the three static caches (the reverse name lookup, the
+     * alpha-3 bridge memo, and the alpha-2 → alpha-3 table) so each test starts
+     * from a clean slate. Not part of the public API.
      *
      * @internal
      */
@@ -405,13 +445,16 @@ final class IsoCountryMap
      * scan, so the whole table is materialised on first use.
      *
      * ResourceBundle::create() emits an E_WARNING when the ICU data is
-     * unavailable. Inside a webtrees request the framework's error handler
-     * turns that into an exception the Throwable guard below catches, but
-     * under the PHPUnit CLI runner (`failOnWarning="true"`) and on the plain
-     * CLI no such handler is installed, so the raw warning would otherwise
-     * survive and fail the caller instead of degrading gracefully. A scoped
-     * error handler that swallows every warning during the ICU access closes
-     * that gap regardless of the surrounding runtime.
+     * unavailable. The scoped `set_error_handler()` below replaces whatever
+     * handler the caller has installed — the webtrees request handler, PHPUnit's
+     * `failOnWarning="true"` handler, or none at all on the plain CLI — for the
+     * duration of the ICU access, and simply swallows the warning; it is
+     * restored in the `finally` block regardless of outcome, so the caller's
+     * handler is back in place before this method returns. The real safety net
+     * is the `instanceof ResourceBundle` checks below, which degrade the
+     * array-building loop to an empty map instead of dereferencing a null/false
+     * ICU handle; the `catch (Throwable)` covers genuine exceptions the ICU
+     * calls can still throw.
      *
      * @return array<string, string>
      */

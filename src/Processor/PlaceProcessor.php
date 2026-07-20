@@ -18,7 +18,6 @@ use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 
 use function is_string;
-use function preg_match;
 
 /**
  * Extracts birth, death, and marriage place names from an individual's life
@@ -35,7 +34,7 @@ class PlaceProcessor
     /**
      * @param Individual      $individual The individual to process
      * @param PlaceFormatSpec $format     Fully resolved formatting instruction
-     * @param IsoCountryMap   $countryMap Resolver for the country segment of the city styles
+     * @param IsoCountryMap   $countryMap Resolver used by the styles that resolve a country segment
      */
     public function __construct(
         private readonly Individual $individual,
@@ -183,8 +182,8 @@ class PlaceProcessor
     /**
      * The outer segments of a place: the first one, plus the last one when the
      * place actually has a second segment. A single-segment place yields a null
-     * "last", which each city style handles its own way. Returns null when the
-     * place has no usable segment at all.
+     * "last", which each style that resolves a country segment handles its own
+     * way. Returns null when the place has no usable segment at all.
      *
      * @param Place $place
      *
@@ -229,7 +228,7 @@ class PlaceProcessor
      */
     private function spellOutCode(string $segment): string
     {
-        if (preg_match('/^[A-Za-z]{3}$/', $segment) !== 1) {
+        if (!IsoCountryMap::isAlpha3Shape($segment)) {
             return $segment;
         }
 

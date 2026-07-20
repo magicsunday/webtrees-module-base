@@ -19,11 +19,17 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionProperty;
 
+use function restore_error_handler;
+use function set_error_handler;
+
 /**
- * Locks the apostrophe-and-diacritic normalisation contract on
- * `IsoCountryMap::resolve()`. ICU's display-region output uses the curly U+2019
- * apostrophe in names like "Côte d'Ivoire", but GEDCOM authors can stamp any of
- * six common single-quote variants. All six must fold to the same ISO-2 code.
+ * Locks the {@see IsoCountryMap} contract: the apostrophe-and-diacritic
+ * normalisation `resolve()` applies (ICU's display-region output uses the
+ * curly U+2019 apostrophe in names like "Côte d'Ivoire", but GEDCOM authors can
+ * stamp any of six common single-quote variants, and all six must fold to the
+ * same ISO-2 code), the alpha-3 ↔ alpha-2 bridge (`resolve()` accepting an
+ * alpha-3 token, `toAlpha3()` converting the other direction), both memoisation
+ * caches, `label()`, and `clearCache()` resetting every one of them.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -55,14 +61,14 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
-     * Every variant of "Côte d?Ivoire" with a different single- quote /
+     * Every variant of "Côte d'Ivoire" with a different single- quote /
      * modifier-letter character at the apostrophe position must resolve to CI.
      * The six characters covered are:
      *
      *   U+0027 — APOSTROPHE (ASCII)
      *   U+2019 — RIGHT SINGLE QUOTATION MARK (ICU canonical)
      *   U+2018 — LEFT SINGLE QUOTATION MARK
-     *   U+02BB — MODIFIER LETTER TURNED COMMA (Hawai?i)
+     *   U+02BB — MODIFIER LETTER TURNED COMMA (Hawai'i)
      *   U+02BC — MODIFIER LETTER APOSTROPHE
      *   U+201B — SINGLE HIGH-REVERSED-9 QUOTATION MARK
      *
@@ -112,8 +118,8 @@ final class IsoCountryMapTest extends TestCase
 
     /**
      * `resolve()` returns null for free-text country names that don't match any
-     * locale-aware label or alias. The fixture's "Atlantis" stays unresolved
-     * and the caller drops the event from the country aggregation.
+     * locale-aware label or alias — "Atlantis" is not a real country and stays
+     * unresolved.
      */
     #[Test]
     public function resolveReturnsNullForUnknownCountry(): void
@@ -126,7 +132,8 @@ final class IsoCountryMapTest extends TestCase
      * exporters stamp into the country segment must resolve to their alpha-2
      * sibling. ICU canonicalises the alpha-3 region subtag onto the same display
      * name as the alpha-2 code, so the resolver bridges through the existing
-     * name lookup rather than carrying a separate 249-entry alpha-3 table.
+     * name → ISO-2 map that backs `resolve()`, instead of reversing the
+     * separate alpha-2 → alpha-3 table `toAlpha3()` uses.
      *
      * @return iterable<string, array{0: string, 1: string}>
      */
@@ -330,6 +337,30 @@ final class IsoCountryMapTest extends TestCase
 
         self::assertSame('SENTINEL', $map->toAlpha3('DE'));
         self::assertSame('SENTINEL', (new IsoCountryMap('de_DE'))->toAlpha3('DE'));
+    }
+
+    /**
+     * `alpha2ToAlpha3Map()` installs a scoped error handler for the duration of
+     * the ICU probe and restores the caller's handler in a `finally` block. If
+     * that restoration were ever dropped, every later test in this shared
+     * process would silently lose whatever handler was active before this call
+     * — e.g. PHPUnit's `failOnWarning` handler. A sentinel closure installed
+     * before the call, and read back via `set_error_handler(null)` afterwards,
+     * proves the caller's handler — not the probe's own — is what remains.
+     *
+     * @return void
+     */
+    #[Test]
+    public function toAlpha3RestoresTheCallersErrorHandler(): void
+    {
+        $sentinel = static fn (): bool => false;
+        set_error_handler($sentinel);
+
+        (new IsoCountryMap('en_US'))->toAlpha3('DE');
+
+        self::assertSame($sentinel, set_error_handler(null), 'the ICU probe must restore the caller handler');
+        restore_error_handler();
+        restore_error_handler();
     }
 
     /**

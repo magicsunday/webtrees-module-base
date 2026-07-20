@@ -37,8 +37,8 @@ class PlaceFormatSpecTest extends TestCase
      * A level count of zero for PlaceStyle::Full, and a level count of one for
      * PlaceStyle::Levels, are both valid boundary values and must not throw.
      * PlaceStyle::CityCountry ignores the level count entirely, so zero is
-     * valid there too — {@see PlaceFormatChoice::CityCountry::toSpec()} relies
-     * on exactly that to construct the spec without a level argument.
+     * valid there too — {@see \MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatChoice::toSpec()}
+     * relies on exactly that to construct the spec without a level argument.
      *
      * @param PlaceStyle $style
      * @param int        $levels
