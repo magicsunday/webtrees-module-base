@@ -257,7 +257,7 @@ class PlaceProcessorTest extends TestCase
                 'Berlin, Deutschland',
             ],
             'a single segment is left whole' => [
-                'Berlin',
+                'Berlin (Stadt)',
                 ['Berlin'],
                 'Berlin',
             ],
@@ -272,27 +272,27 @@ class PlaceProcessorTest extends TestCase
                 'London, United Kingdom',
             ],
             'a two-letter segment is never expanded' => [
-                'Dover, DE',
+                'Dover,DE',
                 ['Dover', 'DE'],
                 'Dover, DE',
             ],
             'a German state abbreviation survives' => [
-                'Ulm, BW',
+                'Ulm,BW',
                 ['Ulm', 'BW'],
                 'Ulm, BW',
             ],
             'an unresolvable three-letter token stays put' => [
-                'Ulm, XYZ',
+                'Ulm,XYZ',
                 ['Ulm', 'XYZ'],
                 'Ulm, XYZ',
             ],
             'a plain country name is not translated' => [
-                'Hamburg, Deutschland',
+                'Hamburg,Deutschland',
                 ['Hamburg', 'Deutschland'],
                 'Hamburg, Deutschland',
             ],
             'a longer unresolvable segment stays put' => [
-                'London, Middlesex',
+                'London,Middlesex',
                 ['London', 'Middlesex'],
                 'London, Middlesex',
             ],

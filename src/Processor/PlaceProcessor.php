@@ -159,8 +159,7 @@ class PlaceProcessor
     /**
      * Keep the first and the last segment. A country recorded as a three-letter
      * code is spelled out in the user's language; a two-letter segment is left
-     * alone, because state and province abbreviations share that shape
-     * ("Dover, DE" is Delaware, not Germany).
+     * alone, {@see self::spellOutCode()} explains why.
      *
      * @param Place $place
      *
@@ -213,9 +212,16 @@ class PlaceProcessor
 
     /**
      * Expand a three-letter country code into its localised name. Any other
-     * segment is returned unchanged. Note that the resolver also accepts the
-     * Chapman codes webtrees treats as countries, so "ENG" resolves to the
-     * United Kingdom.
+     * segment is returned unchanged. The restriction to exactly three letters
+     * is deliberate: two-letter segments are ambiguous with US and German
+     * state abbreviations, so "Dover, DE" is Delaware and "Ulm, BW" is
+     * Baden-Württemberg, not country codes. Note that the resolver also
+     * accepts the Chapman codes webtrees treats as countries, so "ENG"
+     * resolves to the United Kingdom. The Chapman code space also contains
+     * three-letter county codes that collide with an ISO 3166-1 alpha-3
+     * country code (e.g. "KEN" for Kent vs. Kenya, "SOM" for Somerset vs.
+     * Somalia); this is not guarded against, because a county practically
+     * never occupies the final segment where the country belongs.
      *
      * @param string $segment
      *
