@@ -16,6 +16,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+use ReflectionProperty;
 
 /**
  * Locks the apostrophe-and-diacritic normalisation contract on
@@ -224,5 +226,106 @@ final class IsoCountryMapTest extends TestCase
     public function labelEchoesUnknownIsoCodeUnchanged(): void
     {
         self::assertSame('XX', (new IsoCountryMap())->label('XX'));
+    }
+
+    /**
+     * ISO-3166-1 alpha-2 codes convert to their alpha-3 siblings through ICU's
+     * supplemental code mappings.
+     *
+     * @param string      $iso2
+     * @param string|null $expected
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('alpha3Provider')]
+    public function alphaTwoCodesConvertToAlphaThree(string $iso2, ?string $expected): void
+    {
+        self::assertSame($expected, (new IsoCountryMap('en_US'))->toAlpha3($iso2));
+    }
+
+    /**
+     * ICU's table covers the CLDR user-assigned range, so "ZZ" resolves rather
+     * than failing — the null cases are codes ISO never assigned, plus inputs
+     * that are not alpha-2 at all.
+     *
+     * @return array<string, array{0: string, 1: string|null}>
+     */
+    public static function alpha3Provider(): array
+    {
+        return [
+            'Germany'                  => ['DE', 'DEU'],
+            'France'                   => ['FR', 'FRA'],
+            'United Kingdom'           => ['GB', 'GBR'],
+            'United States'            => ['US', 'USA'],
+            'non-ASCII country name'   => ['CI', 'CIV'],
+            'outlying territory'       => ['AX', 'ALA'],
+            'lower case input'         => ['de', 'DEU'],
+            'surrounding whitespace'   => [' de ', 'DEU'],
+            'CLDR user-assigned range' => ['ZZ', 'ZZZ'],
+            'unassigned code'          => ['AB', null],
+            'digit in the code'        => ['D1', null],
+            'three letters in'         => ['DEU', null],
+            'empty input'              => ['', null],
+        ];
+    }
+
+    /**
+     * The second lookup reads the materialised table instead of going back to
+     * ICU. Asserting the same value twice would pass without any memoisation at
+     * all, so the primed table is replaced with a sentinel: a re-read of ICU
+     * would still yield DEU.
+     *
+     * This also pins the docblock's claim that the table is shared across
+     * instances.
+     *
+     * @return void
+     */
+    #[Test]
+    public function alphaThreeLookupsReadTheMemoisedTable(): void
+    {
+        $map = new IsoCountryMap('en_US');
+
+        self::assertSame('DEU', $map->toAlpha3('DE'));
+
+        $property = new ReflectionProperty(IsoCountryMap::class, 'alpha2ToAlpha3Map');
+        $property->setValue(null, ['DE' => 'SENTINEL']);
+
+        self::assertSame('SENTINEL', $map->toAlpha3('DE'));
+        self::assertSame('SENTINEL', (new IsoCountryMap('de_DE'))->toAlpha3('DE'));
+    }
+
+    /**
+     * clearCache() must leave no primed static state behind — including caches
+     * added after this test was written. Comparing the whole static-property set
+     * against a pristine snapshot keeps the guarantee general instead of naming
+     * one field.
+     *
+     * @return void
+     */
+    #[Test]
+    public function clearCacheLeavesNoPrimedStaticState(): void
+    {
+        IsoCountryMap::clearCache();
+
+        $pristine = (new ReflectionClass(IsoCountryMap::class))->getStaticProperties();
+
+        $map = new IsoCountryMap('en_US');
+        $map->resolve('DEU');
+        $map->toAlpha3('DE');
+
+        self::assertNotSame(
+            $pristine,
+            (new ReflectionClass(IsoCountryMap::class))->getStaticProperties(),
+            'the fixture must actually prime the caches, or this test is vacuous'
+        );
+
+        IsoCountryMap::clearCache();
+
+        self::assertSame(
+            $pristine,
+            (new ReflectionClass(IsoCountryMap::class))->getStaticProperties(),
+            'clearCache() must reset every static cache, including ones added later'
+        );
     }
 }

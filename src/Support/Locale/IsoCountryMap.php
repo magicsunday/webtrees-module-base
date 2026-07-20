@@ -13,10 +13,13 @@ namespace MagicSunday\Webtrees\ModuleBase\Support\Locale;
 
 use Fisharebest\Webtrees\I18N;
 use Locale;
+use ResourceBundle;
 use Throwable;
 
 use function array_key_exists;
 use function array_unique;
+use function is_string;
+use function iterator_to_array;
 use function mb_strtolower;
 use function preg_match;
 use function preg_replace;
@@ -169,6 +172,17 @@ final class IsoCountryMap
     private static array $alpha3Cache = [];
 
     /**
+     * ICU's alpha-2 → alpha-3 table, built lazily on first use. Null until the
+     * ICU bundle has been read; an empty array means the ICU data was
+     * unavailable and every lookup degrades to "unknown" from then on. The table
+     * is locale-independent, so it is safely shared across instances like
+     * {@see self::$reverseLookup}.
+     *
+     * @var array<string, string>|null
+     */
+    private static ?array $alpha2ToAlpha3Map = null;
+
+    /**
      * @param string $userLocale Optional extra locale folded into the reverse lookup. Empty string defaults to the active webtrees I18N tag — pass an explicit value only when overriding for tests or for a non-user-facing label resolution.
      */
     public function __construct(
@@ -288,6 +302,24 @@ final class IsoCountryMap
     }
 
     /**
+     * Convert an ISO-3166-1 alpha-2 code to its alpha-3 sibling ("DE" → "DEU").
+     * Returns null for anything that is not an alpha-2 code, and for codes ICU
+     * does not list.
+     *
+     * @param string $iso2 Alpha-2 country code (case-insensitive, surrounding whitespace tolerated).
+     */
+    public function toAlpha3(string $iso2): ?string
+    {
+        $key = strtoupper(trim($iso2));
+
+        if (preg_match('/^[A-Z]{2}$/', $key) !== 1) {
+            return null;
+        }
+
+        return $this->alpha2ToAlpha3Map()[$key] ?? null;
+    }
+
+    /**
      * Test-only: clear the static reverse-lookup cache so each test starts from
      * a clean slate. Not part of the public API.
      *
@@ -295,8 +327,9 @@ final class IsoCountryMap
      */
     public static function clearCache(): void
     {
-        self::$reverseLookup = null;
-        self::$alpha3Cache   = [];
+        self::$reverseLookup     = null;
+        self::$alpha3Cache       = [];
+        self::$alpha2ToAlpha3Map = null;
     }
 
     /**
@@ -360,6 +393,55 @@ final class IsoCountryMap
         }
 
         return $map;
+    }
+
+    /**
+     * ICU's supplemental "codeMappings" table as an alpha-2 → alpha-3 map, so no
+     * hand-maintained code table is needed. Each row is (alpha-2, numeric,
+     * alpha-3); reading all rows once costs about as much as a single failed
+     * scan, so the whole table is materialised on first use.
+     *
+     * ResourceBundle::create() emits an E_WARNING when the ICU data is
+     * unavailable, which the webtrees error handler turns into an exception —
+     * hence the Throwable guard rather than a null check on the return value.
+     *
+     * @return array<string, string>
+     */
+    private function alpha2ToAlpha3Map(): array
+    {
+        if (self::$alpha2ToAlpha3Map !== null) {
+            return self::$alpha2ToAlpha3Map;
+        }
+
+        $map = [];
+
+        try {
+            $bundle   = ResourceBundle::create('supplementalData', 'ICUDATA', false);
+            $mappings = $bundle instanceof ResourceBundle ? $bundle->get('codeMappings') : null;
+
+            if ($mappings instanceof ResourceBundle) {
+                foreach ($mappings as $row) {
+                    if (!$row instanceof ResourceBundle) {
+                        continue;
+                    }
+
+                    $entries = iterator_to_array($row);
+                    $alpha2  = $entries[0] ?? null;
+                    $alpha3  = $entries[2] ?? null;
+
+                    if (
+                        is_string($alpha2)
+                        && is_string($alpha3)
+                    ) {
+                        $map[$alpha2] = $alpha3;
+                    }
+                }
+            }
+        } catch (Throwable) {
+            $map = [];
+        }
+
+        return self::$alpha2ToAlpha3Map = $map;
     }
 
     /**
