@@ -24,4 +24,4 @@ MAKEFILE_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 # three are equally load-bearing.
 REQUIRED_MAKE_INCLUDES := Make/dev.mk Make/helper/ui.mk Make/helper/help.mk
 MISSING_MAKE_INCLUDES  := $(filter-out $(wildcard $(addprefix $(MAKEFILE_DIR)/,$(REQUIRED_MAKE_INCLUDES))),$(addprefix $(MAKEFILE_DIR)/,$(REQUIRED_MAKE_INCLUDES)))
-$(if $(MISSING_MAKE_INCLUDES),$(error Make/ includes are missing — incomplete checkout?))
+$(if $(MISSING_MAKE_INCLUDES),$(error Make/ includes are missing — incomplete checkout? Missing: $(MISSING_MAKE_INCLUDES)))

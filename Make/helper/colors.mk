@@ -4,8 +4,11 @@
 # Variables
 # =============================================================================
 
-# Define standard colors
-ifneq ($(TERM),)
+# Define standard colors. Gated on `tput colors` actually succeeding, not
+# just TERM being non-empty — an unknown terminal (e.g. TERM=bogus, common in
+# minimal containers without a terminfo database) makes every other `tput`
+# call below print "tput: unknown terminal" to stderr.
+ifeq ($(shell tput colors >/dev/null 2>&1 && echo yes),yes)
 	FBOLD         := $(shell tput bold)
 	FDIM          := $(shell tput dim)
 	FRESET        := $(shell tput sgr0)

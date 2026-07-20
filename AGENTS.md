@@ -22,7 +22,7 @@ directly via setup-php.
 - Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`.
 - Single PHPUnit test: `composer ci:test:php:unit -- --filter TestClassName`.
 - Auto-fix: `composer ci:cgl` (PHP-CS-Fixer), `composer ci:rector` (Rector).
-- Make shortcuts: `make clean` (remove `.build/`). All other quality-gate commands run through `composer` directly (see above).
+- Make shortcuts: `make clean` (remove `.build/` and `node_modules/`, plus the npm `package.json`/`package-lock.json` artifacts). All other quality-gate commands run through `composer` directly (see above).
 
 ## Architecture
 
@@ -99,4 +99,4 @@ Per project policy, `composer.json`, `phpstan.neon`, `rector.php`, `phpunit.xml`
 - `composer ci:test` runs phpstan with `level: max`. Never use `@phpstan-ignore` annotations — fix the code, or add a scoped `ignoreErrors` entry in `phpstan.neon` keyed by identifier and path with a rationale comment (see the `trait.unused` entries there for the pattern).
 - `assetUrl()` lives on `ModuleCustomTrait`, not on any interface. Anywhere this library needs it, the parameter type uses an intersection with `ModuleAssetUrlInterface` (see `Contract/`). Never use `method_exists` to work around missing-method type errors.
 - PHPUnit 12 prefers `self::createStub()` over `$this->createMock()` for tests that only need a target object for reflection-based access (no mock-call expectations).
-- Cache directories live under `.build/cache/` (phpstan, rector, phpunit, php-cs-fixer, phplint). Wiping `.build/` is the canonical "force regeneration" reset.
+- Cache directories live under `.build/cache/` (phpstan, rector, phpunit, php-cs-fixer, phplint); jscpd resolves out of `node_modules/`, installed by the composer `post-install-cmd`/`post-update-cmd` hooks. `make clean` is the canonical "force regeneration" reset — it removes both `.build/` and `node_modules/` (plus the npm `package.json`/`package-lock.json` artifacts).
