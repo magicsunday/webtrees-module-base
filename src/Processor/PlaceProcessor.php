@@ -13,6 +13,8 @@ namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
+use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
+use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 
 /**
  * Extracts birth, death, and marriage place names from an individual's life
@@ -27,17 +29,12 @@ use Fisharebest\Webtrees\Place;
 class PlaceProcessor
 {
     /**
-     * @param Individual $individual  The individual to process
-     * @param int        $placeParts  Number of place hierarchy parts to show (0 = full)
-     * @param bool       $placeSuffix When true, keep the LAST $placeParts parts (country end,
-     *                                Place::lastParts()); when false, keep the first (locality end,
-     *                                Place::firstParts()). Mirrors the SHOW_PEDIGREE_PLACES_SUFFIX
-     *                                tree preference; defaults to false for backwards compatibility
+     * @param Individual      $individual The individual to process
+     * @param PlaceFormatSpec $format     Fully resolved formatting instruction
      */
     public function __construct(
         private readonly Individual $individual,
-        private readonly int $placeParts,
-        private readonly bool $placeSuffix = false,
+        private readonly PlaceFormatSpec $format,
     ) {
     }
 
@@ -114,10 +111,9 @@ class PlaceProcessor
     }
 
     /**
-     * Returns a shortened place name according to the configured number of
-     * hierarchy parts. With $placeSuffix the last parts (country end) are kept,
-     * otherwise the first parts (locality end). This method only uses the
-     * placeParts/placeSuffix scalars.
+     * Returns a shortened place name according to the configured format. The
+     * empty-name guard stays first: Place::firstParts() returns an empty
+     * collection for an empty place, and ->first() would then yield null.
      *
      * @param Place $place
      *
@@ -131,13 +127,24 @@ class PlaceProcessor
             return '';
         }
 
-        if ($this->placeParts === 0) {
-            return $placeName;
-        }
+        return match ($this->format->style) {
+            PlaceStyle::Full   => $placeName,
+            PlaceStyle::Levels => $this->levelParts($place),
+        };
+    }
 
-        $parts = $this->placeSuffix
-            ? $place->lastParts($this->placeParts)
-            : $place->firstParts($this->placeParts);
+    /**
+     * Keep a fixed number of hierarchy levels, from either end.
+     *
+     * @param Place $place
+     *
+     * @return string
+     */
+    private function levelParts(Place $place): string
+    {
+        $parts = $this->format->fromEnd
+            ? $place->lastParts($this->format->levels)
+            : $place->firstParts($this->format->levels);
 
         return $parts->implode(', ');
     }
