@@ -84,6 +84,15 @@ final class IsoCountryMapTest extends TestCase
         yield 'high-9 U+201B' => ["Côte d\u{201B}Ivoire"];
     }
 
+    /**
+     * Every apostrophe/modifier-letter variant listed by {@see self::apostropheVariants()}
+     * must fold to the same ISO-2 code, regardless of which single-quote
+     * character the source data used at the apostrophe position.
+     *
+     * @param string $name Country name spelled with one apostrophe variant
+     *
+     * @return void
+     */
     #[Test]
     #[DataProvider('apostropheVariants')]
     public function resolveFoldsEveryApostropheVariantToTheSameIso(string $name): void
@@ -173,6 +182,46 @@ final class IsoCountryMapTest extends TestCase
             'DE',
             (new IsoCountryMap())->resolveFromPlace('Freiburg, Freiburg, Baden-Württemberg, DEU'),
         );
+    }
+
+    /**
+     * `resolveFromPlace()`'s comma-less branch: a place string with no comma at
+     * all is resolved as-is, without splitting off a trailing segment. Every
+     * other `resolveFromPlace()` test in this file passes a comma-separated
+     * string, so this branch was otherwise never exercised.
+     *
+     * @return void
+     */
+    #[Test]
+    public function resolveFromPlaceAcceptsAPlaceWithNoComma(): void
+    {
+        self::assertSame('DE', (new IsoCountryMap())->resolveFromPlace('Deutschland'));
+    }
+
+    /**
+     * `resolve()`'s empty-normalised-name guard is reachable through
+     * `resolveFromPlace()` on realistic GEDCOM artefacts: a trailing comma
+     * leaves an empty country segment, and a punctuation-only segment
+     * `normalise()` trims down to the empty string.
+     *
+     * @return iterable<string, array{0: string}>
+     */
+    public static function placesWithAnEmptyCountrySegment(): iterable
+    {
+        yield 'a trailing comma leaves an empty segment' => ['Berlin,'];
+        yield 'a punctuation-only segment normalises to empty' => ['Berlin, ...'];
+    }
+
+    /**
+     * @param string $place Place string whose country segment normalises to the empty string
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('placesWithAnEmptyCountrySegment')]
+    public function resolveFromPlaceReturnsNullForAnEmptyCountrySegment(string $place): void
+    {
+        self::assertNull((new IsoCountryMap())->resolveFromPlace($place));
     }
 
     /**
@@ -270,8 +319,8 @@ final class IsoCountryMapTest extends TestCase
      * ISO-3166-1 alpha-2 codes convert to their alpha-3 siblings through ICU's
      * supplemental code mappings.
      *
-     * @param string      $iso2
-     * @param string|null $expected
+     * @param string      $iso2     Alpha-2 country code fed into toAlpha3()
+     * @param string|null $expected Expected alpha-3 code, or null when ICU has none
      *
      * @return void
      */
@@ -341,12 +390,15 @@ final class IsoCountryMapTest extends TestCase
 
     /**
      * `alpha2ToAlpha3Map()` installs a scoped error handler for the duration of
-     * the ICU probe and restores the caller's handler in a `finally` block. If
+     * the ICU probe and must restore the caller's handler before returning. If
      * that restoration were ever dropped, every later test in this shared
      * process would silently lose whatever handler was active before this call
      * — e.g. PHPUnit's `failOnWarning` handler. A sentinel closure installed
      * before the call, and read back via `set_error_handler(null)` afterwards,
-     * proves the caller's handler — not the probe's own — is what remains.
+     * proves the caller's handler — not the probe's own — is what remains. This
+     * only proves the end state after the call is correct; it cannot tell a
+     * restore placed in a `finally` block from one placed at the end of the
+     * `try` body.
      *
      * @return void
      */
@@ -356,11 +408,19 @@ final class IsoCountryMapTest extends TestCase
         $sentinel = static fn (): bool => false;
         set_error_handler($sentinel);
 
-        (new IsoCountryMap('en_US'))->toAlpha3('DE');
+        try {
+            (new IsoCountryMap('en_US'))->toAlpha3('DE');
 
-        self::assertSame($sentinel, set_error_handler(null), 'the ICU probe must restore the caller handler');
-        restore_error_handler();
-        restore_error_handler();
+            self::assertSame($sentinel, set_error_handler(null), 'the ICU probe must restore the caller handler');
+        } finally {
+            // Undoes both set_error_handler() calls above (the sentinel and,
+            // if the assertion reached it, the null probe read) regardless of
+            // whether the assertion passed — a failure here is exactly the
+            // regression this test guards, and must not leave either handler
+            // on the process-wide stack for later tests.
+            restore_error_handler();
+            restore_error_handler();
+        }
     }
 
     /**

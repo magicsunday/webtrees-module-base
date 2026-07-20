@@ -49,7 +49,8 @@ enum PlaceFormatChoice: string
     case Levels3 = 'levels-3';
 
     /**
-     * Show the first and the last segment, both spelled out.
+     * Keep the first and the last segment; a last segment recorded as a
+     * three-letter country code is spelled out in the interface language.
      */
     case CityCountry = 'city-country';
 

@@ -28,7 +28,11 @@ use PHPUnit\Framework\TestCase;
 use function array_slice;
 
 /**
- * PlaceProcessorTest.
+ * Locks the {@see PlaceProcessor} contract: PlaceStyle::Full/Levels/CityCountry
+ * shortening (including the from-end direction and the alpha-3 country-code
+ * spell-out CityCountry performs through {@see IsoCountryMap}), the full
+ * (unshortened) birth/death/marriage accessors, and the first-spouse-family
+ * wiring of getMarriagePlace().
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -76,8 +80,8 @@ class PlaceProcessorTest extends TestCase
      * that returned a fixed pre-truncated collection would green even if the processor
      * passed a wrong count.
      *
-     * @param string        $gedcomName
-     * @param array<string> $parts
+     * @param string        $gedcomName Full GEDCOM place name returned by gedcomName()
+     * @param array<string> $parts      Ordered place-name segments, most specific (locality) first
      *
      * @return Place
      */
@@ -179,8 +183,8 @@ class PlaceProcessorTest extends TestCase
      * whole name — but only the paired three-level case proves the processor is
      * slicing at all rather than always returning the recorded name.
      *
-     * @param int    $levels
-     * @param string $expected
+     * @param int    $levels   Number of hierarchy levels the format spec keeps
+     * @param string $expected Expected shortened place name
      *
      * @return void
      */
@@ -230,9 +234,9 @@ class PlaceProcessorTest extends TestCase
      * The place-and-country style keeps the outermost segments and drops
      * everything between them.
      *
-     * @param string        $gedcomName
-     * @param array<string> $parts
-     * @param string        $expected
+     * @param string        $gedcomName Full GEDCOM place name returned by gedcomName()
+     * @param array<string> $parts      Ordered place-name segments, most specific (locality) first
+     * @param string        $expected   Expected CityCountry-shortened place name
      *
      * @return void
      */
@@ -315,7 +319,7 @@ class PlaceProcessorTest extends TestCase
                 ['London', 'Middlesex'],
                 'London, Middlesex',
             ],
-            'a place with no usable segment yields nothing' => [
+            'a non-empty name with no parts pins the outerSegments() type guard' => [
                 'Foo',
                 [],
                 '',
@@ -375,6 +379,11 @@ class PlaceProcessorTest extends TestCase
      * returns an empty string when there is none. Both outcomes went through
      * the constructor rewrite untested.
      *
+     * The two-spouse-family row stubs a second family with a different
+     * recorded place: only reading the first family's place, and ignoring the
+     * second, proves the accessor actually keys off Collection::first() rather
+     * than e.g. last() — a single-family fixture cannot distinguish the two.
+     *
      * The spec deliberately uses PlaceStyle::Levels, 1 rather than
      * PlaceStyle::Full: under Full, fullPlaceName() and shortPlaceName() return
      * the same string by construction, so a regression that routed
@@ -383,27 +392,28 @@ class PlaceProcessorTest extends TestCase
      * whole recorded name ('Hamburg, Germany') while the shortened path would
      * truncate to the first segment ('Hamburg').
      *
-     * @param string|null $familyPlaceName Recorded marriage place of the stubbed spouse family, or null for no family
-     * @param string      $expected        Expected return value of getMarriagePlace()
+     * @param array<string> $familyPlaceNames Recorded marriage place per stubbed spouse family, in order; empty for no family
+     * @param string        $expected         Expected return value of getMarriagePlace()
      *
      * @return void
      */
     #[Test]
     #[DataProvider('marriagePlaceProvider')]
-    public function getMarriagePlaceReflectsTheFirstSpouseFamily(?string $familyPlaceName, string $expected): void
+    public function getMarriagePlaceReflectsTheFirstSpouseFamily(array $familyPlaceNames, string $expected): void
     {
         $individual = self::createStub(Individual::class);
+        $families   = [];
 
-        if ($familyPlaceName === null) {
-            $individual->method('spouseFamilies')->willReturn(new Collection());
-        } else {
+        foreach ($familyPlaceNames as $familyPlaceName) {
             $family = self::createStub(Family::class);
             $family->method('getMarriagePlace')->willReturn(
                 $this->placeStub($familyPlaceName, ['Hamburg', 'Germany'])
             );
 
-            $individual->method('spouseFamilies')->willReturn(new Collection([$family]));
+            $families[] = $family;
         }
+
+        $individual->method('spouseFamilies')->willReturn(new Collection($families));
 
         $processor = new PlaceProcessor(
             $individual,
@@ -415,13 +425,15 @@ class PlaceProcessorTest extends TestCase
     }
 
     /**
-     * @return array<string, array{0: string|null, 1: string}>
+     * @return array<string, array{0: array<string>, 1: string}>
      */
     public static function marriagePlaceProvider(): array
     {
         return [
-            'a spouse family returns its recorded marriage place' => ['Hamburg, Germany', 'Hamburg, Germany'],
-            'no spouse family yields an empty string'             => [null, ''],
+            'a second spouse family is ignored, the first wins' => [
+                ['Hamburg, Germany', 'Munich, Germany'], 'Hamburg, Germany',
+            ],
+            'no spouse family yields an empty string' => [[], ''],
         ];
     }
 
@@ -448,5 +460,62 @@ class PlaceProcessorTest extends TestCase
         );
 
         self::assertSame('Mitte, Berlin', $processor->getDeathPlaceShort());
+    }
+
+    /**
+     * getBirthPlace() and getDeathPlace() read the individual's birth/death
+     * place accessor directly and return the whole recorded GEDCOM place name,
+     * unshortened. Both went untested despite the same wiring risk that
+     * justifies {@see self::getDeathPlaceShortShortensTheDeathPlace()}: a
+     * mix-up pointing the death accessor at the birth place (or vice versa)
+     * would go unnoticed without this.
+     *
+     * PlaceStyle::Levels, 1 is used deliberately, not PlaceStyle::Full: under
+     * Full, the full and short accessors return the same string by
+     * construction, so a regression that routed a full accessor through the
+     * shortening path would stay green. The gedcomName also lacks the spaces
+     * the joined parts would add, so a reassembling implementation fails this
+     * test too.
+     *
+     * @param string                          $individualMethod    Individual accessor stubbed with the place ('getBirthPlace' or 'getDeathPlace')
+     * @param callable(PlaceProcessor):string $callProcessorMethod Invokes the PlaceProcessor accessor under test
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('fullPlaceAccessorProvider')]
+    public function fullAccessorsReturnTheWholeRecordedNameUnshortened(
+        string $individualMethod,
+        callable $callProcessorMethod,
+    ): void {
+        $individual = self::createStub(Individual::class);
+        $individual->method($individualMethod)->willReturn(
+            $this->placeStub('Mitte,Berlin,Germany', ['Mitte', 'Berlin', 'Germany'])
+        );
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec(PlaceStyle::Levels, 1),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame('Mitte,Berlin,Germany', $callProcessorMethod($processor));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: callable(PlaceProcessor):string}>
+     */
+    public static function fullPlaceAccessorProvider(): array
+    {
+        return [
+            'getBirthPlace reads the birth place unshortened' => [
+                'getBirthPlace',
+                static fn (PlaceProcessor $processor): string => $processor->getBirthPlace(),
+            ],
+            'getDeathPlace reads the death place unshortened' => [
+                'getDeathPlace',
+                static fn (PlaceProcessor $processor): string => $processor->getDeathPlace(),
+            ],
+        ];
     }
 }

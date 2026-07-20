@@ -219,13 +219,12 @@ final class IsoCountryMap
     /**
      * Whether $value has the shape of an ISO-3166-1 alpha-2 country code: exactly
      * two letters, case-insensitive. Purely a shape test — it does not check
-     * whether the code is actually recognised, callers combine this with a
-     * lookup for that. Shared with {@see \MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor}
-     * so the case tolerance cannot drift between the two consumers.
+     * whether the code is actually recognised, {@see self::toAlpha3()} (its
+     * only caller) combines this with a lookup for that.
      *
      * @param string $value Candidate token
      */
-    public static function isAlpha2Shape(string $value): bool
+    private function isAlpha2Shape(string $value): bool
     {
         return preg_match('/^[A-Za-z]{2}$/', $value) === 1;
     }
@@ -300,9 +299,10 @@ final class IsoCountryMap
             $name = (string) Locale::getDisplayRegion('-' . strtoupper($normalised), 'en_US');
 
             // mb_strtolower(), not strtolower(): the display name can contain
-            // non-ASCII letters (e.g. the echoed-back subtag is always ASCII,
-            // but a resolved region name like "Åland Islands" is not), and
-            // byte-based lowercasing would corrupt those before the comparison.
+            // non-ASCII letters (a resolved region name like "Åland Islands",
+            // though the echoed-back subtag is always ASCII) that strtolower()
+            // leaves unfolded, which would then mismatch $normalised — already
+            // folded via mb_strtolower() inside self::normalise().
             if (($name !== '') && (mb_strtolower($name, 'UTF-8') !== $normalised)) {
                 $resolved = $map[$this->normalise($name)] ?? null;
             }
@@ -332,7 +332,10 @@ final class IsoCountryMap
     /**
      * Localised display name for a given ISO-3166-1 alpha-2 code in the
      * resolver's user locale (or English when the user locale is empty). Falls
-     * back to the raw ISO code if the locale doesn't recognise the code.
+     * back to $iso2 unchanged when the locale doesn't recognise the code —
+     * except that ICU always echoes an unrecognised region subtag back
+     * upper-cased, so a lower-case, unrecognised $iso2 (e.g. "xx") comes back
+     * as "XX", not "xx".
      *
      * @param string $iso2 Alpha-2 country code (case-insensitive).
      */
@@ -354,7 +357,7 @@ final class IsoCountryMap
     {
         $key = strtoupper(trim($iso2));
 
-        if (!self::isAlpha2Shape($key)) {
+        if (!$this->isAlpha2Shape($key)) {
             return null;
         }
 

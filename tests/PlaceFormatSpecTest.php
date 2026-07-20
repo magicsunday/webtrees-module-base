@@ -23,7 +23,10 @@ use PHPUnit\Framework\TestCase;
 use function preg_quote;
 
 /**
- * PlaceFormatSpecTest.
+ * Locks the {@see PlaceFormatSpec} contract: the constructor accepts every
+ * valid (style, levels) combination and rejects a negative level count for
+ * any style, or a zero level count specifically for PlaceStyle::Levels, with
+ * a descriptive exception message.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -31,7 +34,7 @@ use function preg_quote;
  */
 #[CoversClass(PlaceFormatSpec::class)]
 #[UsesClass(PlaceStyle::class)]
-class PlaceFormatSpecTest extends TestCase
+final class PlaceFormatSpecTest extends TestCase
 {
     /**
      * A level count of zero for PlaceStyle::Full, and a level count of one for
@@ -40,8 +43,8 @@ class PlaceFormatSpecTest extends TestCase
      * valid there too — {@see \MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatChoice::toSpec()}
      * relies on exactly that to construct the spec without a level argument.
      *
-     * @param PlaceStyle $style
-     * @param int        $levels
+     * @param PlaceStyle $style  Style under test
+     * @param int        $levels Level count expected to be accepted
      *
      * @return void
      */
@@ -77,9 +80,9 @@ class PlaceFormatSpecTest extends TestCase
      * PlaceStyle::Levels combined with zero levels has no correct interpretation
      * and must be rejected at construction rather than reinterpreted later.
      *
-     * @param PlaceStyle $style
-     * @param int        $levels
-     * @param string     $expectedMessage
+     * @param PlaceStyle $style           Style under test
+     * @param int        $levels          Level count expected to be rejected
+     * @param string     $expectedMessage Substring expected in the exception message
      *
      * @return void
      */

@@ -34,7 +34,8 @@ enum PlaceStyle
     case Levels;
 
     /**
-     * Keep the first and last segment, both as plain text.
+     * Keep the first and the last segment; a last segment recorded as a
+     * three-letter country code is spelled out in the interface language.
      */
     case CityCountry;
 }

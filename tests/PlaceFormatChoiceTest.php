@@ -24,7 +24,11 @@ use function array_column;
 use function array_map;
 
 /**
- * PlaceFormatChoiceTest.
+ * Locks the {@see PlaceFormatChoice} contract: every choice resolves into the
+ * correct {@see PlaceFormatSpec} via toSpec(), Automatic collapses to
+ * PlaceStyle::Full for a non-positive tree level count (unset preference or
+ * the pre-3.0 sentinel), and the persisted backing values round-trip for
+ * every case.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -33,17 +37,17 @@ use function array_map;
 #[CoversClass(PlaceFormatChoice::class)]
 #[UsesClass(PlaceFormatSpec::class)]
 #[UsesClass(PlaceStyle::class)]
-class PlaceFormatChoiceTest extends TestCase
+final class PlaceFormatChoiceTest extends TestCase
 {
     /**
      * Each selectable choice resolves into a concrete formatter instruction. The
      * tree arguments apply to "Automatic" only; every other case ignores them,
      * which the deliberately conspicuous 7/true arguments make visible.
      *
-     * @param PlaceFormatChoice $choice
-     * @param PlaceStyle        $expectedStyle
-     * @param int               $expectedLevels
-     * @param bool              $expectedFromEnd
+     * @param PlaceFormatChoice $choice          Choice under test
+     * @param PlaceStyle        $expectedStyle   Expected resolved style
+     * @param int               $expectedLevels  Expected resolved level count
+     * @param bool              $expectedFromEnd Expected resolved fromEnd flag
      *
      * @return void
      */
@@ -82,7 +86,7 @@ class PlaceFormatChoiceTest extends TestCase
      * nothing" — and a negative value (the pre-3.0 automatic sentinel, still
      * present in databases) must not reach the spec, which rejects it.
      *
-     * @param int $treeLevels
+     * @param int $treeLevels Tree-preference level count fed into PlaceFormatChoice::Automatic->toSpec()
      *
      * @return void
      */
@@ -112,8 +116,8 @@ class PlaceFormatChoiceTest extends TestCase
      * silently resets every installation that stored it. Order is NOT part of
      * that contract, so this checks the round-trip rather than a sequence.
      *
-     * @param string            $stored
-     * @param PlaceFormatChoice $expected
+     * @param string            $stored   Backing value as persisted in the module preference
+     * @param PlaceFormatChoice $expected Expected enum case for the stored value
      *
      * @return void
      */

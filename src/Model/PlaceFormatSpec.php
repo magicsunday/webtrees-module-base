@@ -15,10 +15,17 @@ use InvalidArgumentException;
 
 /**
  * A fully resolved place-formatting instruction. Everything a formatter needs,
- * with no configuration lookups left to perform — in particular the level count
- * is already a concrete number: 1-9 when $style is PlaceStyle::Levels (the
+ * with no configuration lookups left to perform. The constructor's only
+ * guarantee on $levels: at least 1 when $style is PlaceStyle::Levels (the
  * constructor rejects 0 for that style — a "keep zero levels" instruction is
- * meaningless), 0 for every other style.
+ * meaningless), and never negative for any style. For every other style
+ * $levels is accepted but not read, so any non-negative value passes
+ * unchecked — including one above nine, the highest level count the webtrees
+ * settings UI offers. That nine is a selection-list limit enforced in the
+ * consuming module's admin form, not a range this constructor validates:
+ * {@see PlaceFormatChoice::automatic()} passes the tree preference through
+ * unchecked (it is an unvalidated database string), so a $levels value
+ * outside 1-9 can still reach this class.
  *
  * $levels and $fromEnd are read only when $style is PlaceStyle::Levels. For
  * PlaceStyle::Full and PlaceStyle::CityCountry they are accepted but ignored —
