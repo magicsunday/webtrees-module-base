@@ -99,9 +99,10 @@ class PlaceFormatSpecTest extends TestCase
     public static function invalidLevelCountProvider(): array
     {
         return [
-            'negative is rejected for Full'   => [PlaceStyle::Full, -1, 'must not be negative'],
-            'negative is rejected for Levels' => [PlaceStyle::Levels, -1, 'must not be negative'],
-            'zero is rejected for Levels'     => [PlaceStyle::Levels, 0, 'PlaceStyle::Levels requires at least one level'],
+            'negative is rejected for Full'        => [PlaceStyle::Full, -1, 'must not be negative'],
+            'negative is rejected for Levels'      => [PlaceStyle::Levels, -1, 'must not be negative'],
+            'negative is rejected for CityCountry' => [PlaceStyle::CityCountry, -1, 'must not be negative'],
+            'zero is rejected for Levels'          => [PlaceStyle::Levels, 0, 'PlaceStyle::Levels requires at least one level'],
         ];
     }
 }
