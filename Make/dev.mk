@@ -7,30 +7,46 @@
 .PHONY: clean
 
 clean: .logo ## Remove .build/ (vendor + caches).
-	@rm -rf $(MAKEFILE_DIR)/.build
-	@echo -e "${FGREEN} ✔${FRESET} .build/ removed"
+	@test -d $(MAKEFILE_DIR)/.build \
+		&& rm -rf $(MAKEFILE_DIR)/.build \
+		&& echo -e "${FGREEN} ✔${FRESET} .build/ removed" \
+		|| echo -e "${FGREEN} ✔${FRESET} .build/ already absent"
 
 # =============================================================================
 # Removed targets
 # =============================================================================
 #
 # This repo has no local PHP container (see AGENTS.md "Running the test
-# suite") — install/update ran through a now-removed compose `php` service.
-# Fail loudly instead of the catch-all `%:` rule silently reporting success.
+# suite") — install/update/bash and the CI/quality-gate targets used to run
+# through a now-removed compose `php` service. Fail loudly instead of letting
+# an unmatched target silently report success.
 
-.PHONY: install update bash
-
-install:
+define REMOVED_TARGET
 	@echo -e "${FRED} ✖${FRESET} Removed — this repo has no local PHP container."
-	@echo -e "   Run instead: cd <webtrees-docker root> && docker compose run --rm buildbox bash -c 'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer install'"
+	@echo -e "   Run instead: cd <webtrees-docker root> && docker compose run --rm buildbox bash -c 'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && $(1)'"
 	@exit 1
+endef
 
-update:
-	@echo -e "${FRED} ✖${FRESET} Removed — this repo has no local PHP container."
-	@echo -e "   Run instead: cd <webtrees-docker root> && docker compose run --rm buildbox bash -c 'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer update'"
-	@exit 1
+.PHONY: install update bash ci-test ci-cgl ci-rector ci-phpstan-baseline
 
-bash:
-	@echo -e "${FRED} ✖${FRESET} Removed — this repo has no local PHP container."
-	@echo -e "   Run instead: cd <webtrees-docker root> && docker compose run --rm buildbox bash, then cd app/vendor/magicsunday/webtrees-module-base"
+install: .logo ## Removed — run composer install via the buildbox container instead.
+	$(call REMOVED_TARGET,composer install)
+
+update: .logo ## Removed — run composer update via the buildbox container instead.
+	$(call REMOVED_TARGET,composer update)
+
+bash: .logo ## Removed — open a shell in the buildbox container instead.
+	$(call REMOVED_TARGET,exec bash)
+
+ci-test: .logo ## Removed — run composer ci:test via the buildbox container instead.
+	$(call REMOVED_TARGET,composer ci:test)
+
+ci-cgl: .logo ## Removed — run composer ci:cgl via the buildbox container instead.
+	$(call REMOVED_TARGET,composer ci:cgl)
+
+ci-rector: .logo ## Removed — run composer ci:rector via the buildbox container instead.
+	$(call REMOVED_TARGET,composer ci:rector)
+
+ci-phpstan-baseline: .logo ## Removed — the phpstan baseline was retired, no replacement command.
+	@echo -e "${FRED} ✖${FRESET} Removed — the phpstan baseline was retired; no composer script regenerates it (see AGENTS.md \"Common pitfalls\")."
 	@exit 1

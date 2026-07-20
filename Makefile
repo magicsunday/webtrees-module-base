@@ -5,9 +5,6 @@ SHELL = /bin/bash
 # Do not print "Entering directory ..."
 MAKEFLAGS += --no-print-directory
 
-.PHONY: no_targets__ *
-	no_targets__:
-
 .DEFAULT_GOAL := help
 
 # Directory this Makefile lives in, so included files and their recipes
@@ -19,6 +16,7 @@ MAKEFILE_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 -include $(MAKEFILE_DIR)/Make/*.mk
 -include $(MAKEFILE_DIR)/Make/**/*.mk
 
-# Argument fix workaround
-%:
-	@:
+# A renamed/sparse/stray checkout that loses Make/ would otherwise silently
+# fall back to "No rule to make target" for every real target without
+# explaining why — make the missing includes loud instead.
+$(if $(wildcard $(MAKEFILE_DIR)/Make/dev.mk),,$(error Make/ includes are missing — incomplete checkout?))
