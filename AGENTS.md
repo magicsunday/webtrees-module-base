@@ -2,14 +2,21 @@
 This repository hosts `magicsunday/webtrees-module-base` — a shared PHP library consumed by `webtrees-fan-chart`, `webtrees-pedigree-chart`, and `webtrees-descendants-chart`. It contains the common processors (Date, Name, Image, Place), models (Symbols, NameAbbreviation), and module helpers (VersionInformation) those modules use to render genealogy charts. No JavaScript, no asset pipeline — pure PHP.
 
 ## Setup/env
-- PHP 8.3 - 8.5 with extension `dom` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
-- All PHP tooling normally runs inside the parent webtrees Docker buildbox — never directly on the NAS or in phpfpm:
-  ```
-  cd /volume2/docker/webtrees && make bash
-  cd app/vendor/magicsunday/webtrees-module-base
-  ```
-- For standalone development (clone outside the parent webtrees repo), `compose.yaml` provides a `php` service (composer:2 image). Use `make ci-test` / `make bash` for the standalone flow.
+- PHP 8.3 - 8.5 with extensions `dom` and `intl` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
 - The most common dev workflow is via `make link-base` from a sibling chart module: that symlinks `.build/vendor/.../webtrees-module-base` in the chart module to a sibling clone of this repo, so edits here are immediately picked up by the consumer.
+
+## Running the test suite
+
+This library has no module-local container. PHP runs through the webtrees-docker
+buildbox, which provides ext-intl (required since 3.0.0):
+
+    cd /path/to/webtrees-docker
+    docker compose run --rm buildbox bash -c \
+        "cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer ci:test"
+
+Substitute `composer install`, `composer update` or `composer ci:cgl` for the last
+command as needed. CI does not use Docker at all — the workflow installs PHP
+directly via setup-php.
 
 ## Build & tests
 - **`composer ci:test` MUST run before every commit** — catches phplint, PHPStan (level max), Rector, PHPUnit, and PHP-CS-Fixer issues before they reach GitHub CI.
@@ -17,7 +24,7 @@ This repository hosts `magicsunday/webtrees-module-base` — a shared PHP librar
 - Single PHPUnit test: `composer ci:test:php:unit -- --filter TestClassName`.
 - Auto-fix: `composer ci:cgl` (PHP-CS-Fixer), `composer ci:rector` (Rector).
 - Regenerate phpstan baseline (after intentional changes): `composer ci:test:php:phpstan:baseline` — should remain empty (no findings) under normal circumstances.
-- Make shortcuts (standalone clone): `make install`, `make ci-test`, `make ci-cgl`, `make ci-rector`, `make ci-phpstan-baseline`, `make bash`.
+- Make shortcuts: `make clean` (remove `.build/`). All other quality-gate commands run through `composer` directly (see above).
 
 ## Architecture
 
