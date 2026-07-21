@@ -470,17 +470,17 @@ final class PlaceProcessorTest extends TestCase
                 ['Hamburg', 'DEU'],
                 'Hamburg, DE',
             ],
-            'iso2 keeps a two-letter last segment verbatim (Dover, DE = Delaware)' => [
+            'iso2 keeps a two-letter last segment verbatim even when it aliases a country (York, UK)' => [
                 PlaceStyle::CityIso2,
-                'Dover, DE',
-                ['Dover', 'DE'],
-                'Dover, DE',
+                'York, UK',
+                ['York', 'UK'],
+                'York, UK',
             ],
-            'iso2 keeps a lone two-letter segment verbatim' => [
+            'iso2 keeps a lone two-letter segment verbatim even when it aliases a country (UK)' => [
                 PlaceStyle::CityIso2,
-                'DE',
-                ['DE'],
-                'DE',
+                'UK',
+                ['UK'],
+                'UK',
             ],
 
             // CityIso3
