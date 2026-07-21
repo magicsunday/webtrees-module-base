@@ -20,7 +20,6 @@ use function array_key_exists;
 use function array_unique;
 use function in_array;
 use function is_string;
-use function iterator_to_array;
 use function mb_strtolower;
 use function preg_match;
 use function preg_replace;
@@ -494,9 +493,11 @@ final class IsoCountryMap
                         continue;
                     }
 
-                    $entries = iterator_to_array($row);
-                    $alpha2  = $entries[0] ?? null;
-                    $alpha3  = $entries[2] ?? null;
+                    // ResourceBundle implements ArrayAccess, so the two fields
+                    // this needs are read directly instead of materialising the
+                    // whole row into an array first.
+                    $alpha2 = $row[0] ?? null;
+                    $alpha3 = $row[2] ?? null;
 
                     // Intersect with the curated set: ICU also lists withdrawn
                     // codes (SU, AN, YU) and CLDR-internal regions (EU -> QUU),
