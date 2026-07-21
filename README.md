@@ -14,7 +14,7 @@ This package ships no UI of its own — it is consumed as a Composer dependency 
 
 ## Requirements
 
-- PHP 8.3 - 8.5 with extension `dom`
+- PHP 8.3 - 8.5 with extensions `dom`, `intl` and `mbstring`
 - [webtrees](https://www.webtrees.net/) `~2.2`
 
 ## Installation
@@ -62,22 +62,20 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 
 ## Development
 
-See [AGENTS.md](AGENTS.md) for the full development workflow including the buildbox vs standalone modes, the `make link-base` sibling-clone pattern, and the tooling-parity policy with consumer modules.
+See [AGENTS.md](AGENTS.md) for the full development workflow, including the
+`make link-base` sibling-clone pattern and the tooling-parity policy with
+consumer modules.
 
-Quick reference:
+Quick reference — this library has no module-local container; PHP runs
+through the webtrees-docker buildbox:
 
 ```shell
-# Standalone clone (compose.yaml provides PHP 8 + composer)
-make install
-make ci-test            # phplint + phpstan + rector + phpunit + cgl
-make ci-cgl             # auto-fix php-cs-fixer
-make ci-rector          # auto-fix rector
-
-# Inside the parent webtrees buildbox
-composer ci:test
-composer ci:cgl
-composer ci:rector
+cd /path/to/webtrees-docker && docker compose run --rm buildbox bash -c \
+    'cd /var/webtrees/app/vendor/magicsunday/webtrees-module-base && composer ci:test'
 ```
+
+Substitute `composer install`, `composer update`, `composer ci:cgl` or
+`composer ci:rector` for the last command as needed.
 
 ## License
 

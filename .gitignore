@@ -8,5 +8,10 @@
 vendor/
 composer.lock
 
+# npm (jscpd, installed by the composer post-install-cmd/post-update-cmd hooks)
+node_modules/
+package.json
+package-lock.json
+
 # Build stuff (incl. all dev-tool caches under .build/cache/)
 .build/

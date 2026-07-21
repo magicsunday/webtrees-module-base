@@ -13,12 +13,18 @@ namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
+use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
+use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
+use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
+
+use function in_array;
+use function is_string;
 
 /**
  * Extracts birth, death, and marriage place names from an individual's life
  * events. Returns both full GEDCOM place strings (for tooltips) and shortened
- * versions truncated to a configurable number of hierarchy levels (for arc
- * text).
+ * versions formatted according to the configured {@see PlaceFormatSpec} (for
+ * arc text).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -27,17 +33,31 @@ use Fisharebest\Webtrees\Place;
 class PlaceProcessor
 {
     /**
-     * @param Individual $individual  The individual to process
-     * @param int        $placeParts  Number of place hierarchy parts to show (0 = full)
-     * @param bool       $placeSuffix When true, keep the LAST $placeParts parts (country end,
-     *                                Place::lastParts()); when false, keep the first (locality end,
-     *                                Place::firstParts()). Mirrors the SHOW_PEDIGREE_PLACES_SUFFIX
-     *                                tree preference; defaults to false for backwards compatibility
+     * ISO-3166-1 alpha-2 codes of countries whose name coincides with a
+     * well-known city name, so a lone place segment spelling out one of these
+     * names is more likely the city than the country (e.g. "Luxembourg",
+     * "Monaco", "San Marino"). For these the ISO city styles keep the recorded
+     * text rather than collapsing a lone segment to its country code. The guard
+     * covers spelled-out NAME inputs only, not a lone alpha-3 code such as
+     * "LUX": a three-letter code is never a city name and still resolves. This
+     * is a display-policy list, not ISO reference data, so it lives here rather
+     * than in {@see IsoCountryMap}.
+     *
+     * @var list<string>
+     */
+    private const array AMBIGUOUS_CITY_COUNTRIES = [
+        'LU', 'MC', 'SM', 'SG', 'PA', 'GT', 'MX', 'KW', 'DJ', 'AD', 'VA', 'GI',
+    ];
+
+    /**
+     * @param Individual      $individual The individual to process
+     * @param PlaceFormatSpec $format     Fully resolved formatting instruction
+     * @param IsoCountryMap   $countryMap Resolver used by the styles that resolve a country segment
      */
     public function __construct(
         private readonly Individual $individual,
-        private readonly int $placeParts,
-        private readonly bool $placeSuffix = false,
+        private readonly PlaceFormatSpec $format,
+        private readonly IsoCountryMap $countryMap,
     ) {
     }
 
@@ -80,8 +100,8 @@ class PlaceProcessor
     }
 
     /**
-     * Returns the birth place name truncated to the configured number of
-     * hierarchy levels.
+     * Returns the birth place name shortened according to the configured
+     * {@see PlaceFormatSpec}.
      *
      * @return string
      */
@@ -91,8 +111,8 @@ class PlaceProcessor
     }
 
     /**
-     * Returns the death place name truncated to the configured number of
-     * hierarchy levels.
+     * Returns the death place name shortened according to the configured
+     * {@see PlaceFormatSpec}.
      *
      * @return string
      */
@@ -114,10 +134,9 @@ class PlaceProcessor
     }
 
     /**
-     * Returns a shortened place name according to the configured number of
-     * hierarchy parts. With $placeSuffix the last parts (country end) are kept,
-     * otherwise the first parts (locality end). This method only uses the
-     * placeParts/placeSuffix scalars.
+     * Returns a shortened place name according to the configured format. The
+     * empty-name guard stays first: a place without a recorded name has no
+     * segments to format.
      *
      * @param Place $place
      *
@@ -131,14 +150,185 @@ class PlaceProcessor
             return '';
         }
 
-        if ($this->placeParts === 0) {
-            return $placeName;
-        }
+        return match ($this->format->style) {
+            PlaceStyle::Full        => $placeName,
+            PlaceStyle::Levels      => $this->levelParts($place),
+            PlaceStyle::CityCountry => $this->cityAndCountry($place),
+            PlaceStyle::CityIso2    => $this->cityAndIsoCode($place, false),
+            PlaceStyle::CityIso3    => $this->cityAndIsoCode($place, true),
+        };
+    }
 
-        $parts = $this->placeSuffix
-            ? $place->lastParts($this->placeParts)
-            : $place->firstParts($this->placeParts);
+    /**
+     * Keep a fixed number of hierarchy levels, from either end.
+     *
+     * @param Place $place
+     *
+     * @return string
+     */
+    private function levelParts(Place $place): string
+    {
+        $parts = $this->format->fromEnd
+            ? $place->lastParts($this->format->levels)
+            : $place->firstParts($this->format->levels);
 
         return $parts->implode(', ');
+    }
+
+    /**
+     * Keep the first and the last segment. A country recorded as a three-letter
+     * code is spelled out in the user's language; a two-letter segment is left
+     * alone, {@see self::spellOutCode()} explains why.
+     *
+     * @param Place $place
+     *
+     * @return string
+     */
+    private function cityAndCountry(Place $place): string
+    {
+        $segments = $this->outerSegments($place);
+
+        if ($segments === null) {
+            return '';
+        }
+
+        if ($segments['last'] === null) {
+            return $segments['first'];
+        }
+
+        return $segments['first'] . ', ' . $this->spellOutCode($segments['last']);
+    }
+
+    /**
+     * Keep the first segment and render the country as an ISO-3166-1 code —
+     * alpha-2 when $alpha3 is false, alpha-3 otherwise. A multi-segment place
+     * resolves its last segment; a lone segment is treated as the country
+     * itself, unlike {@see self::cityAndCountry()} which returns it unchanged.
+     * Every resolution failure degrades to the recorded text.
+     *
+     * @param Place $place  The place to shorten
+     * @param bool  $alpha3 Whether to render the alpha-3 code instead of alpha-2
+     *
+     * @return string
+     */
+    private function cityAndIsoCode(Place $place, bool $alpha3): string
+    {
+        $segments = $this->outerSegments($place);
+
+        if ($segments === null) {
+            return '';
+        }
+
+        if ($segments['last'] === null) {
+            return $this->segmentToIsoCode($segments['first'], $alpha3, guardAmbiguous: true);
+        }
+
+        return $segments['first'] . ', ' . $this->segmentToIsoCode($segments['last'], $alpha3, guardAmbiguous: false);
+    }
+
+    /**
+     * Render a place segment as its ISO-3166-1 code — alpha-2, or the alpha-3
+     * sibling when $alpha3 is set. A bare two-letter segment is left verbatim
+     * (decision 7): "DE", "BW", "IL" are ambiguous with US and German state
+     * abbreviations, so "Dover, DE" is Delaware and "Ulm, BW" is
+     * Baden-Württemberg, never country codes — only full country names and
+     * three-letter codes expand. When $guardAmbiguous is set (the lone-segment
+     * path only), a resolved country NAME whose spelling coincides with a
+     * well-known city (e.g. "Luxembourg") also keeps its recorded text. That
+     * guard applies to name inputs only: a lone alpha-3 code (e.g. "LUX") is
+     * never a city name, so it still resolves to its ISO code. Every remaining
+     * failure path — an unresolvable segment, an ambiguous name match, a
+     * missing alpha-3 mapping — degrades to the recorded segment text rather
+     * than dropping the place.
+     *
+     * @param string $segment        The place segment to render
+     * @param bool   $alpha3         Whether to render the alpha-3 code instead of alpha-2
+     * @param bool   $guardAmbiguous Whether to keep a resolved ambiguous country NAME (not an alpha-3 code) as recorded text
+     *
+     * @return string
+     */
+    private function segmentToIsoCode(string $segment, bool $alpha3, bool $guardAmbiguous): string
+    {
+        if (IsoCountryMap::isAlpha2Shape($segment)) {
+            return $segment;
+        }
+
+        $iso2 = $this->countryMap->resolve($segment);
+
+        if ($iso2 === null) {
+            return $segment;
+        }
+
+        if (
+            $guardAmbiguous
+            && !IsoCountryMap::isAlpha3Shape($segment)
+            && in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true)
+        ) {
+            return $segment;
+        }
+
+        if (!$alpha3) {
+            return $iso2;
+        }
+
+        return $this->countryMap->toAlpha3($iso2) ?? $segment;
+    }
+
+    /**
+     * The outer segments of a place: the first one, plus the last one when the
+     * place actually has a second segment. A single-segment place yields a null
+     * "last", which each style that resolves a country segment handles its own
+     * way. Returns null when the place has no usable segment at all.
+     *
+     * @param Place $place
+     *
+     * @return array{first: string, last: string|null}|null
+     */
+    private function outerSegments(Place $place): ?array
+    {
+        $first = $place->firstParts(1)->first();
+
+        if (!is_string($first)) {
+            return null;
+        }
+
+        $last = $place->lastParts(1)->first();
+
+        if (
+            !is_string($last)
+            || ($place->firstParts(2)->count() < 2)
+        ) {
+            return ['first' => $first, 'last' => null];
+        }
+
+        return ['first' => $first, 'last' => $last];
+    }
+
+    /**
+     * Expand a three-letter country code into its localised name. Any other
+     * segment is returned unchanged. The restriction to exactly three letters
+     * is deliberate: two-letter segments are ambiguous with US and German
+     * state abbreviations, so "Dover, DE" is Delaware and "Ulm, BW" is
+     * Baden-Württemberg, not country codes. Note that the resolver also
+     * accepts the Chapman codes webtrees treats as countries, so "ENG"
+     * resolves to the United Kingdom. The Chapman code space also contains
+     * three-letter county codes that collide with an ISO 3166-1 alpha-3
+     * country code (e.g. "KEN" for Kent vs. Kenya, "SOM" for Somerset vs.
+     * Somalia); this is not guarded against, because a county practically
+     * never occupies the final segment where the country belongs.
+     *
+     * @param string $segment
+     *
+     * @return string
+     */
+    private function spellOutCode(string $segment): string
+    {
+        if (!IsoCountryMap::isAlpha3Shape($segment)) {
+            return $segment;
+        }
+
+        $iso2 = $this->countryMap->resolve($segment);
+
+        return $iso2 === null ? $segment : $this->countryMap->label($iso2);
     }
 }

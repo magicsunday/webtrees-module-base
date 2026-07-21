@@ -10,7 +10,6 @@
 declare(strict_types=1);
 
 use Fisharebest\Webtrees\Webtrees;
-use RuntimeException;
 
 require __DIR__ . '/../.build/vendor/autoload.php';
 
