@@ -482,6 +482,16 @@ final class PlaceProcessorTest extends TestCase
                 ['Hamburg', 'DEU'],
                 'Hamburg, DE',
             ],
+            // A country whose NAME is on the ambiguity list, but in the last
+            // (country) segment: the multi-segment path never guards ambiguity
+            // (guardAmbiguous: false), so it resolves. Pins that asymmetry —
+            // the lone "Monaco" stays verbatim, this one becomes "MC".
+            'iso2 resolves an ambiguous country name in the last segment (Ville, Monaco -> Ville, MC)' => [
+                PlaceStyle::CityIso2,
+                'Ville, Monaco',
+                ['Ville', 'Monaco'],
+                'Ville, MC',
+            ],
             'iso2 keeps a two-letter last segment verbatim even when it aliases a country (York, UK)' => [
                 PlaceStyle::CityIso2,
                 'York, UK',
