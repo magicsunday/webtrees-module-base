@@ -493,9 +493,10 @@ final class IsoCountryMap
                         continue;
                     }
 
-                    // ResourceBundle implements ArrayAccess, so the two fields
-                    // this needs are read directly instead of materialising the
-                    // whole row into an array first.
+                    // ext-intl gives ResourceBundle native dimension access via
+                    // an internal read_dimension handler — it does NOT implement
+                    // ArrayAccess — so the two fields this needs are read
+                    // directly instead of materialising the whole row.
                     $alpha2 = $row[0] ?? null;
                     $alpha3 = $row[2] ?? null;
 
