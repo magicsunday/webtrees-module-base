@@ -452,6 +452,18 @@ final class PlaceProcessorTest extends TestCase
                 ['Monaco'],
                 'Monaco',
             ],
+            'iso2 resolves a lone ambiguous-country alpha-3 code to alpha-2 (LUX -> LU)' => [
+                PlaceStyle::CityIso2,
+                'LUX',
+                ['LUX'],
+                'LU',
+            ],
+            'iso2 resolves a second lone ambiguous-country alpha-3 code to alpha-2 (PAN -> PA)' => [
+                PlaceStyle::CityIso2,
+                'PAN',
+                ['PAN'],
+                'PA',
+            ],
             'iso2 keeps an unresolvable last segment as-is' => [
                 PlaceStyle::CityIso2,
                 'London, Middlesex',
@@ -513,6 +525,12 @@ final class PlaceProcessorTest extends TestCase
                 'Luxembourg',
                 ['Luxembourg'],
                 'Luxembourg',
+            ],
+            'iso3 resolves a lone ambiguous-country alpha-3 code to alpha-3 (LUX -> LUX)' => [
+                PlaceStyle::CityIso3,
+                'LUX',
+                ['LUX'],
+                'LUX',
             ],
             'iso3 keeps an unresolvable last segment as-is' => [
                 PlaceStyle::CityIso3,

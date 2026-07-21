@@ -34,11 +34,13 @@ class PlaceProcessor
 {
     /**
      * ISO-3166-1 alpha-2 codes of countries whose name coincides with a
-     * well-known city name, so a lone place segment carrying one of them is
-     * more likely the city than the country (e.g. "Luxembourg", "Monaco",
-     * "San Marino"). For these the ISO city styles keep the recorded text
-     * rather than collapsing a lone segment to its country code. This is a
-     * display-policy list, not ISO reference data, so it lives here rather
+     * well-known city name, so a lone place segment spelling out one of these
+     * names is more likely the city than the country (e.g. "Luxembourg",
+     * "Monaco", "San Marino"). For these the ISO city styles keep the recorded
+     * text rather than collapsing a lone segment to its country code. The guard
+     * covers spelled-out NAME inputs only, not a lone alpha-3 code such as
+     * "LUX": a three-letter code is never a city name and still resolves. This
+     * is a display-policy list, not ISO reference data, so it lives here rather
      * than in {@see IsoCountryMap}.
      *
      * @var list<string>
@@ -231,15 +233,17 @@ class PlaceProcessor
      * abbreviations, so "Dover, DE" is Delaware and "Ulm, BW" is
      * Baden-Württemberg, never country codes — only full country names and
      * three-letter codes expand. When $guardAmbiguous is set (the lone-segment
-     * path only), a resolved code naming a country whose name coincides with a
-     * well-known city (e.g. "Luxembourg") also keeps its recorded text. Every
-     * remaining failure path — an unresolvable segment, an ambiguous match, a
+     * path only), a resolved country NAME whose spelling coincides with a
+     * well-known city (e.g. "Luxembourg") also keeps its recorded text. That
+     * guard applies to name inputs only: a lone alpha-3 code (e.g. "LUX") is
+     * never a city name, so it still resolves to its ISO code. Every remaining
+     * failure path — an unresolvable segment, an ambiguous name match, a
      * missing alpha-3 mapping — degrades to the recorded segment text rather
      * than dropping the place.
      *
      * @param string $segment        The place segment to render
      * @param bool   $alpha3         Whether to render the alpha-3 code instead of alpha-2
-     * @param bool   $guardAmbiguous Whether to keep a resolved ambiguous city/country name as recorded text
+     * @param bool   $guardAmbiguous Whether to keep a resolved ambiguous country NAME (not an alpha-3 code) as recorded text
      *
      * @return string
      */
@@ -251,9 +255,14 @@ class PlaceProcessor
 
         $iso2 = $this->countryMap->resolve($segment);
 
+        if ($iso2 === null) {
+            return $segment;
+        }
+
         if (
-            ($iso2 === null)
-            || ($guardAmbiguous && in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true))
+            $guardAmbiguous
+            && !IsoCountryMap::isAlpha3Shape($segment)
+            && in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true)
         ) {
             return $segment;
         }
