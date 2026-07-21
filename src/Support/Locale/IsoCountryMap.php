@@ -64,6 +64,15 @@ use function trim;
 final class IsoCountryMap
 {
     /**
+     * Prefix that turns a bare region subtag into a well-formed BCP 47 tag for
+     * {@see Locale::getDisplayRegion()}. "und" is the ISO-639-2 code for an
+     * undetermined language, which is how the standard expresses "region only".
+     * A bare leading hyphen ("-DE") happens to parse in current ICU builds but
+     * is ill-formed, so it is not relied on.
+     */
+    private const string REGION_TAG_PREFIX = 'und-';
+
+    /**
      * Locales whose ICU display-region names get folded into the reverse lookup
      * map. Covers the major Latin-script languages used in published genealogy
      * software.
@@ -300,7 +309,7 @@ final class IsoCountryMap
             // matches the en_US key the reverse map is always seeded with
             // first. ICU echoes an unknown subtag back unchanged (uppercased),
             // so an echo equal to the token means "no region".
-            $name = (string) Locale::getDisplayRegion('-' . strtoupper($normalised), 'en_US');
+            $name = (string) Locale::getDisplayRegion(self::REGION_TAG_PREFIX . strtoupper($normalised), 'en_US');
 
             // mb_strtolower(), not strtolower(): the display name can contain
             // non-ASCII letters (a resolved region name like "Åland Islands",
@@ -345,7 +354,7 @@ final class IsoCountryMap
      */
     public function label(string $iso2): string
     {
-        $name = (string) Locale::getDisplayRegion('-' . $iso2, $this->effectiveLocale());
+        $name = (string) Locale::getDisplayRegion(self::REGION_TAG_PREFIX . $iso2, $this->effectiveLocale());
 
         return (($name !== '') && ($name !== $iso2)) ? $name : $iso2;
     }
@@ -409,7 +418,7 @@ final class IsoCountryMap
 
         foreach (self::ISO2_CODES as $iso2) {
             foreach ($locales as $locale) {
-                $name = (string) Locale::getDisplayRegion('-' . $iso2, $locale);
+                $name = (string) Locale::getDisplayRegion(self::REGION_TAG_PREFIX . $iso2, $locale);
 
                 if ($name === '') {
                     continue;
