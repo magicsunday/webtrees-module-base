@@ -218,74 +218,51 @@ class PlaceProcessor
         }
 
         if ($segments['last'] === null) {
-            return $this->loneCountryCode($segments['first'], $alpha3);
+            return $this->segmentToIsoCode($segments['first'], $alpha3, guardAmbiguous: true);
         }
 
-        return $segments['first'] . ', ' . $this->countrySegmentCode($segments['last'], $alpha3);
+        return $segments['first'] . ', ' . $this->segmentToIsoCode($segments['last'], $alpha3, guardAmbiguous: false);
     }
 
     /**
-     * Render a multi-segment place's country segment as an ISO code. The
-     * segment is resolved to its alpha-2 code and, for $alpha3, bridged on to
-     * the alpha-3 code; an unresolvable segment or a missing alpha-3 mapping
-     * degrades to the recorded text.
+     * Render a place segment as its ISO-3166-1 code — alpha-2, or the alpha-3
+     * sibling when $alpha3 is set. A bare two-letter segment is left verbatim
+     * (decision 7): "DE", "BW", "IL" are ambiguous with US and German state
+     * abbreviations, so "Dover, DE" is Delaware and "Ulm, BW" is
+     * Baden-Württemberg, never country codes — only full country names and
+     * three-letter codes expand. When $guardAmbiguous is set (the lone-segment
+     * path only), a resolved code naming a country whose name coincides with a
+     * well-known city (e.g. "Luxembourg") also keeps its recorded text. Every
+     * remaining failure path — an unresolvable segment, an ambiguous match, a
+     * missing alpha-3 mapping — degrades to the recorded segment text rather
+     * than dropping the place.
      *
-     * @param string $segment The last (country) segment
-     * @param bool   $alpha3  Whether to render the alpha-3 code instead of alpha-2
+     * @param string $segment        The place segment to render
+     * @param bool   $alpha3         Whether to render the alpha-3 code instead of alpha-2
+     * @param bool   $guardAmbiguous Whether to keep a resolved ambiguous city/country name as recorded text
      *
      * @return string
      */
-    private function countrySegmentCode(string $segment, bool $alpha3): string
+    private function segmentToIsoCode(string $segment, bool $alpha3, bool $guardAmbiguous): string
     {
-        $iso2 = $this->countryMap->resolve($segment);
-
-        if ($iso2 === null) {
+        if (IsoCountryMap::isAlpha2Shape($segment)) {
             return $segment;
         }
 
-        return $this->isoCode($iso2, $alpha3, $segment);
-    }
-
-    /**
-     * Render a lone segment as its ISO country code. The segment is treated as
-     * the country name (GVExport parity), but an ambiguous city/country name
-     * keeps its recorded text, as does an unresolvable segment or a missing
-     * alpha-3 mapping.
-     *
-     * @param string $segment The lone place segment
-     * @param bool   $alpha3  Whether to render the alpha-3 code instead of alpha-2
-     *
-     * @return string
-     */
-    private function loneCountryCode(string $segment, bool $alpha3): string
-    {
         $iso2 = $this->countryMap->resolve($segment);
 
-        if (($iso2 === null) || in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true)) {
+        if (
+            ($iso2 === null)
+            || ($guardAmbiguous && in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true))
+        ) {
             return $segment;
         }
 
-        return $this->isoCode($iso2, $alpha3, $segment);
-    }
-
-    /**
-     * Turn a resolved alpha-2 code into the requested ISO representation: the
-     * alpha-2 code itself, or its alpha-3 sibling when $alpha3 is set. A missing
-     * alpha-3 mapping degrades to $fallback, the recorded segment text.
-     *
-     * @param string $iso2     Resolved ISO-3166-1 alpha-2 code
-     * @param bool   $alpha3   Whether to render the alpha-3 code instead of alpha-2
-     * @param string $fallback Recorded segment text to fall back to when the alpha-3 mapping is missing
-     *
-     * @return string
-     */
-    private function isoCode(string $iso2, bool $alpha3, string $fallback): string
-    {
         if (!$alpha3) {
             return $iso2;
         }
 
-        return $this->countryMap->toAlpha3($iso2) ?? $fallback;
+        return $this->countryMap->toAlpha3($iso2) ?? $segment;
     }
 
     /**

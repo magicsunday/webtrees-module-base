@@ -221,12 +221,14 @@ final class IsoCountryMap
     /**
      * Whether $value has the shape of an ISO-3166-1 alpha-2 country code: exactly
      * two letters, case-insensitive. Purely a shape test — it does not check
-     * whether the code is actually recognised, {@see self::toAlpha3()} (its
-     * only caller) combines this with a lookup for that.
+     * whether the code is actually recognised, callers combine this with a lookup
+     * for that. Shared with
+     * {@see \MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor} so the case
+     * tolerance cannot drift between the two consumers.
      *
      * @param string $value Candidate token
      */
-    private function isAlpha2Shape(string $value): bool
+    public static function isAlpha2Shape(string $value): bool
     {
         return preg_match('/^[A-Za-z]{2}$/', $value) === 1;
     }
@@ -359,7 +361,7 @@ final class IsoCountryMap
     {
         $key = strtoupper(trim($iso2));
 
-        if (!$this->isAlpha2Shape($key)) {
+        if (!self::isAlpha2Shape($key)) {
             return null;
         }
 

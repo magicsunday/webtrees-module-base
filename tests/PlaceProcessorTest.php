@@ -470,6 +470,18 @@ final class PlaceProcessorTest extends TestCase
                 ['Hamburg', 'DEU'],
                 'Hamburg, DE',
             ],
+            'iso2 keeps a two-letter last segment verbatim (Dover, DE = Delaware)' => [
+                PlaceStyle::CityIso2,
+                'Dover, DE',
+                ['Dover', 'DE'],
+                'Dover, DE',
+            ],
+            'iso2 keeps a lone two-letter segment verbatim' => [
+                PlaceStyle::CityIso2,
+                'DE',
+                ['DE'],
+                'DE',
+            ],
 
             // CityIso3
             'iso3 collapses a four-segment place to city + alpha-3' => [
@@ -508,11 +520,29 @@ final class PlaceProcessorTest extends TestCase
                 ['London', 'Middlesex'],
                 'London, Middlesex',
             ],
-            'iso3 resolves an alpha-3 last segment through alpha-2' => [
+            'iso3 keeps a two-letter last segment verbatim (Dover, DE = Delaware)' => [
                 PlaceStyle::CityIso3,
-                'Hamburg, DEU',
-                ['Hamburg', 'DEU'],
-                'Hamburg, DEU',
+                'Dover, DE',
+                ['Dover', 'DE'],
+                'Dover, DE',
+            ],
+            'iso3 keeps a two-letter last segment verbatim (Ulm, BW = Baden-Württemberg)' => [
+                PlaceStyle::CityIso3,
+                'Ulm, BW',
+                ['Ulm', 'BW'],
+                'Ulm, BW',
+            ],
+            'iso3 keeps a two-letter last segment verbatim (Springfield, IL = Illinois)' => [
+                PlaceStyle::CityIso3,
+                'Springfield, IL',
+                ['Springfield', 'IL'],
+                'Springfield, IL',
+            ],
+            'iso3 keeps a lone two-letter segment verbatim' => [
+                PlaceStyle::CityIso3,
+                'DE',
+                ['DE'],
+                'DE',
             ],
         ];
     }
