@@ -377,8 +377,8 @@ final class PlaceProcessorTest extends TestCase
     /**
      * The two ISO city styles keep the locality and resolve the country segment
      * to its ISO-3166-1 code — alpha-2 for CityIso2, alpha-3 for CityIso3. A
-     * multi-segment place resolves its last segment; a lone segment is treated
-     * as the country itself (GVExport parity) unless it is an ambiguous
+     * multi-segment place resolves its last segment; a lone segment is read
+     * as the country itself unless it is an ambiguous
      * city/country name, in which case the plain text survives. Every failure
      * path degrades to the recorded text rather than dropping the place.
      *

@@ -38,8 +38,8 @@ class PlaceProcessor
      * more likely the city than the country (e.g. "Luxembourg", "Monaco",
      * "San Marino"). For these the ISO city styles keep the recorded text
      * rather than collapsing a lone segment to its country code. This is a
-     * display-policy list mirroring GVExport's behaviour, not ISO reference
-     * data, so it lives here rather than in {@see IsoCountryMap}.
+     * display-policy list, not ISO reference data, so it lives here rather
+     * than in {@see IsoCountryMap}.
      *
      * @var list<string>
      */
