@@ -17,6 +17,29 @@ Substitute `composer install`, `composer update` or `composer ci:cgl` for the la
 command as needed. CI does not use Docker at all — the workflow installs PHP
 directly via setup-php.
 
+### Why `config.policy.advisories.ignore` lists `guzzlehttp/guzzle`
+
+`composer.json` carries no comments, so the rationale lives here — and the entry
+mirrors the identical one in the chart modules and webtrees-statistics.
+
+This package requires `fisharebest/webtrees` only to develop and test against its
+API. It is a **library consumed into** an administrator's own webtrees install,
+and the release artifact ships this package's `src/` alone, so it neither vendors
+nor distributes webtrees' transitive dependencies. `guzzlehttp/guzzle` is one of
+those: exact-pinned by each webtrees release, not chosen by us, not patchable by
+us, and upgraded by the administrator's webtrees — not by this package.
+
+Composer's advisory policy blocks *resolution*, not merely the `composer audit`
+report (`--no-audit` / `COMPOSER_NO_AUDIT` suppress only the report). So whenever
+a pinned guzzle picks up an advisory, every install and CI run of this package
+reds for a vulnerability that cannot reach anyone through us.
+
+The ignore is deliberately **scoped to that one package** rather than disabling
+the policy wholesale: advisories on any other package still block resolution,
+guzzle CVEs still surface in `composer audit`, and this package's own direct
+dependencies stay subject to review as usual. `config` applies only to the root
+package, so consumers are unaffected.
+
 ## Build & tests
 - **`composer ci:test` MUST run before every commit** — catches phplint, PHPStan (level max), Rector, PHPUnit, and PHP-CS-Fixer issues before they reach GitHub CI.
 - Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`.
