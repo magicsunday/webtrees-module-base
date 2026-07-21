@@ -2,7 +2,7 @@
 This repository hosts `magicsunday/webtrees-module-base` — a shared PHP library consumed by `webtrees-fan-chart`, `webtrees-pedigree-chart`, and `webtrees-descendants-chart`. It contains the common processors (Date, Name, Image, Place), models (Symbols, NameAbbreviation, PlaceStyle, PlaceFormatSpec, PlaceFormatChoice), locale support (`IsoCountryMap`), and module helpers (VersionInformation) those modules use to render genealogy charts. No JavaScript, no asset pipeline — pure PHP.
 
 ## Setup/env
-- PHP 8.3 - 8.5 with extensions `dom` and `intl` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
+- PHP 8.3 - 8.5 with extensions `dom`, `intl` and `mbstring` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
 - The most common dev workflow is via `make link-base` from a sibling chart module: that symlinks `.build/vendor/.../webtrees-module-base` in the chart module to a sibling clone of this repo, so edits here are immediately picked up by the consumer.
 
 ## Running the test suite
@@ -80,7 +80,7 @@ tests/
 ### Support
 - **`Support/CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from the CLDR/ICU short-date pattern of a locale, for `DateProcessor`'s compact API.
 - **`Support/TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings.
-- **`Support/Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 alpha-2 codes, built on `ext-intl` (`Locale::getDisplayRegion`), the reason this library requires the `intl` extension. Used by `PlaceProcessor`'s `CityCountry` style.
+- **`Support/Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 alpha-2 codes, built on `ext-intl` (`Locale::getDisplayRegion`), the reason this library requires the `intl` extension, and on `mbstring` for folding the ICU display names. Used by `PlaceProcessor`'s `CityCountry`, `CityIso2` and `CityIso3` styles.
 
 ### Modules
 - **`Module/VersionInformation`** — checks GitHub releases for newer module versions, with file cache. Used by all three chart modules' admin pages.
