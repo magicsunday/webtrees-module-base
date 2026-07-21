@@ -17,6 +17,7 @@ use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceStyle;
 use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 
+use function in_array;
 use function is_string;
 
 /**
@@ -31,6 +32,21 @@ use function is_string;
  */
 class PlaceProcessor
 {
+    /**
+     * ISO-3166-1 alpha-2 codes of countries whose name coincides with a
+     * well-known city name, so a lone place segment carrying one of them is
+     * more likely the city than the country (e.g. "Luxembourg", "Monaco",
+     * "San Marino"). For these the ISO city styles keep the recorded text
+     * rather than collapsing a lone segment to its country code. This is a
+     * display-policy list mirroring GVExport's behaviour, not ISO reference
+     * data, so it lives here rather than in {@see IsoCountryMap}.
+     *
+     * @var list<string>
+     */
+    private const array AMBIGUOUS_CITY_COUNTRIES = [
+        'LU', 'MC', 'SM', 'SG', 'PA', 'GT', 'MX', 'KW', 'DJ', 'AD', 'VA', 'GI',
+    ];
+
     /**
      * @param Individual      $individual The individual to process
      * @param PlaceFormatSpec $format     Fully resolved formatting instruction
@@ -136,6 +152,8 @@ class PlaceProcessor
             PlaceStyle::Full        => $placeName,
             PlaceStyle::Levels      => $this->levelParts($place),
             PlaceStyle::CityCountry => $this->cityAndCountry($place),
+            PlaceStyle::CityIso2    => $this->cityAndIsoCode($place, false),
+            PlaceStyle::CityIso3    => $this->cityAndIsoCode($place, true),
         };
     }
 
@@ -177,6 +195,97 @@ class PlaceProcessor
         }
 
         return $segments['first'] . ', ' . $this->spellOutCode($segments['last']);
+    }
+
+    /**
+     * Keep the first segment and render the country as an ISO-3166-1 code —
+     * alpha-2 when $alpha3 is false, alpha-3 otherwise. A multi-segment place
+     * resolves its last segment; a lone segment is treated as the country
+     * itself, unlike {@see self::cityAndCountry()} which returns it unchanged.
+     * Every resolution failure degrades to the recorded text.
+     *
+     * @param Place $place  The place to shorten
+     * @param bool  $alpha3 Whether to render the alpha-3 code instead of alpha-2
+     *
+     * @return string
+     */
+    private function cityAndIsoCode(Place $place, bool $alpha3): string
+    {
+        $segments = $this->outerSegments($place);
+
+        if ($segments === null) {
+            return '';
+        }
+
+        if ($segments['last'] === null) {
+            return $this->loneCountryCode($segments['first'], $alpha3);
+        }
+
+        return $segments['first'] . ', ' . $this->countrySegmentCode($segments['last'], $alpha3);
+    }
+
+    /**
+     * Render a multi-segment place's country segment as an ISO code. The
+     * segment is resolved to its alpha-2 code and, for $alpha3, bridged on to
+     * the alpha-3 code; an unresolvable segment or a missing alpha-3 mapping
+     * degrades to the recorded text.
+     *
+     * @param string $segment The last (country) segment
+     * @param bool   $alpha3  Whether to render the alpha-3 code instead of alpha-2
+     *
+     * @return string
+     */
+    private function countrySegmentCode(string $segment, bool $alpha3): string
+    {
+        $iso2 = $this->countryMap->resolve($segment);
+
+        if ($iso2 === null) {
+            return $segment;
+        }
+
+        return $this->isoCode($iso2, $alpha3, $segment);
+    }
+
+    /**
+     * Render a lone segment as its ISO country code. The segment is treated as
+     * the country name (GVExport parity), but an ambiguous city/country name
+     * keeps its recorded text, as does an unresolvable segment or a missing
+     * alpha-3 mapping.
+     *
+     * @param string $segment The lone place segment
+     * @param bool   $alpha3  Whether to render the alpha-3 code instead of alpha-2
+     *
+     * @return string
+     */
+    private function loneCountryCode(string $segment, bool $alpha3): string
+    {
+        $iso2 = $this->countryMap->resolve($segment);
+
+        if (($iso2 === null) || in_array($iso2, self::AMBIGUOUS_CITY_COUNTRIES, true)) {
+            return $segment;
+        }
+
+        return $this->isoCode($iso2, $alpha3, $segment);
+    }
+
+    /**
+     * Turn a resolved alpha-2 code into the requested ISO representation: the
+     * alpha-2 code itself, or its alpha-3 sibling when $alpha3 is set. A missing
+     * alpha-3 mapping degrades to $fallback, the recorded segment text.
+     *
+     * @param string $iso2     Resolved ISO-3166-1 alpha-2 code
+     * @param bool   $alpha3   Whether to render the alpha-3 code instead of alpha-2
+     * @param string $fallback Recorded segment text to fall back to when the alpha-3 mapping is missing
+     *
+     * @return string
+     */
+    private function isoCode(string $iso2, bool $alpha3, string $fallback): string
+    {
+        if (!$alpha3) {
+            return $iso2;
+        }
+
+        return $this->countryMap->toAlpha3($iso2) ?? $fallback;
     }
 
     /**

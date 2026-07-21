@@ -79,6 +79,8 @@ final class PlaceFormatChoiceTest extends TestCase
             'two levels'                         => [PlaceFormatChoice::Levels2, PlaceStyle::Levels, 2, false],
             'three levels'                       => [PlaceFormatChoice::Levels3, PlaceStyle::Levels, 3, false],
             'place and country'                  => [PlaceFormatChoice::CityCountry, PlaceStyle::CityCountry, 0, false],
+            'city and ISO alpha-2'               => [PlaceFormatChoice::CityIso2, PlaceStyle::CityIso2, 0, false],
+            'city and ISO alpha-3'               => [PlaceFormatChoice::CityIso3, PlaceStyle::CityIso3, 0, false],
         ];
     }
 
@@ -141,6 +143,8 @@ final class PlaceFormatChoiceTest extends TestCase
             'levels-2'     => ['levels-2', PlaceFormatChoice::Levels2],
             'levels-3'     => ['levels-3', PlaceFormatChoice::Levels3],
             'city-country' => ['city-country', PlaceFormatChoice::CityCountry],
+            'city-iso2'    => ['city-iso2', PlaceFormatChoice::CityIso2],
+            'city-iso3'    => ['city-iso3', PlaceFormatChoice::CityIso3],
         ];
     }
 

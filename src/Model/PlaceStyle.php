@@ -38,4 +38,18 @@ enum PlaceStyle
      * three-letter country code is spelled out in the interface language.
      */
     case CityCountry;
+
+    /**
+     * Keep the first segment and resolve the country segment to its
+     * ISO-3166-1 alpha-2 code; a lone segment is treated as the country
+     * itself unless it is an ambiguous city/country name.
+     */
+    case CityIso2;
+
+    /**
+     * Keep the first segment and resolve the country segment to its
+     * ISO-3166-1 alpha-3 code; a lone segment is treated as the country
+     * itself unless it is an ambiguous city/country name.
+     */
+    case CityIso3;
 }

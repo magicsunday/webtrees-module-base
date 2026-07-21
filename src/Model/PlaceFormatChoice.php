@@ -55,6 +55,18 @@ enum PlaceFormatChoice: string
     case CityCountry = 'city-country';
 
     /**
+     * Keep the first segment and resolve the country segment to its
+     * ISO-3166-1 alpha-2 code.
+     */
+    case CityIso2 = 'city-iso2';
+
+    /**
+     * Keep the first segment and resolve the country segment to its
+     * ISO-3166-1 alpha-3 code.
+     */
+    case CityIso3 = 'city-iso3';
+
+    /**
      * Resolve this choice into a formatter instruction. The two arguments carry
      * the tree's SHOW_PEDIGREE_PLACES / SHOW_PEDIGREE_PLACES_SUFFIX preferences
      * and are read for self::Automatic only — every other case is already fully
@@ -79,6 +91,8 @@ enum PlaceFormatChoice: string
             self::Levels2     => new PlaceFormatSpec(PlaceStyle::Levels, 2),
             self::Levels3     => new PlaceFormatSpec(PlaceStyle::Levels, 3),
             self::CityCountry => new PlaceFormatSpec(PlaceStyle::CityCountry),
+            self::CityIso2    => new PlaceFormatSpec(PlaceStyle::CityIso2),
+            self::CityIso3    => new PlaceFormatSpec(PlaceStyle::CityIso3),
         };
     }
 

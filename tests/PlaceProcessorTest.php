@@ -375,6 +375,149 @@ final class PlaceProcessorTest extends TestCase
     }
 
     /**
+     * The two ISO city styles keep the locality and resolve the country segment
+     * to its ISO-3166-1 code — alpha-2 for CityIso2, alpha-3 for CityIso3. A
+     * multi-segment place resolves its last segment; a lone segment is treated
+     * as the country itself (GVExport parity) unless it is an ambiguous
+     * city/country name, in which case the plain text survives. Every failure
+     * path degrades to the recorded text rather than dropping the place.
+     *
+     * @param PlaceStyle    $style      City style under test
+     * @param string        $gedcomName Full GEDCOM place name returned by gedcomName()
+     * @param array<string> $parts      Ordered place-name segments, most specific (locality) first
+     * @param string        $expected   Expected shortened place name
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('cityIsoProvider')]
+    public function cityIsoStylesResolveTheCountrySegment(
+        PlaceStyle $style,
+        string $gedcomName,
+        array $parts,
+        string $expected,
+    ): void {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthPlace')->willReturn($this->placeStub($gedcomName, $parts));
+
+        $processor = new PlaceProcessor(
+            $individual,
+            new PlaceFormatSpec($style),
+            new IsoCountryMap('en_US')
+        );
+
+        self::assertSame($expected, $processor->getBirthPlaceShort());
+    }
+
+    /**
+     * @return array<string, array{0: PlaceStyle, 1: string, 2: array<string>, 3: string}>
+     */
+    public static function cityIsoProvider(): array
+    {
+        return [
+            // CityIso2
+            'iso2 collapses a four-segment place to city + alpha-2' => [
+                PlaceStyle::CityIso2,
+                'Hamburg, Wandsbek, Schleswig-Holstein, Deutschland',
+                ['Hamburg', 'Wandsbek', 'Schleswig-Holstein', 'Deutschland'],
+                'Hamburg, DE',
+            ],
+            'iso2 resolves a two-segment place to city + alpha-2' => [
+                PlaceStyle::CityIso2,
+                'Hamburg, Deutschland',
+                ['Hamburg', 'Deutschland'],
+                'Hamburg, DE',
+            ],
+            'iso2 keeps a lone unresolvable segment whole' => [
+                PlaceStyle::CityIso2,
+                'Berlin',
+                ['Berlin'],
+                'Berlin',
+            ],
+            'iso2 treats a lone country name as the country' => [
+                PlaceStyle::CityIso2,
+                'Deutschland',
+                ['Deutschland'],
+                'DE',
+            ],
+            'iso2 keeps a lone ambiguous city/country name (Luxembourg)' => [
+                PlaceStyle::CityIso2,
+                'Luxembourg',
+                ['Luxembourg'],
+                'Luxembourg',
+            ],
+            'iso2 keeps a lone ambiguous city/country name (Monaco)' => [
+                PlaceStyle::CityIso2,
+                'Monaco',
+                ['Monaco'],
+                'Monaco',
+            ],
+            'iso2 keeps an unresolvable last segment as-is' => [
+                PlaceStyle::CityIso2,
+                'London, Middlesex',
+                ['London', 'Middlesex'],
+                'London, Middlesex',
+            ],
+            'iso2 resolves an alias last segment (England -> GB)' => [
+                PlaceStyle::CityIso2,
+                'London, England',
+                ['London', 'England'],
+                'London, GB',
+            ],
+            'iso2 resolves an alpha-3 last segment back to alpha-2' => [
+                PlaceStyle::CityIso2,
+                'Hamburg, DEU',
+                ['Hamburg', 'DEU'],
+                'Hamburg, DE',
+            ],
+
+            // CityIso3
+            'iso3 collapses a four-segment place to city + alpha-3' => [
+                PlaceStyle::CityIso3,
+                'Hamburg, Wandsbek, Schleswig-Holstein, Deutschland',
+                ['Hamburg', 'Wandsbek', 'Schleswig-Holstein', 'Deutschland'],
+                'Hamburg, DEU',
+            ],
+            'iso3 resolves a two-segment place to city + alpha-3' => [
+                PlaceStyle::CityIso3,
+                'Hamburg, Deutschland',
+                ['Hamburg', 'Deutschland'],
+                'Hamburg, DEU',
+            ],
+            'iso3 keeps a lone unresolvable segment whole' => [
+                PlaceStyle::CityIso3,
+                'Berlin',
+                ['Berlin'],
+                'Berlin',
+            ],
+            'iso3 treats a lone country name as the country' => [
+                PlaceStyle::CityIso3,
+                'Deutschland',
+                ['Deutschland'],
+                'DEU',
+            ],
+            'iso3 keeps a lone ambiguous city/country name (Luxembourg)' => [
+                PlaceStyle::CityIso3,
+                'Luxembourg',
+                ['Luxembourg'],
+                'Luxembourg',
+            ],
+            'iso3 keeps an unresolvable last segment as-is' => [
+                PlaceStyle::CityIso3,
+                'London, Middlesex',
+                ['London', 'Middlesex'],
+                'London, Middlesex',
+            ],
+            'iso3 resolves an alpha-3 last segment through alpha-2' => [
+                PlaceStyle::CityIso3,
+                'Hamburg, DEU',
+                ['Hamburg', 'DEU'],
+                'Hamburg, DEU',
+            ],
+        ];
+    }
+
+    /**
      * getMarriagePlace() has a branch no other accessor shares: it reads the
      * individual's FIRST spouse family rather than a direct place accessor, and
      * returns an empty string when there is none. Both outcomes went through
