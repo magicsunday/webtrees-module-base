@@ -537,9 +537,22 @@ final class IsoCountryMap
         // quotation mark) inside names like "Côte d'Ivoire", but
         // GEDCOM authors typically type the ASCII apostrophe
         // U+0027. Fold the curly variants down to ASCII before
-        // case-mapping so the lookup matches either source.
+        // case-mapping so the lookup matches either source. The
+        // grave and acute accents are in the set because they sit
+        // on their own key on several keyboard layouts and get
+        // typed where an apostrophe was meant; standing alone they
+        // are never part of a country name, so folding them cannot
+        // collide with a legitimate spelling.
         $quotesNormalised = str_replace(
-            ["\u{2019}", "\u{2018}", "\u{02BB}", "\u{02BC}", "\u{201B}"],
+            [
+                "\u{2019}",
+                "\u{2018}",
+                "\u{02BB}",
+                "\u{02BC}",
+                "\u{201B}",
+                "\u{0060}",
+                "\u{00B4}",
+            ],
             "'",
             $trimmed,
         );

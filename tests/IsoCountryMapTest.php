@@ -26,7 +26,7 @@ use function set_error_handler;
  * Locks the {@see IsoCountryMap} contract: the apostrophe-and-diacritic
  * normalisation `resolve()` applies (ICU's display-region output uses the
  * curly U+2019 apostrophe in names like "Côte d'Ivoire", but GEDCOM authors can
- * stamp any of six common single-quote variants, and all six must fold to the
+ * stamp any of eight common single-quote variants, and all eight must fold to the
  * same ISO-2 code), the alpha-3 ↔ alpha-2 bridge (`resolve()` accepting an
  * alpha-3 token, `toAlpha3()` converting the other direction), both memoisation
  * caches, `label()`, and `clearCache()` resetting every one of them.
@@ -72,7 +72,7 @@ final class IsoCountryMapTest extends TestCase
     /**
      * Every variant of "Côte d'Ivoire" with a different single- quote /
      * modifier-letter character at the apostrophe position must resolve to CI.
-     * The six characters covered are:
+     * The eight characters covered are:
      *
      *   U+0027 — APOSTROPHE (ASCII)
      *   U+2019 — RIGHT SINGLE QUOTATION MARK (ICU canonical)
@@ -80,6 +80,8 @@ final class IsoCountryMapTest extends TestCase
      *   U+02BB — MODIFIER LETTER TURNED COMMA (Hawai'i)
      *   U+02BC — MODIFIER LETTER APOSTROPHE
      *   U+201B — SINGLE HIGH-REVERSED-9 QUOTATION MARK
+     *   U+0060 — GRAVE ACCENT (own key on several layouts)
+     *   U+00B4 — ACUTE ACCENT (own key on several layouts)
      *
      * @return iterable<string, array{0: string}>
      */
@@ -91,6 +93,8 @@ final class IsoCountryMapTest extends TestCase
         yield 'okina U+02BB' => ["Côte d\u{02BB}Ivoire"];
         yield 'modifier U+02BC' => ["Côte d\u{02BC}Ivoire"];
         yield 'high-9 U+201B' => ["Côte d\u{201B}Ivoire"];
+        yield 'grave U+0060' => ["Côte d\u{0060}Ivoire"];
+        yield 'acute U+00B4' => ["Côte d\u{00B4}Ivoire"];
     }
 
     /**
