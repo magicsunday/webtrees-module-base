@@ -9,8 +9,6 @@
 /rector.php            export-ignore
 .jscpd.json            export-ignore
 /tests/                export-ignore
-/Make/                 export-ignore
-/Makefile              export-ignore
 /AGENTS.md             export-ignore
 /node_modules/         export-ignore
 /package.json          export-ignore
