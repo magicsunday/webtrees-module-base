@@ -44,7 +44,7 @@ package, so consumers are unaffected.
 
 ## Build & tests
 - **`composer ci:test` MUST run before every commit** — catches phplint, PHPStan (level max), Rector, PHPUnit, and PHP-CS-Fixer issues before they reach GitHub CI.
-- Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`.
+- Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`, `composer ci:test:php:psr4`.
 - Single PHPUnit test: `composer ci:test:php:unit -- --filter TestClassName`.
 - Auto-fix: `composer ci:cgl` (PHP-CS-Fixer), `composer ci:rector` (Rector).
 - No Makefile: this library has no JS build, no translation catalogue and no release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules package.json package-lock.json`.
@@ -63,7 +63,9 @@ src/
   Support/Locale/ — locale-aware helpers (IsoCountryMap)
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules
 tests/
-  *Test.php       — PHPUnit tests, namespace MagicSunday\Webtrees\ModuleBase\Test
+  bootstrap.php   — harness only; belongs to no source class, so it stays at the root
+  <mirror of src/> — every *Test.php sits at the path its subject has under src/
+                     (src/Processor/DateProcessor.php → tests/Processor/DateProcessorTest.php)
 ```
 
 ### Processors
@@ -103,7 +105,8 @@ tests/
 - All files declare `strict_types=1`.
 - Strict PHPStan (level max + strict-rules + deprecation-rules + phpunit extension) — no baseline file; findings are fixed in code, with a small set of scoped `ignoreErrors` entries in `phpstan.neon` for irreducible library-export false positives (e.g. `trait.unused` on traits only consumed by downstream modules).
 - Promoted constructor properties + `readonly` where applicable (Rector applies this automatically per `rector.php` set list).
-- Test classes namespace `MagicSunday\Webtrees\ModuleBase\Test`; test classes are declared `final`.
+- The test tree mirrors `src/`: a test lives at the path of its subject (`src/Support/Locale/IsoCountryMap.php` → `tests/Support/Locale/IsoCountryMapTest.php`) and its namespace carries the matching suffix (`MagicSunday\Webtrees\ModuleBase\Test\Support\Locale`). PSR-4 resolves this without a composer change. PHPUnit itself never checks the namespace — it requires the file and matches the class's *short* name against the filename — so a mis-namespaced test still runs and the test count will not reveal the mistake. `composer ci:test:php:psr4` (`dump-autoload --optimize --strict-psr`; Composer requires the optimisation for the strict check) is the gate that does: it exits non-zero and names the offending file. It runs inside `ci:test` and as its own CI step.
+- Test classes are declared `final`.
 - All code comments in English (planning docs may be German).
 
 ## Tooling parity with chart modules

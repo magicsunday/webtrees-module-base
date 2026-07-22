@@ -61,6 +61,12 @@ jobs:
               run: |
                   composer ci:test:php:lint
 
+            - id: psr4
+              name: PSR-4 compliance
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  composer ci:test:php:psr4
+
             - id: phpstan
               name: PHPStan
               if: ${{ always() && steps.install.conclusion == 'success' }}
