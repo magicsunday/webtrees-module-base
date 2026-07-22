@@ -119,6 +119,8 @@ tests/
 ## Tooling parity with chart modules
 Per project policy, `composer.json`, `phpstan.neon`, `rector.php`, `phpunit.xml`, `.phplint.yml`, `.php-cs-fixer.dist.php`, and `.github/workflows/ci.yml` are kept structurally identical (modulo PHP-only vs JS sections) to the canonical fan-chart equivalents at `/volume2/docker/webtrees/app/vendor/magicsunday/webtrees-fan-chart/`. When updating tooling here, mirror the change to fan/ped/des in the same session, and vice versa.
 
+**What this rule is for, and its one exception.** The point is that a change to a config *the repos already share* must not land in one of them and be forgotten in the others — silent drift. It is not a ban on ever being ahead. **Adopting a new dev tool may run as a tracked pilot**: land it in one repo, and in the *same session* file an issue against each remaining repo describing the setup to mirror. That is the opposite of silent drift — the divergence is deliberate, visible and assigned. It is also how the shared config gets to be *right*: both phpat and infection had their leg-selection and score-accounting corrected during review of the pilot, and neither correction had to be repeated three times. A pilot without those issues filed is just drift, and is not allowed. Precedent: phpat (module-base #37 → fan #279 / pedigree #146 / descendants #135) and infection (#39 → fan #280 / pedigree #147 / descendants #136).
+
 ## Release
 - Library — no asset zip, no `make release` pipeline. Releases are pure git tag + GitHub release.
 - Bump consumer-facing dependencies first (e.g. when bumping `php` constraint or changing public class/interface signatures, decide on minor vs major per semver).
