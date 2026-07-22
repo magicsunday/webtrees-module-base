@@ -30,7 +30,7 @@ use function is_string;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class PlaceProcessor
+final readonly class PlaceProcessor
 {
     /**
      * ISO-3166-1 alpha-2 codes of countries whose name coincides with a
@@ -55,9 +55,9 @@ class PlaceProcessor
      * @param IsoCountryMap   $countryMap Resolver used by the styles that resolve a country segment
      */
     public function __construct(
-        private readonly Individual $individual,
-        private readonly PlaceFormatSpec $format,
-        private readonly IsoCountryMap $countryMap,
+        private Individual $individual,
+        private PlaceFormatSpec $format,
+        private IsoCountryMap $countryMap,
     ) {
     }
 

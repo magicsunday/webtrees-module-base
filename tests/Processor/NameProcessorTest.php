@@ -80,13 +80,12 @@ final class NameProcessorTest extends TestCase
     #[DataProvider('convertToHtmlEntitiesDataProvider')]
     public function convertToHtmlEntities(string $input, string $expected): void
     {
-        // Create mock
-        $nameProcessorMock = self::createStub(NameProcessor::class);
+        $nameProcessor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
 
         $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('convertToHtmlEntities');
 
-        $result = $reflectionMethod->invokeArgs($nameProcessorMock, [$input]);
+        $result = $reflectionMethod->invokeArgs($nameProcessor, [$input]);
 
         self::assertSame($expected, $result);
     }
@@ -213,18 +212,17 @@ final class NameProcessorTest extends TestCase
         $reflectionClass  = new ReflectionClass(NameProcessor::class);
         $reflectionMethod = $reflectionClass->getMethod('getDomXPathInstance');
 
-        // Create mock
-        $nameProcessorMock = self::createStub(NameProcessor::class);
+        $nameProcessor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
 
         /** @var DOMXPath $domXPath */
-        $domXPath = $reflectionMethod->invoke($nameProcessorMock, $input);
+        $domXPath = $reflectionMethod->invoke($nameProcessor, $input);
 
         $reflectionProperty = $reflectionClass->getProperty('xPath');
-        $reflectionProperty->setValue($nameProcessorMock, $domXPath);
+        $reflectionProperty->setValue($nameProcessor, $domXPath);
 
         $result = $reflectionClass
             ->getMethod($methodeName)
-            ->invoke($nameProcessorMock);
+            ->invoke($nameProcessor);
 
         self::assertSame($expected, $result);
     }
@@ -282,10 +280,10 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * Invokes the real getMarriedSurnames() on a stubbed NameProcessor whose
-     * $individual property is set via reflection. Required because
-     * self::createStub() overrides public methods with no-op stubs — the real
-     * method body is reachable only via Reflection::invoke().
+     * Invokes the real getMarriedSurnames() on a constructor-less NameProcessor
+     * whose $individual property is set via reflection. The class is final, so
+     * it cannot be subclassed or stubbed; a real instance built without its
+     * constructor runs the real method body.
      *
      * @param array<int, array<string, string>> $individualNames
      * @param Individual|null                   $spouse
@@ -299,12 +297,12 @@ final class NameProcessorTest extends TestCase
         $individualStub = self::createStub(Individual::class);
         $individualStub->method('getAllNames')->willReturn($individualNames);
 
-        $processorStub = self::createStub(NameProcessor::class);
+        $processor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
 
         $reflectionClass = new ReflectionClass(NameProcessor::class);
-        $reflectionClass->getProperty('individual')->setValue($processorStub, $individualStub);
+        $reflectionClass->getProperty('individual')->setValue($processor, $individualStub);
 
-        $result = $reflectionClass->getMethod('getMarriedSurnames')->invoke($processorStub, $spouse);
+        $result = $reflectionClass->getMethod('getMarriedSurnames')->invoke($processor, $spouse);
 
         self::assertIsArray($result);
 
@@ -474,9 +472,9 @@ final class NameProcessorTest extends TestCase
         string $nick,
         string $expected,
     ): void {
-        $processorStub    = self::createStub(NameProcessor::class);
+        $processor        = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
         $reflectionMethod = (new ReflectionClass(NameProcessor::class))->getMethod('injectNickname');
-        $result           = $reflectionMethod->invoke($processorStub, $fullName, $firstNames, $lastNames, $nick);
+        $result           = $reflectionMethod->invoke($processor, $fullName, $firstNames, $lastNames, $nick);
 
         self::assertSame($expected, $result);
     }

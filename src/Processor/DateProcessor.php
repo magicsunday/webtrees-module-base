@@ -37,17 +37,17 @@ use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class DateProcessor
+final readonly class DateProcessor
 {
     /**
      * The birthdate of the individual.
      */
-    private readonly Date $birthDate;
+    private Date $birthDate;
 
     /**
      * The death date of the individual.
      */
-    private readonly Date $deathDate;
+    private Date $deathDate;
 
     /**
      * @param Individual $individual              The individual to process
@@ -61,10 +61,10 @@ class DateProcessor
      *                                            CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
      */
     public function __construct(
-        private readonly Individual $individual,
-        private readonly int $generation = 0,
-        private readonly int $detailedDateGenerations = PHP_INT_MAX,
-        private readonly string $compactDateFormat = CompactDateFormat::FALLBACK,
+        private Individual $individual,
+        private int $generation = 0,
+        private int $detailedDateGenerations = PHP_INT_MAX,
+        private string $compactDateFormat = CompactDateFormat::FALLBACK,
     ) {
         $this->birthDate = $this->individual->getBirthDate();
         $this->deathDate = $this->individual->getDeathDate();

@@ -24,6 +24,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionMethod;
+use ReflectionProperty;
 
 /**
  * DateProcessorTest.
@@ -75,6 +77,26 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * Builds a constructor-less DateProcessor with the given date property set
+     * via reflection, so a reflection test can invoke a method that reads it.
+     *
+     * @param string $propertyName The private date property to populate
+     * @param string $input        The GEDCOM date string to store there
+     *
+     * @return DateProcessor
+     *
+     * @throws ReflectionException
+     */
+    private function dateProcessorWith(string $propertyName, string $input): DateProcessor
+    {
+        $dateProcessor = (new ReflectionClass(DateProcessor::class))->newInstanceWithoutConstructor();
+
+        (new ReflectionProperty(DateProcessor::class, $propertyName))->setValue($dateProcessor, new Date($input));
+
+        return $dateProcessor;
+    }
+
+    /**
      * Tests extracting the year from a date.
      *
      * @param int    $expected
@@ -92,15 +114,8 @@ final class DateProcessorTest extends TestCase
         string $propertyName,
         string $methodeName,
     ): void {
-        // Create mock
-        $dateProcessorMock = self::createStub(DateProcessor::class);
-
-        $reflectionClass    = new ReflectionClass(DateProcessor::class);
-        $reflectionProperty = $reflectionClass->getProperty($propertyName);
-        $reflectionProperty->setValue($dateProcessorMock, new Date($input));
-
-        $result = $reflectionClass->getMethod($methodeName)
-            ->invokeArgs($dateProcessorMock, []);
+        $result = (new ReflectionMethod(DateProcessor::class, $methodeName))
+            ->invokeArgs($this->dateProcessorWith($propertyName, $input), []);
 
         self::assertSame($expected, $result);
     }
@@ -187,15 +202,8 @@ final class DateProcessorTest extends TestCase
         string $propertyName,
         string $methodeName,
     ): void {
-        // Create mock
-        $dateProcessorMock = self::createStub(DateProcessor::class);
-
-        $reflectionClass    = new ReflectionClass(DateProcessor::class);
-        $reflectionProperty = $reflectionClass->getProperty($propertyName);
-        $reflectionProperty->setValue($dateProcessorMock, new Date($input));
-
-        $result = $reflectionClass->getMethod($methodeName)
-            ->invokeArgs($dateProcessorMock, []);
+        $result = (new ReflectionMethod(DateProcessor::class, $methodeName))
+            ->invokeArgs($this->dateProcessorWith($propertyName, $input), []);
 
         self::assertIsString($result);
         self::assertSame(strip_tags($result), $result);
