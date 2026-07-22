@@ -496,27 +496,30 @@ final class IsoCountryMapTest extends TestCase
     {
         // [ candidate, is alpha-2 shape, is alpha-3 shape ]
         return [
-            'two upper-case letters'     => ['DE', true, false],
-            'two lower-case letters'     => ['de', true, false],
-            'mixed case is tolerated'    => ['dE', true, false],
-            'three letters'              => ['DEU', false, true],
-            'three lower-case letters'   => ['deu', false, true],
-            'single letter'              => ['D', false, false],
-            'four letters'               => ['DEUT', false, false],
-            'empty string'               => ['', false, false],
-            'digit instead of letter'    => ['D1', false, false],
-            'trailing space'             => ['DE ', false, false],
-            'leading space'              => [' DE', false, false],
-            'non-ascii letters'          => ['DÜ', false, false],
-            'newline after a valid code' => ["DE\n", false, false],
+            'two upper-case letters'             => ['DE', true, false],
+            'two lower-case letters'             => ['de', true, false],
+            'mixed case is tolerated'            => ['dE', true, false],
+            'three letters'                      => ['DEU', false, true],
+            'three lower-case letters'           => ['deu', false, true],
+            'single letter'                      => ['D', false, false],
+            'four letters'                       => ['DEUT', false, false],
+            'empty string'                       => ['', false, false],
+            'digit instead of letter'            => ['D1', false, false],
+            'trailing space'                     => ['DE ', false, false],
+            'leading space'                      => [' DE', false, false],
+            'non-ascii letters'                  => ['DÜ', false, false],
+            'newline after a valid alpha-2 code' => ["DE\n", false, false],
+            'newline after a valid alpha-3 code' => ["DEU\n", false, false],
         ];
     }
 
     /**
      * The shape tests gate which tokens are even looked up, so they must reject
      * anything that is not exactly two (or three) ASCII letters — including a token
-     * that merely starts that way. The trailing-newline case is the one that a
-     * non-anchored pattern would wrongly accept.
+     * that merely starts that way. The trailing-newline rows are the discriminating
+     * ones: `$` matches before a final newline, so a `^…$` pattern accepts them. Both
+     * lengths need their own row — a single alpha-2 case would leave the alpha-3
+     * anchoring unpinned.
      *
      * @param string $candidate
      * @param bool   $isAlpha2

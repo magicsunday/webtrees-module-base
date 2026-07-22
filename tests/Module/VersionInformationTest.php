@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Module;
 
-use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\ClientInterface;
@@ -20,13 +19,13 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JsonException;
 use MagicSunday\Webtrees\ModuleBase\Module\VersionInformation;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\InMemoryCacheFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function json_encode;
-use function uniqid;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -54,17 +53,18 @@ final class VersionInformationTest extends TestCase
     {
         parent::setUp();
 
-        Registry::cache(new CacheFactory());
+        Registry::cache(new InMemoryCacheFactory());
     }
 
     /**
      * Runs the real version check against a stubbed HTTP client, so the release-API
      * response can be dictated without reaching the network.
      *
-     * Every call gets a unique module name. The check memoises its result in the
-     * FILE cache under a key built from that name, so a shared name would let the
-     * first case's result answer every later one — and, because that cache outlives
-     * the process, every later run too.
+     * The check memoises its result under a cache key built from the module name, so
+     * the cache — not the key — is what has to be fresh. setUp() installs an in-memory
+     * factory per test, which is why a stable name is safe here; with the real
+     * file-backed factory the first case's result would answer every later one, and
+     * outlive the process too.
      *
      * @param Response|ConnectException $response The response the client returns, or
      *                                            the transport failure it raises
@@ -76,7 +76,7 @@ final class VersionInformationTest extends TestCase
         $module = self::createStub(ModuleCustomInterface::class);
         $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
         $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
-        $module->method('name')->willReturn('version-information-test-' . uniqid('', true));
+        $module->method('name')->willReturn('version-information-test');
 
         $client = self::createStub(ClientInterface::class);
 

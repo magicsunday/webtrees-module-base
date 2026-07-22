@@ -20,6 +20,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function array_map;
+
 /**
  * NameProcessorTest.
  *
@@ -270,13 +272,12 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * Invokes the real getMarriedSurnames() on a constructor-less NameProcessor
-     * whose $individual property is set via reflection. The class is final, so
-     * it cannot be subclassed or stubbed; a real instance built without its
-     * constructor runs the real method body.
+     * Reports the married surnames an individual with the given NAME records has,
+     * built the way a consumer builds it: around a stubbed individual, through the
+     * real constructor, calling the public method.
      *
-     * @param array<int, array<string, string>> $individualNames
-     * @param Individual|null                   $spouse
+     * @param array<int, array<string, string>> $individualNames The individual's NAME records
+     * @param Individual|null                   $spouse          The spouse whose surname must match, if any
      *
      * @return string[]
      */
@@ -302,6 +303,11 @@ final class NameProcessorTest extends TestCase
         return (new NameProcessor($individualStub))->getMarriedSurnames($spouse);
     }
 
+    /**
+     * An individual with only a plain NAME record has no married surname to report.
+     *
+     * @return void
+     */
     #[Test]
     public function getMarriedSurnamesReturnsEmptyWhenNoMarnmRecord(): void
     {
@@ -310,6 +316,11 @@ final class NameProcessorTest extends TestCase
         ]));
     }
 
+    /**
+     * With no spouse to match against, the _MARNM surname is reported as-is.
+     *
+     * @return void
+     */
     #[Test]
     public function getMarriedSurnamesReturnsMarnmSurnameWhenNoSpouseGiven(): void
     {
@@ -319,6 +330,11 @@ final class NameProcessorTest extends TestCase
         ]));
     }
 
+    /**
+     * A _MARNM surname holding several space-separated parts is split into one entry per part.
+     *
+     * @return void
+     */
     #[Test]
     public function getMarriedSurnamesSplitsMultipleSurnameParts(): void
     {
@@ -327,6 +343,12 @@ final class NameProcessorTest extends TestCase
         ]));
     }
 
+    /**
+     * Given a spouse, only the _MARNM record whose surname matches that spouse is reported —
+     * an individual can carry several married names from different marriages.
+     *
+     * @return void
+     */
     #[Test]
     public function getMarriedSurnamesMatchesSpouseSurname(): void
     {
@@ -347,6 +369,12 @@ final class NameProcessorTest extends TestCase
         ));
     }
 
+    /**
+     * When no _MARNM record matches the spouse's surname, nothing is reported rather than
+     * falling back to an unrelated married name.
+     *
+     * @return void
+     */
     #[Test]
     public function getMarriedSurnamesReturnsEmptyWhenSpouseSurnameDoesNotMatchAnyMarnm(): void
     {
@@ -528,9 +556,11 @@ final class NameProcessorTest extends TestCase
             ['NICK', 'Married-Nick'],
         ]);
 
+        // An explicit lower-case "birth" TYPE: the guard upper-cases before comparing,
+        // so this must still be accepted as the primary identity.
         $birthName = self::createStub(Fact::class);
         $birthName->method('attribute')->willReturnMap([
-            ['TYPE', ''],
+            ['TYPE', 'birth'],
             ['NICK', 'Jonny'],
         ]);
 

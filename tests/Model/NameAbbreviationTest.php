@@ -73,7 +73,24 @@ final class NameAbbreviationTest extends TestCase
         NameAbbreviation $expected,
     ): void {
         self::assertSame($expected, $configured->resolve($surnameTradition));
-        self::assertNotSame(NameAbbreviation::Auto, $configured->resolve($surnameTradition));
+    }
+
+    /**
+     * Resolving never yields Auto — for ANY case against ANY tradition, not just the
+     * curated rows above. This is the invariant the JS layer depends on: it receives a
+     * concrete strategy, never the "decide for me" placeholder. Asserted over cases()
+     * so adding an enum case without extending resolve() fails here.
+     *
+     * @return void
+     */
+    #[Test]
+    public function resolveNeverYieldsAuto(): void
+    {
+        foreach (NameAbbreviation::cases() as $case) {
+            foreach (['icelandic', 'paternal', '', 'something-new'] as $tradition) {
+                self::assertNotSame(NameAbbreviation::Auto, $case->resolve($tradition));
+            }
+        }
     }
 
     /**

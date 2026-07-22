@@ -23,6 +23,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function strip_tags;
+
 /**
  * DateProcessorTest.
  *
