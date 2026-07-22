@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Support\Locale;
 
 use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 use PHPUnit\Framework\Attributes\CoversClass;

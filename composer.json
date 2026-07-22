@@ -80,6 +80,9 @@
         "ci:test:php:lint": [
             "phplint --configuration .phplint.yml"
         ],
+        "ci:test:php:psr4": [
+            "composer dump-autoload --optimize --strict-psr"
+        ],
         "ci:test:php:phpstan": [
             "phpstan analyze --configuration phpstan.neon --memory-limit=-1"
         ],
@@ -94,6 +97,7 @@
         ],
         "ci:test": [
             "@ci:test:php:lint",
+            "@ci:test:php:psr4",
             "@ci:test:php:phpstan",
             "@ci:test:php:rector",
             "@ci:test:php:unit",

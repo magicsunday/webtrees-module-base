@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
 use DOMXPath;
 use Fisharebest\Webtrees\Individual;
