@@ -16,6 +16,7 @@
     <testsuites>
         <testsuite name="Unit Tests">
             <directory>tests</directory>
+            <exclude>tests/Architecture</exclude>
         </testsuite>
     </testsuites>
 

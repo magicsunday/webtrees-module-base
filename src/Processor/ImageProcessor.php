@@ -23,7 +23,7 @@ use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class ImageProcessor
+final readonly class ImageProcessor
 {
     /**
      * Constructor.
@@ -35,11 +35,11 @@ class ImageProcessor
         /**
          * The module.
          */
-        private readonly ModuleCustomInterface&ModuleAssetUrlInterface $module,
+        private ModuleCustomInterface&ModuleAssetUrlInterface $module,
         /**
          * The individual.
          */
-        private readonly Individual $individual,
+        private Individual $individual,
     ) {
     }
 

@@ -23,7 +23,7 @@ use Fisharebest\Webtrees\Individual;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class NameProcessor
+final class NameProcessor
 {
     /**
      * The full name identifier with name placeholders.

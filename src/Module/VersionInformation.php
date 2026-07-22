@@ -42,7 +42,7 @@ use const JSON_THROW_ON_ERROR;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class VersionInformation
+final readonly class VersionInformation
 {
     /**
      * Constructor.
@@ -53,7 +53,7 @@ class VersionInformation
         /**
          * The module.
          */
-        private readonly ModuleCustomInterface $module,
+        private ModuleCustomInterface $module,
     ) {
     }
 

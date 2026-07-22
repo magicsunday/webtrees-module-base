@@ -64,6 +64,7 @@ src/
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules
 tests/
   bootstrap.php   — harness only; belongs to no source class, so it stays at the root
+  Architecture/   — phpat rule providers, not PHPUnit tests (see the mirror exception below)
   <mirror of src/> — every *Test.php sits at the path its subject has under src/
                      (src/Processor/DateProcessor.php → tests/Processor/DateProcessorTest.php)
 ```
@@ -103,9 +104,11 @@ tests/
 ## Code style
 - PSR-12 + PER-CS 2.x with project-specific tightenings (PHP-CS-Fixer config in `.php-cs-fixer.dist.php`).
 - All files declare `strict_types=1`.
-- Strict PHPStan (level max + strict-rules + deprecation-rules + phpunit extension) — no baseline file; findings are fixed in code, with a small set of scoped `ignoreErrors` entries in `phpstan.neon` for irreducible library-export false positives (e.g. `trait.unused` on traits only consumed by downstream modules).
+- Strict PHPStan (level max + strict-rules + deprecation-rules + phpunit extension + phpat architecture rules) — no baseline file; findings are fixed in code, with a small set of scoped `ignoreErrors` entries in `phpstan.neon` for irreducible library-export false positives (e.g. `trait.unused` on traits only consumed by downstream modules).
+- Architecture rules live in `tests/Architecture/ArchitectureTest.php` (phpat, run inside the PHPStan step): the leaf layers (`Model`, `Support`, `Contract`, `Module`) depend on nothing else under `src/`, `Processor` depends only on those leaves, and `Model`/`Support`/`Processor`/`Module` are `final`. phpat cannot subject a trait, so `Facade`/`Traits` are pinned only as dependency targets — verify a new rule by breaking it, never assume a green run enforces it.
 - Promoted constructor properties + `readonly` where applicable (Rector applies this automatically per `rector.php` set list).
 - The test tree mirrors `src/`: a test lives at the path of its subject (`src/Support/Locale/IsoCountryMap.php` → `tests/Support/Locale/IsoCountryMapTest.php`) and its namespace carries the matching suffix (`MagicSunday\Webtrees\ModuleBase\Test\Support\Locale`). PSR-4 resolves this without a composer change. PHPUnit itself never checks the namespace — it requires the file and matches the class's *short* name against the filename — so a mis-namespaced test still runs and the test count will not reveal the mistake. `composer ci:test:php:psr4` (`dump-autoload --optimize --strict-psr`; Composer requires the optimisation for the strict check) is the gate that does: it exits non-zero and names the offending file. It runs inside `ci:test` and as its own CI step.
+  - **Exception — files that test no `src/` subject.** The mirror rule pairs a test with the class it exercises, so it applies only to files that have one. Two do not, and they stay put: `tests/bootstrap.php` (harness) and `tests/Architecture/` (phpat rule providers — they are not PHPUnit tests at all, are excluded from the suite in `phpunit.xml`, and are consumed by PHPStan via the `phpat.test` service tag; there is no `src/Architecture/` for them to mirror). Their namespace still follows the directory, so the PSR-4 gate covers them.
 - Test classes are declared `final`.
 - Every test declares its coverage target: `#[CoversClass]` for a class/enum subject, `#[CoversTrait]` for a trait, plus `#[UsesClass]` / `#[UsesTrait]` for each collaborator it actually executes (a collaborator outside the `<source>` scope — `src/` only — such as a webtrees vendor class, needs none: it records no coverage). A purely structural test that executes no production line (reflection-only API-shape checks) declares `#[CoversNothing]` rather than a `Covers*` it never exercises — honest, and it does not masquerade as coverage a mutation run would expect to kill. `phpunit.xml` sets `requireCoverageMetadata="true"`, so `composer ci:test:php:unit` fails a test that declares none (as *risky*) — this holds without collecting coverage, so the existing CI unit step enforces it.
 - All code comments in English (planning docs may be German).
