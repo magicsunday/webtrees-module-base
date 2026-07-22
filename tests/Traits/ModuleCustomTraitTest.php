@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Traits;
 
 use MagicSunday\Webtrees\ModuleBase\Traits\ModuleCustomTrait;
 use PHPUnit\Framework\Attributes\DataProvider;

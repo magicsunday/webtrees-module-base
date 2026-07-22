@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Support;
 
 use MagicSunday\Webtrees\ModuleBase\Support\TextDirection;
 use PHPUnit\Framework\Attributes\Test;

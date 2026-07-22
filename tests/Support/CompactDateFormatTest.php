@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Support;
 
 use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 use PHPUnit\Framework\Attributes\CoversClass;

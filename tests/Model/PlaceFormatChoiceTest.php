@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Webtrees\ModuleBase\Test;
+namespace MagicSunday\Webtrees\ModuleBase\Test\Model;
 
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatChoice;
 use MagicSunday\Webtrees\ModuleBase\Model\PlaceFormatSpec;
