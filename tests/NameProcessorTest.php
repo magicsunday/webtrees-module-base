@@ -27,7 +27,7 @@ use ReflectionException;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class NameProcessorTest extends TestCase
+final class NameProcessorTest extends TestCase
 {
     /**
      * @return string[][]

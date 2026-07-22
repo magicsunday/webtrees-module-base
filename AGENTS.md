@@ -103,7 +103,7 @@ tests/
 - All files declare `strict_types=1`.
 - Strict PHPStan (level max + strict-rules + deprecation-rules + phpunit extension) — no baseline file; findings are fixed in code, with a small set of scoped `ignoreErrors` entries in `phpstan.neon` for irreducible library-export false positives (e.g. `trait.unused` on traits only consumed by downstream modules).
 - Promoted constructor properties + `readonly` where applicable (Rector applies this automatically per `rector.php` set list).
-- Test classes namespace `MagicSunday\Webtrees\ModuleBase\Test`.
+- Test classes namespace `MagicSunday\Webtrees\ModuleBase\Test`; test classes are declared `final`.
 - All code comments in English (planning docs may be German).
 
 ## Tooling parity with chart modules

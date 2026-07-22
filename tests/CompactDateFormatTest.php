@@ -27,7 +27,7 @@ use function extension_loaded;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(CompactDateFormat::class)]
-class CompactDateFormatTest extends TestCase
+final class CompactDateFormatTest extends TestCase
 {
     /**
      * @return array<string, array{string, string}>
