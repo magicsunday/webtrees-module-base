@@ -12,74 +12,147 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Traits;
 
 use Fisharebest\Webtrees\Individual;
-use Fisharebest\Webtrees\Menu;
+use Fisharebest\Webtrees\Tree;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\ChartModuleDouble;
 use MagicSunday\Webtrees\ModuleBase\Traits\ModuleChartTrait;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use ReflectionMethod;
-use ReflectionNamedType;
 
 /**
- * Structural coverage for the shared chart-module trait extracted from the
- * fan/pedigree/descendants chart modules.
+ * Pins the chart URL the trait builds for an individual: the consuming module's
+ * ROUTE_DEFAULT is used, the individual contributes xref and tree, and caller
+ * parameters are added — but cannot displace those two.
+ *
+ * The route() helper that turns the route name and parameters into a URL is
+ * webtrees', not this trait's, so it is mocked away at the trait's own seam
+ * (buildRouteUrl); the assertions are on what the trait hands to that seam.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
+#[CoversTrait(ModuleChartTrait::class)]
 final class ModuleChartTraitTest extends TestCase
 {
-    #[Test]
-    public function traitExistsAndReusesWebtreesBaseTrait(): void
+    /**
+     * Builds a chart module composing the trait, with its route-resolving seam
+     * mocked so the URL construction can be asserted in isolation.
+     *
+     * @return ChartModuleDouble&MockObject
+     */
+    private function createModule(): ChartModuleDouble&MockObject
     {
-        self::assertTrue(trait_exists(ModuleChartTrait::class));
+        return $this->getMockBuilder(ChartModuleDouble::class)
+            ->onlyMethods(['buildRouteUrl'])
+            ->getMock();
+    }
 
-        $reflection = new ReflectionClass(ModuleChartTrait::class);
+    /**
+     * Builds an individual whose xref and tree name land in the URL.
+     *
+     * @param string $xref
+     * @param string $treeName
+     *
+     * @return Individual
+     */
+    private function createIndividual(string $xref, string $treeName): Individual
+    {
+        $tree = self::createStub(Tree::class);
+        $tree->method('name')->willReturn($treeName);
 
+        $individual = self::createStub(Individual::class);
+        $individual->method('xref')->willReturn($xref);
+        $individual->method('tree')->willReturn($tree);
+
+        return $individual;
+    }
+
+    /**
+     * The composition is the contract: webtrees' own chart trait supplies
+     * chartMenu(), which chartBoxMenu() delegates to.
+     */
+    #[Test]
+    public function composesWebtreesOwnChartTrait(): void
+    {
         self::assertContains(
             \Fisharebest\Webtrees\Module\ModuleChartTrait::class,
-            $reflection->getTraitNames(),
+            (new ReflectionClass(ModuleChartTrait::class))->getTraitNames(),
         );
     }
 
+    /**
+     * The individual identifies itself in the URL through its xref and its
+     * tree, under the route the consuming module declares — and the resolved
+     * URL is handed straight back to the caller.
+     */
     #[Test]
-    public function chartBoxMenuReturnsMenuOrNull(): void
+    public function chartUrlAddressesTheIndividualUnderTheModulesOwnRoute(): void
     {
-        $method = new ReflectionMethod(ModuleChartTrait::class, 'chartBoxMenu');
+        $module = $this->createModule();
+        $module->expects(self::once())
+            ->method('buildRouteUrl')
+            ->with('my-chart', ['xref' => 'X17', 'tree' => 'demo-tree'])
+            ->willReturn('/resolved-url');
 
-        self::assertTrue($method->isPublic());
-        self::assertCount(1, $method->getParameters());
-
-        $parameter     = $method->getParameters()[0];
-        $parameterType = $parameter->getType();
-        self::assertInstanceOf(ReflectionNamedType::class, $parameterType);
-        self::assertSame(Individual::class, $parameterType->getName());
-
-        $returnType = $method->getReturnType();
-        self::assertInstanceOf(ReflectionNamedType::class, $returnType);
-        self::assertSame(Menu::class, $returnType->getName());
-        self::assertTrue($returnType->allowsNull());
+        self::assertSame(
+            '/resolved-url',
+            $module->chartUrl($this->createIndividual('X17', 'demo-tree')),
+        );
     }
 
+    /**
+     * Extra parameters — layout or generation toggles, say — travel to the
+     * route alongside the individual's own.
+     */
     #[Test]
-    public function chartUrlReturnsString(): void
+    public function chartUrlCarriesAdditionalParameters(): void
     {
-        $method = new ReflectionMethod(ModuleChartTrait::class, 'chartUrl');
+        $module = $this->createModule();
+        $module->expects(self::once())
+            ->method('buildRouteUrl')
+            ->with(
+                'my-chart',
+                [
+                    'xref'        => 'X17',
+                    'tree'        => 'demo-tree',
+                    'generations' => 4,
+                    'layout'      => 'left',
+                ]
+            )
+            ->willReturn('/resolved-url');
 
-        self::assertTrue($method->isPublic());
-        self::assertCount(2, $method->getParameters());
+        $module->chartUrl(
+            $this->createIndividual('X17', 'demo-tree'),
+            [
+                'generations' => 4,
+                'layout'      => 'left',
+            ]
+        );
+    }
 
-        $individualType = $method->getParameters()[0]->getType();
-        self::assertInstanceOf(ReflectionNamedType::class, $individualType);
-        self::assertSame(Individual::class, $individualType->getName());
+    /**
+     * The individual's own keys win: the trait unions its array onto the
+     * caller's rather than merging, so a caller cannot point the URL at a
+     * different record than the individual it was handed.
+     */
+    #[Test]
+    public function callerParametersCannotDisplaceTheIndividual(): void
+    {
+        $module = $this->createModule();
+        $module->expects(self::once())
+            ->method('buildRouteUrl')
+            ->with('my-chart', ['xref' => 'X17', 'tree' => 'demo-tree'])
+            ->willReturn('/resolved-url');
 
-        $parameters = $method->getParameters()[1];
-        self::assertTrue($parameters->isDefaultValueAvailable());
-        self::assertSame([], $parameters->getDefaultValue());
-
-        $returnType = $method->getReturnType();
-        self::assertInstanceOf(ReflectionNamedType::class, $returnType);
-        self::assertSame('string', $returnType->getName());
+        $module->chartUrl(
+            $this->createIndividual('X17', 'demo-tree'),
+            [
+                'xref' => 'X99',
+                'tree' => 'other-tree',
+            ]
+        );
     }
 }
