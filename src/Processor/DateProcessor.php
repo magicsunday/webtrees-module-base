@@ -21,12 +21,12 @@ use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 /**
  * Extracts and formats birth, death, and marriage dates from an Individual.
  *
- * The legacy methods (getBirthDate, getDeathDate, getLifetimeDescription,
- * getMarriageDate, getMarriageDateOfParents) preserve the locale-aware webtrees
- * display() output for backwards compatibility.
+ * The legacy methods (getBirthDate, getDeathDate, getLifetimeDescription)
+ * preserve the locale-aware webtrees display() output.
  *
  * Generation-aware "compact" methods (added in 1.1.0 — getFormattedBirthDate,
- * getFormattedDeathDate, getBirthDateFull, getDeathDateFull,
+ * getFormattedDeathDate, getFormattedMarriageDate,
+ * getFormattedMarriageDateOfParents, getBirthDateFull, getDeathDateFull,
  * getMarriageDateFull, getCompactLifetimeDescription, formatMarriageDate)
  * format dates in a caller-supplied compact format (default "%d.%m.%Y", but
  * consumers pass a locale-aware pattern) or year-only depending on the
@@ -138,51 +138,6 @@ class DateProcessor
 
         if ($this->individual->isDead()) {
             return I18N::translate('Deceased');
-        }
-
-        return '';
-    }
-
-    /**
-     * Returns the marriage date of the individual using webtrees' locale-aware
-     * display.
-     *
-     * @deprecated since 3.1.0 — unused by every bundled chart module; use the
-     *             generation-aware getFormattedMarriageDate(), or
-     *             getMarriageDateFull() for the always-full date, instead.
-     *             Scheduled for removal in the next major release.
-     *
-     * @return string
-     */
-    public function getMarriageDate(): string
-    {
-        /** @var Family|null $family */
-        $family = $this->individual->spouseFamilies()->first();
-
-        if ($family !== null) {
-            return $this->decodeValue($family->getMarriageDate()->display());
-        }
-
-        return '';
-    }
-
-    /**
-     * Returns the marriage date of the parents using webtrees' locale-aware
-     * display.
-     *
-     * @deprecated since 2.6.0 — unused by every bundled chart module; use the
-     *             generation-aware getFormattedMarriageDateOfParents() instead.
-     *             Scheduled for removal in the next major release.
-     *
-     * @return string
-     */
-    public function getMarriageDateOfParents(): string
-    {
-        /** @var Family|null $family */
-        $family = $this->individual->childFamilies()->first();
-
-        if ($family !== null) {
-            return $this->decodeValue($family->getMarriageDate()->display());
         }
 
         return '';
