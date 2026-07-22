@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Facade;
 
 use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -27,6 +28,7 @@ use ReflectionNamedType;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
+#[CoversTrait(RouteAwareDataFacadeTrait::class)]
 final class RouteAwareDataFacadeTraitTest extends TestCase
 {
     #[Test]

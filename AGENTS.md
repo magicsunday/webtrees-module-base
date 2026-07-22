@@ -107,6 +107,7 @@ tests/
 - Promoted constructor properties + `readonly` where applicable (Rector applies this automatically per `rector.php` set list).
 - The test tree mirrors `src/`: a test lives at the path of its subject (`src/Support/Locale/IsoCountryMap.php` → `tests/Support/Locale/IsoCountryMapTest.php`) and its namespace carries the matching suffix (`MagicSunday\Webtrees\ModuleBase\Test\Support\Locale`). PSR-4 resolves this without a composer change. PHPUnit itself never checks the namespace — it requires the file and matches the class's *short* name against the filename — so a mis-namespaced test still runs and the test count will not reveal the mistake. `composer ci:test:php:psr4` (`dump-autoload --optimize --strict-psr`; Composer requires the optimisation for the strict check) is the gate that does: it exits non-zero and names the offending file. It runs inside `ci:test` and as its own CI step.
 - Test classes are declared `final`.
+- Every test declares its coverage target: `#[CoversClass]` for a class/enum subject, `#[CoversTrait]` for a trait, plus `#[UsesClass]` / `#[UsesTrait]` for each collaborator it actually executes. `phpunit.xml` sets `requireCoverageMetadata="true"`, so `composer ci:test:php:unit` fails a test that declares none (as *risky*) — this holds without collecting coverage, so the existing CI unit step enforces it.
 - All code comments in English (planning docs may be German).
 
 ## Tooling parity with chart modules
