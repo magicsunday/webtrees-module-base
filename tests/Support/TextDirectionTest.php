@@ -12,46 +12,110 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Support;
 
 use MagicSunday\Webtrees\ModuleBase\Support\TextDirection;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use ReflectionMethod;
-use ReflectionNamedType;
 
 /**
- * Structural coverage for the shared RTL detection helper.
+ * Locks the RTL verdict the chart modules use to orient a label: the first
+ * character that falls into a recognised script range decides, never the
+ * majority — characters outside every known range are skipped on the way.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
+#[CoversClass(TextDirection::class)]
 final class TextDirectionTest extends TestCase
 {
-    #[Test]
-    public function classExistsAndIsFinal(): void
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function scriptDirectionDataProvider(): array
     {
-        self::assertTrue(class_exists(TextDirection::class));
+        // [ text, expected isRtl ]
+        return [
+            'Latin text reads left-to-right' => [
+                'Hello world',
+                false,
+            ],
+            'Hebrew text reads right-to-left' => [
+                'שלום עולם',
+                true,
+            ],
+            'Arabic text reads right-to-left' => [
+                'مرحبا بالعالم',
+                true,
+            ],
+            'Digits alone are not right-to-left' => [
+                '123',
+                false,
+            ],
 
-        $reflection = new ReflectionClass(TextDirection::class);
+            // The verdict comes from the script's DIRECTION, not from "is it
+            // Latin": a recognised non-Latin script still reads left-to-right.
+            // Without this row an implementation reduced to
+            // `textScript($text) !== 'Latn'` would pass the whole set.
+            'A non-Latin left-to-right script is not right-to-left' => [
+                'Привет мир',
+                false,
+            ],
+            'An empty string is not right-to-left' => [
+                '',
+                false,
+            ],
 
-        self::assertTrue($reflection->isFinal());
+            // The FIRST character in a recognised script range decides; later
+            // runs are never counted. Both rows below would come out the other
+            // way round under a majority rule, so they are what pins the
+            // first-strong contract the chart labels depend on.
+            'A leading Latin letter decides even when Hebrew dominates' => [
+                'A שלום שלום שלום',
+                false,
+            ],
+            'A leading Hebrew letter decides even when Latin dominates' => [
+                'שלום Hello',
+                true,
+            ],
+
+            // Characters in no recognised range are skipped rather than
+            // treated as a script of their own: the umlaut is passed over and
+            // the following "l" settles it, and the digits and punctuation in
+            // front of a Hebrew name never make the label left-to-right.
+            'A leading diacritic is skipped, not treated as a script' => [
+                'Ölbaum',
+                false,
+            ],
+            'Leading digits and punctuation are skipped before the script decides' => [
+                '1. שלום',
+                true,
+            ],
+        ];
     }
 
+    /**
+     * Pins the RTL verdict the chart modules use to orient a label.
+     *
+     * @param string $text
+     * @param bool   $expected
+     */
     #[Test]
-    public function isRtlIsPublicStaticAndAcceptsString(): void
+    #[DataProvider('scriptDirectionDataProvider')]
+    public function reportsWhetherTheTextReadsRightToLeft(string $text, bool $expected): void
     {
-        $method = new ReflectionMethod(TextDirection::class, 'isRtl');
+        self::assertSame($expected, TextDirection::isRtl($text));
+    }
 
-        self::assertTrue($method->isPublic());
-        self::assertTrue($method->isStatic());
-        self::assertCount(1, $method->getParameters());
-
-        $parameterType = $method->getParameters()[0]->getType();
-        self::assertInstanceOf(ReflectionNamedType::class, $parameterType);
-        self::assertSame('string', $parameterType->getName());
-
-        $returnType = $method->getReturnType();
-        self::assertInstanceOf(ReflectionNamedType::class, $returnType);
-        self::assertSame('bool', $returnType->getName());
+    /**
+     * The helper is a static-only utility the chart modules call without an
+     * instance, so it must stay closed for subclassing. Everything else about
+     * the signature is already proven by the behavioural calls above.
+     */
+    #[Test]
+    public function theHelperClassIsFinal(): void
+    {
+        self::assertTrue((new ReflectionClass(TextDirection::class))->isFinal());
     }
 }

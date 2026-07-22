@@ -33,12 +33,27 @@ trait ModuleChartTrait
      */
     public function chartUrl(Individual $individual, array $parameters = []): string
     {
-        return route(
+        return $this->buildRouteUrl(
             self::ROUTE_DEFAULT,
             [
                 'xref' => $individual->xref(),
                 'tree' => $individual->tree()->name(),
             ] + $parameters
         );
+    }
+
+    /**
+     * Resolves a webtrees route to its URL. This wraps the global route() helper
+     * so the URL construction above can be exercised in isolation, without a
+     * booted application, by overriding this one method.
+     *
+     * @param string                         $routeName  The route to resolve
+     * @param array<string, bool|int|string> $parameters The route parameters
+     *
+     * @return string
+     */
+    protected function buildRouteUrl(string $routeName, array $parameters): string
+    {
+        return route($routeName, $parameters);
     }
 }
