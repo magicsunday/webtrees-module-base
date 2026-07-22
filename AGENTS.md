@@ -1,6 +1,8 @@
 ## Overview
 This repository hosts `magicsunday/webtrees-module-base` — a shared PHP library consumed by `webtrees-fan-chart`, `webtrees-pedigree-chart`, and `webtrees-descendants-chart`. It contains the common processors (Date, Name, Image, Place), models (Symbols, NameAbbreviation, PlaceStyle, PlaceFormatSpec, PlaceFormatChoice), locale support (`IsoCountryMap`), and module helpers (VersionInformation) those modules use to render genealogy charts. No JavaScript, no asset pipeline — pure PHP.
 
+Not all of this is consumed by every chart today. The place subsystem (`PlaceProcessor`, the `PlaceStyle` / `PlaceFormatSpec` / `PlaceFormatChoice` models, `IsoCountryMap`) and the compact, generation-aware date API (`DateProcessor`'s `getFormatted*` / `get*Full` methods, `CompactDateFormat`, `Symbols`) are currently used only by the fan chart; the pedigree and descendants charts consume just the shared core (name/image processing and `DateProcessor`'s legacy locale-aware `getBirthDate` / `getDeathDate` / `getLifetimeDescription`). These fan-only components are kept in the base as deliberate pre-investment for a future second consumer, not because all three charts use them today.
+
 ## Setup/env
 - PHP 8.3 - 8.5 with extensions `dom`, `intl` and `mbstring` is required; composer installs dependencies into `.build/vendor` and binaries into `.build/bin`.
 - The most common dev workflow is via `make link-base` from a sibling chart module: that symlinks `.build/vendor/.../webtrees-module-base` in the chart module to a sibling clone of this repo, so edits here are immediately picked up by the consumer.
@@ -65,7 +67,7 @@ tests/
 ```
 
 ### Processors
-- **`DateProcessor`** — generation-aware date formatting. Public methods include both the legacy locale-aware API (`getBirth*`, `getDeath*`, `getMarriage*`) and the newer compact format API (`getFormatted*`, `getCompactLifetimeDescription`) that chart modules use to keep deep-generation labels short.
+- **`DateProcessor`** — generation-aware date formatting. Public methods include both the legacy locale-aware API (`getBirth*`, `getDeath*`, `getMarriage*`) and the newer compact format API (`getFormatted*`, `getCompactLifetimeDescription`) that the fan chart uses to keep deep-generation labels short.
 - **`NameProcessor`** — name extraction from webtrees name HTML. Splits first/last/preferred names, handles starredname spans, alternative names, married names. DOM/XPath based.
 - **`ImageProcessor`** — highlight image + silhouette URL resolution. Constructor requires `ModuleCustomInterface & ModuleAssetUrlInterface` (the marker interface ensures the module exposes `assetUrl()`, which lives on `ModuleCustomTrait` and is invisible to the `ModuleCustomInterface` type alone).
 - **`PlaceProcessor`** — extracts and shortens birth/death/marriage place names for chart labels, driven by a resolved `PlaceFormatSpec`. Supports `PlaceStyle::Full` (unchanged), `PlaceStyle::Levels` (keep a fixed number of hierarchy levels, from either end), and `PlaceStyle::CityCountry` (keep the first and last segment; resolves the country segment via `IsoCountryMap` when it is a recognised country name).
