@@ -53,6 +53,15 @@ final class TextDirectionTest extends TestCase
                 '123',
                 false,
             ],
+
+            // The verdict comes from the script's DIRECTION, not from "is it
+            // Latin": a recognised non-Latin script still reads left-to-right.
+            // Without this row an implementation reduced to
+            // `textScript($text) !== 'Latn'` would pass the whole set.
+            'A non-Latin left-to-right script is not right-to-left' => [
+                'Привет мир',
+                false,
+            ],
             'An empty string is not right-to-left' => [
                 '',
                 false,

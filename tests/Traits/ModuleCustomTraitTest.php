@@ -33,7 +33,6 @@ use function scandir;
 use function sprintf;
 use function strlen;
 use function sys_get_temp_dir;
-use function trait_exists;
 use function uniqid;
 use function unlink;
 
@@ -131,15 +130,11 @@ final class ModuleCustomTraitTest extends TestCase
      * every other method of the interface.
      */
     #[Test]
-    public function traitExistsAndReusesWebtreesBaseTrait(): void
+    public function composesWebtreesOwnCustomModuleTraitForAssetHandling(): void
     {
-        self::assertTrue(trait_exists(ModuleCustomTrait::class));
-
-        $reflection = new ReflectionClass(ModuleCustomTrait::class);
-
         self::assertContains(
             \Fisharebest\Webtrees\Module\ModuleCustomTrait::class,
-            $reflection->getTraitNames(),
+            (new ReflectionClass(ModuleCustomTrait::class))->getTraitNames(),
         );
     }
 
