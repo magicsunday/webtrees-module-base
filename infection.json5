@@ -10,8 +10,12 @@
     },
     "tmpDir": ".build/cache/infection",
     "testFramework": "phpunit",
-    "minMsi": 0,
-    "minCoveredMsi": 0,
+    // Baseline at adoption was 83.41 (mutation code coverage 100%). The floor sits
+    // a little below it on purpose: a handful of mutants time out, and timeouts are
+    // not deterministic, so a floor at the exact baseline would red the build on
+    // noise. Raise this as the score improves; never lower it to admit a regression.
+    "minMsi": 80,
+    "minCoveredMsi": 80,
     "mutators": {
         "@default": true
     }

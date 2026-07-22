@@ -10,12 +10,28 @@ permissions:
 
 jobs:
     build:
+        # Pinned explicitly so the required-status-check contexts stay `build (8.3)`
+        # etc. even though the matrix carries an extra `mutation` dimension below.
+        # Without this pin the include would rename the contexts to `build (8.4, true)`
+        # and desync branch protection.
+        name: build (${{ matrix.php }})
         runs-on: ubuntu-latest
 
         strategy:
             fail-fast: false
             matrix:
                 php: ['8.3', '8.4', '8.5']
+                include:
+                    # Mutation testing runs on exactly one leg — the score is a
+                    # property of the tests, not of the PHP version. Selecting that
+                    # leg through a matrix include rather than a bare
+                    # `matrix.php == '8.4'` in the step makes a matrix edit LOUD:
+                    # if this version ever leaves the list above, the include no
+                    # longer merges into any combination and GitHub adds a visibly
+                    # extra job, instead of silently skipping the step on every leg
+                    # and leaving the mutation gate running nowhere.
+                    - php: '8.4'
+                      mutation: true
 
         steps:
             - id: checkout
@@ -94,14 +110,21 @@ jobs:
               run: |
                   composer ci:test:php:cpd
 
-            # Mutation testing runs on one leg only: it re-runs the suite once per
-            # mutant, and the score is a property of the tests, not of the PHP
-            # version. It is deliberately NOT part of the `ci:test` aggregate —
-            # that aggregate is the pre-commit hook, and this is too slow to pay
-            # on every commit — so this step is the only place it runs.
+            # Mutation testing. Deliberately NOT part of the `ci:test` aggregate —
+            # that aggregate is what the pre-commit hook runs over the whole
+            # worktree, and a full mutation run is too slow to pay on every commit —
+            # so this step is the only place it runs. Which leg it runs on is
+            # decided by the `mutation` matrix dimension, not by a literal here.
+            #
+            # `!cancelled()` rather than `always()`: the other steps use `always()`
+            # so one red check still reports the rest, but this step re-runs the
+            # suite once per mutant, and `always()` would keep that going even after
+            # the run is cancelled. It additionally requires the unit tests to have
+            # passed — infection needs a green suite as its baseline, so running it
+            # against failing tests only burns minutes to reach the same red.
             - id: infection
               name: Mutation Testing
-              if: ${{ always() && steps.install.conclusion == 'success' && matrix.php == '8.4' }}
+              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation }}
               run: |
                   composer ci:test:php:infection
 
