@@ -4,13 +4,15 @@
 
 # webtrees-module-base
 
-Shared PHP base classes for the [magicsunday](https://github.com/magicsunday) family of [webtrees](https://www.webtrees.net) chart modules. Centralises the date, name, image and place processing logic, common models (genealogical symbols enum, tree node), and module helpers (GitHub release-version checking with file cache) so each chart module does not have to reimplement them.
+Shared PHP base classes for the [magicsunday](https://github.com/magicsunday) family of [webtrees](https://www.webtrees.net) chart modules. Centralises the name, image and date processing logic, common models, and module helpers (GitHub release-version checking with file cache) so the chart modules do not have to reimplement the shared pieces.
 
 This package ships no UI of its own — it is consumed as a Composer dependency by:
 
 - [webtrees-fan-chart](https://github.com/magicsunday/webtrees-fan-chart) — SVG ancestor fan chart
 - [webtrees-pedigree-chart](https://github.com/magicsunday/webtrees-pedigree-chart) — SVG pedigree chart
 - [webtrees-descendants-chart](https://github.com/magicsunday/webtrees-descendants-chart) — SVG descendants chart
+
+> **Scope note:** not every base component is consumed by all three charts yet. The place-name subsystem (`PlaceProcessor`, its `PlaceFormat*` / `PlaceStyle` models and `IsoCountryMap`) and the compact, generation-aware date API (`DateProcessor`'s `getFormatted*` / `get*Full` methods, `CompactDateFormat` and the `Symbols` enum) are currently used only by the fan chart; the pedigree and descendants charts consume just the shared core (name/image processing and `DateProcessor`'s legacy locale-aware methods). These fan-only pieces live in the base as deliberate pre-investment, so a second chart can adopt them without a namespace move.
 
 ## Requirements
 
