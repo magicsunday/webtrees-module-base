@@ -73,9 +73,6 @@ final class NameProcessor
      * @param bool            $useMarriedName TRUE to return the married name instead of the primary one
      */
     public function __construct(
-        /**
-         * The individual.
-         */
         private readonly Individual $individual,
         ?Individual $spouse = null,
         bool $useMarriedName = false,
