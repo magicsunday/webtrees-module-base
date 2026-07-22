@@ -67,7 +67,7 @@ tests/
 ```
 
 ### Processors
-- **`DateProcessor`** — generation-aware date formatting. Public methods include both the legacy locale-aware API (`getBirth*`, `getDeath*`, `getMarriage*`) and the newer compact format API (`getFormatted*`, `getCompactLifetimeDescription`) that the fan chart uses to keep deep-generation labels short.
+- **`DateProcessor`** — generation-aware date formatting. Public methods include both the legacy locale-aware API (`getBirth*`, `getDeath*`, `getMarriage*`) and the newer compact format API (`getFormatted*`, `getCompactLifetimeDescription`) that the fan chart uses to keep deep-generation labels short. Both legacy marriage-date methods (`getMarriageDate()`, `getMarriageDateOfParents()`) are `@deprecated` and scheduled for removal in the next major release; no bundled chart module calls them.
 - **`NameProcessor`** — name extraction from webtrees name HTML. Splits first/last/preferred names, handles starredname spans, alternative names, married names. DOM/XPath based.
 - **`ImageProcessor`** — highlight image + silhouette URL resolution. Constructor requires `ModuleCustomInterface & ModuleAssetUrlInterface` (the marker interface ensures the module exposes `assetUrl()`, which lives on `ModuleCustomTrait` and is invisible to the `ModuleCustomInterface` type alone).
 - **`PlaceProcessor`** — extracts and shortens birth/death/marriage place names for chart labels, driven by a resolved `PlaceFormatSpec`. Supports `PlaceStyle::Full` (unchanged), `PlaceStyle::Levels` (keep a fixed number of hierarchy levels, from either end), and `PlaceStyle::CityCountry` (keep the first and last segment; resolves the country segment via `IsoCountryMap` when it is a recognised country name).

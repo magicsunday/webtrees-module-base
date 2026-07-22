@@ -47,7 +47,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 ## What's inside
 
 ### `src/Processor/`
-- **`DateProcessor`** — generation-aware date formatting (compact `getFormatted*` API for tight chart labels; locale-aware legacy `getBirth*` / `getDeath*` / `getMarriage*` API for everything else)
+- **`DateProcessor`** — generation-aware date formatting (compact `getFormatted*` API for tight chart labels; locale-aware legacy `getBirth*` / `getDeath*` API for everything else). Both legacy marriage-date methods are deprecated and scheduled for removal in the next major release — replace `getMarriageDate()` with `getFormattedMarriageDate()` (or `getMarriageDateFull()` for the always-full date) and `getMarriageDateOfParents()` with `getFormattedMarriageDateOfParents()`
 - **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names)
 - **`ImageProcessor`** — highlight image + silhouette URL resolution
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
