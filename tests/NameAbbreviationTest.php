@@ -23,7 +23,7 @@ use PHPUnit\Framework\TestCase;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class NameAbbreviationTest extends TestCase
+final class NameAbbreviationTest extends TestCase
 {
     /**
      * @return array<string, array{0: string, 1: string, 2: string}>
