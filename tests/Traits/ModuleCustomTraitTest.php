@@ -30,6 +30,7 @@ use function mkdir;
 use function pack;
 use function rmdir;
 use function scandir;
+use function sprintf;
 use function strlen;
 use function sys_get_temp_dir;
 use function trait_exists;
@@ -39,8 +40,11 @@ use function unlink;
 /**
  * Pins what the shared custom-module trait does for a consuming chart module:
  * the accessors surface that module's own CUSTOM_* constants, and
- * customTranslations() reads <resourcesFolder>lang/<language>/messages.mo,
+ * customTranslations() reads `{resourcesFolder}lang/{language}/messages.mo`,
  * returning an empty catalogue when the language has none.
+ *
+ * customModuleLatestVersion() is deliberately absent: it performs network I/O
+ * through VersionInformation and is covered by that class's own test.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -58,6 +62,9 @@ final class ModuleCustomTraitTest extends TestCase
     private array $temporaryFolders = [];
 
     /**
+     * Removes every folder a test registered, so a failing assertion cannot
+     * leak a directory tree into the system temp directory.
+     *
      * @return void
      */
     protected function tearDown(): void
@@ -150,12 +157,25 @@ final class ModuleCustomTraitTest extends TestCase
         return new class($resourcesFolder) extends AbstractModule implements ModuleCustomInterface {
             use ModuleCustomTrait;
 
+            /**
+             * The value customModuleAuthorName() must hand back unchanged.
+             */
             public const string CUSTOM_AUTHOR = 'Rico Sonntag';
 
+            /**
+             * The installed version customModuleVersion() reports.
+             */
             public const string CUSTOM_VERSION = '9.8.7';
 
+            /**
+             * Despite its name this holds a URL, not a version: the trait maps
+             * it to customModuleLatestVersionUrl().
+             */
             public const string CUSTOM_LATEST_VERSION = 'https://example.test/releases/latest';
 
+            /**
+             * The URL customModuleSupportUrl() reports to the control panel.
+             */
             public const string CUSTOM_SUPPORT_URL = 'https://example.test/support';
 
             /**
@@ -180,8 +200,11 @@ final class ModuleCustomTraitTest extends TestCase
     }
 
     /**
-     * Writes a minimal but valid little-endian gettext MO file, so the parse
-     * path is exercised against a real binary instead of a stubbed reader.
+     * Writes a minimal little-endian gettext MO file, so the parse path is
+     * exercised against a real binary instead of a stubbed reader. Entries are
+     * emitted in insertion order rather than sorted by msgid: the reader under
+     * test scans linearly, so this suffices here, but a binary-searching reader
+     * would require the sorted form the format allows for.
      *
      * The leading entry with the empty msgid is the gettext metadata header
      * every real catalogue carries — and it is not optional here: the reader
@@ -265,7 +288,7 @@ final class ModuleCustomTraitTest extends TestCase
 
     /**
      * Pins the lookup path and the parse: the catalogue is read from
-     * <resourcesFolder>lang/<language>/messages.mo.
+     * `{resourcesFolder}lang/{language}/messages.mo`.
      */
     #[Test]
     public function customTranslationsReadsTheCompiledCatalogueOfTheRequestedLanguage(): void
