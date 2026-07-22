@@ -25,8 +25,9 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
  * or a cache that simply forgets. This is the latter: construct one per test and the
  * isolation comes from its lifetime rather than from key hygiene.
  *
- * Both accessors share one adapter, mirroring the real factory's behaviour that a
- * value stored through one accessor is visible to code reading the same key.
+ * Both accessors return the same adapter. The real factory backs them separately
+ * (array vs filesystem); sharing one here is a deliberate simplification, so a test
+ * that writes through one accessor and reads through the other still sees its value.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

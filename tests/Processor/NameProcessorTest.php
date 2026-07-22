@@ -93,7 +93,7 @@ final class NameProcessorTest extends TestCase
      */
     public static function individualNameDataProvider(): array
     {
-        // [ input, expected => [ First names, Last names, Preferred first name, Nick names ] ]
+        // [ formatted name, expected => [ first names, last names, preferred name ] ]
         return [
             [
                 '<span class="NAME" dir="auto" translate="no"><span class="starredname">Max</span> Hermann <span class="SURN">Mustermann</span></span>',
@@ -235,7 +235,7 @@ final class NameProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getFirstNames(string $input, array $expected): void
+    public function extractsGivenNameTokensFromTheFormattedName(string $input, array $expected): void
     {
         self::assertSame($expected[0], $this->nameProcessorFor($input)->getFirstNames());
     }
@@ -250,7 +250,7 @@ final class NameProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getLastNames(string $input, array $expected): void
+    public function extractsSurnameTokensFromTheFormattedName(string $input, array $expected): void
     {
         self::assertSame($expected[1], $this->nameProcessorFor($input)->getLastNames());
     }
@@ -265,7 +265,7 @@ final class NameProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getPreferredName(string $input, array $expected): void
+    public function reportsTheStarredNamePartAsPreferredName(string $input, array $expected): void
     {
         // getPreferredName returns only one match, but test data is stored as an array
         self::assertSame($expected[2][0], $this->nameProcessorFor($input)->getPreferredName());
@@ -418,6 +418,19 @@ final class NameProcessorTest extends TestCase
                 'Fritz',
                 'Friedrich von "Fritz" Berg',
             ],
+            'Last given name absent from the plain name: appends instead of inserting' => [
+                // The formatted name yields given "Ludwig" / surname "Beethoven", but the
+                // plain name carries neither given name — so the search inside the
+                // pre-surname slice finds nothing and the nickname is appended.
+                '<span class="NAME" dir="auto" translate="no">Ludwig <span class="SURN">Beethoven</span></span>',
+                'van Beethoven', 'Luigi', 'van Beethoven "Luigi"',
+            ],
+            'Surname absent from the plain name: the whole string stays searchable' => [
+                // strpos() cannot locate "Mustermann" in the plain name, so the haystack
+                // is not truncated and the given name is still found in the full string.
+                '<span class="NAME" dir="auto" translate="no">Max <span class="SURN">Mustermann</span></span>',
+                'Max Schmidt', 'Maxi', 'Max "Maxi" Schmidt',
+            ],
             'Idempotent: nick already inline' => [
                 '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
                 'John "Jonny" Doe', 'Jonny', 'John "Jonny" Doe',
@@ -509,7 +522,7 @@ final class NameProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('injectNicknameDataProvider')]
-    public function getFullNameWithNickname(
+    public function injectsQuotedNicknameAfterTheLastGivenName(
         string $fullNameHtml,
         string $plainName,
         string $nick,

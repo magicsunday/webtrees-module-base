@@ -16,8 +16,8 @@ use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
+use Throwable;
 
 use function is_array;
 use function is_string;
@@ -45,6 +45,20 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class VersionInformation
 {
+    /**
+     * The nesting depth json_decode() is allowed. A release payload is a flat
+     * object; anything deeper is not something this parser needs to walk.
+     */
+    private const int MAX_JSON_DEPTH = 32;
+
+    /**
+     * A release tag that is a whole semantic version, optionally with a
+     * pre-release/build suffix. Anchored end to end with \A/\z (not ^/$, which
+     * would also accept a trailing newline) so the value rendered in the control
+     * panel is exactly what was validated.
+     */
+    private const string VERSION_TAG_PATTERN = '/\A\d{1,5}\.\d{1,5}\.\d{1,5}(?:[-+][0-9A-Za-z.\-+]{1,32})?\z/';
+
     /**
      * Constructor.
      *
@@ -101,8 +115,12 @@ final readonly class VersionInformation
                     if ($response->getStatusCode() === StatusCodeInterface::STATUS_OK) {
                         return $this->parseLatestVersion($response->getBody()->getContents());
                     }
-                } catch (GuzzleException) {
-                    // Can't connect to the server?
+                } catch (Throwable) {
+                    // An update check must never break the page it renders in. This
+                    // runs inside the control panel, so anything the request or the
+                    // body read throws — a transport error, a detached stream, or
+                    // whatever an injected client raises — degrades to the bundled
+                    // version instead of reaching the error handler.
                 }
 
                 return $this->module->customModuleVersion();
@@ -123,23 +141,31 @@ final readonly class VersionInformation
      * @param string $body The raw HTTP response body
      *
      * @return string The parsed version number, or the bundled module version as a fallback
-     *
-     * @throws JsonException When the body is not valid JSON
      */
     private function parseLatestVersion(string $body): string
     {
-        $json = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $json = json_decode($body, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            // A 200 response carrying something other than JSON is routine — a
+            // captive portal, a CDN maintenance page, a provider incident page.
+            // None of them justify breaking the control panel.
+            return $this->module->customModuleVersion();
+        }
 
         if (is_array($json)) {
             $version = $json['tag_name'] ?? '';
 
-            // Does the response look like a version? A non-string tag_name
+            // Validate the WHOLE tag, not a prefix of it. A non-string tag_name
             // (GitHub returns a string, but a spoofed/malformed body could carry
             // an array or object) must not reach preg_match(), which would throw
-            // an uncaught TypeError instead of falling back to the bundled version.
+            // an uncaught TypeError. And the value is rendered into the control
+            // panel's upgrade notice, so a tag that merely STARTS like a version
+            // ("2.6.0 — download the patch from …") must not pass and be shown
+            // there verbatim for the next 24 hours.
             if (
                 is_string($version)
-                && (preg_match('/^\d+\.\d+\.\d+/', $version) === 1)
+                && (preg_match(self::VERSION_TAG_PATTERN, $version) === 1)
             ) {
                 return $version;
             }

@@ -24,8 +24,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface;
+use RuntimeException;
 
 use function json_encode;
+use function str_repeat;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -68,11 +71,15 @@ final class VersionInformationTest extends TestCase
      *
      * @param Response|ConnectException $response The response the client returns, or
      *                                            the transport failure it raises
+     * @param StreamInterface|null      $body     Replaces the response body, for the
+     *                                            case where reading it throws
      *
      * @return string
      */
-    private function fetchLatestVersionFor(Response|ConnectException $response): string
-    {
+    private function fetchLatestVersionFor(
+        Response|ConnectException $response,
+        ?StreamInterface $body = null,
+    ): string {
         $module = self::createStub(ModuleCustomInterface::class);
         $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
         $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
@@ -83,7 +90,9 @@ final class VersionInformationTest extends TestCase
         if ($response instanceof ConnectException) {
             $client->method('request')->willThrowException($response);
         } else {
-            $client->method('request')->willReturn($response);
+            $client->method('request')->willReturn(
+                $body instanceof StreamInterface ? $response->withBody($body) : $response
+            );
         }
 
         return (new VersionInformation($module, $client))->fetchLatestVersion();
@@ -122,6 +131,21 @@ final class VersionInformationTest extends TestCase
                 json_encode(['tag_name' => ['2.6.0']], JSON_THROW_ON_ERROR),
                 self::FALLBACK_VERSION,
             ],
+            'Trailing text after a valid version is refused, not shown verbatim' => [
+                json_encode(
+                    ['tag_name' => '2.6.0 - SECURITY UPDATE, download from http://example.invalid/patch.zip'],
+                    JSON_THROW_ON_ERROR
+                ),
+                self::FALLBACK_VERSION,
+            ],
+            'A trailing newline after a valid version is refused' => [
+                json_encode(['tag_name' => "2.6.0\n"], JSON_THROW_ON_ERROR),
+                self::FALLBACK_VERSION,
+            ],
+            'An absurdly long numeric component is refused' => [
+                json_encode(['tag_name' => str_repeat('9', 100) . '.0.0'], JSON_THROW_ON_ERROR),
+                self::FALLBACK_VERSION,
+            ],
         ];
     }
 
@@ -142,17 +166,41 @@ final class VersionInformationTest extends TestCase
     }
 
     /**
-     * A 200 response with a malformed JSON body surfaces the JsonException rather
-     * than being silently swallowed (it is not a GuzzleException).
+     * A 200 response whose body is not JSON falls back to the bundled version.
+     *
+     * This is routine, not exotic: a captive portal, a CDN maintenance page or a
+     * provider incident page all answer 200 with HTML. Letting the decode failure
+     * escape would take down the control panel this check renders in — and, because
+     * the exception would escape the cache callback, nothing would be memoised, so
+     * every reload would retry and fail again.
      *
      * @return void
      */
     #[Test]
-    public function malformedJsonBodySurfacesTheJsonException(): void
+    public function nonJsonBodyFallsBackToTheBundledVersion(): void
     {
-        $this->expectException(JsonException::class);
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(new Response(200, [], '<html>503 Service Unavailable</html>'))
+        );
+    }
 
-        $this->fetchLatestVersionFor(new Response(200, [], '{ not valid json'));
+    /**
+     * A failure raised while reading the response body is swallowed too. It is not a
+     * GuzzleException, so a catch narrowed to that type would let it escape.
+     *
+     * @return void
+     */
+    #[Test]
+    public function bodyReadFailureFallsBackToTheBundledVersion(): void
+    {
+        $stream = self::createStub(StreamInterface::class);
+        $stream->method('getContents')->willThrowException(new RuntimeException('stream detached'));
+
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(new Response(200, [], ''), $stream)
+        );
     }
 
     /**

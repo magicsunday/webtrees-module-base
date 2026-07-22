@@ -104,7 +104,11 @@ final class DateProcessorTest extends TestCase
      */
     private function assertPlainText(string $result): void
     {
-        self::assertSame(strip_tags($result), $result);
+        // Anchor the positive case first: stripping tags from an empty string also
+        // yields an empty string, so the markup assertion alone stays green if the
+        // accessor regresses to returning nothing at all.
+        self::assertNotSame('', $result, 'a parseable date must render something');
+        self::assertSame(strip_tags($result), $result, 'no markup may reach the template');
     }
 
     /**
@@ -117,7 +121,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
-    public function getBirthYear(string $input, int $expected): void
+    public function extractsTheYearFromEveryGedcomBirthDateForm(string $input, int $expected): void
     {
         self::assertSame($expected, $this->dateProcessorFor($input)->getBirthYear());
     }
@@ -132,7 +136,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
-    public function getDeathYear(string $input, int $expected): void
+    public function extractsTheYearFromEveryGedcomDeathDateForm(string $input, int $expected): void
     {
         self::assertSame($expected, $this->dateProcessorFor('', $input)->getDeathYear());
     }
@@ -142,7 +146,7 @@ final class DateProcessorTest extends TestCase
      */
     public static function dateDataProvider(): array
     {
-        // [ input, expected ]
+        // [ GEDCOM date input ] — the assertion is shape-only, see assertPlainText()
         return [
             [
                 '01 MAY 2000',
@@ -168,7 +172,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('dateDataProvider')]
-    public function getBirthDate(string $input): void
+    public function rendersTheBirthDateAsPlainTextWithoutMarkup(string $input): void
     {
         I18N::init('en-US', true);
 
@@ -184,7 +188,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('dateDataProvider')]
-    public function getDeathDate(string $input): void
+    public function rendersTheDeathDateAsPlainTextWithoutMarkup(string $input): void
     {
         I18N::init('en-US', true);
 

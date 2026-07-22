@@ -76,10 +76,11 @@ final class NameAbbreviationTest extends TestCase
     }
 
     /**
-     * Resolving never yields Auto — for ANY case against ANY tradition, not just the
-     * curated rows above. This is the invariant the JS layer depends on: it receives a
-     * concrete strategy, never the "decide for me" placeholder. Asserted over cases()
-     * so adding an enum case without extending resolve() fails here.
+     * Resolving always yields a strategy the JS layer understands — for ANY case
+     * against ANY tradition, not just the curated rows above. Asserted as membership
+     * rather than "not Auto": resolve() returns $this for every non-Auto case, so a
+     * newly added case left unhandled would still satisfy a not-Auto check while
+     * emitting a value no consumer knows.
      *
      * @return void
      */
@@ -88,7 +89,11 @@ final class NameAbbreviationTest extends TestCase
     {
         foreach (NameAbbreviation::cases() as $case) {
             foreach (['icelandic', 'paternal', '', 'something-new'] as $tradition) {
-                self::assertNotSame(NameAbbreviation::Auto, $case->resolve($tradition));
+                self::assertContains(
+                    $case->resolve($tradition),
+                    [NameAbbreviation::Given, NameAbbreviation::Surname],
+                    'resolve() must yield a concrete strategy the JS layer understands'
+                );
             }
         }
     }
