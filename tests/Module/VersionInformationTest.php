@@ -11,17 +11,22 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Module;
 
+use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
+use Fisharebest\Webtrees\Registry;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use JsonException;
 use MagicSunday\Webtrees\ModuleBase\Module\VersionInformation;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use ReflectionException;
 
 use function json_encode;
+use function uniqid;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -36,34 +41,52 @@ use const JSON_THROW_ON_ERROR;
 final class VersionInformationTest extends TestCase
 {
     /**
-     * The bundled module version the parse falls back to.
+     * The bundled module version the check falls back to.
      */
     private const string FALLBACK_VERSION = '1.0.0-fallback';
 
     /**
-     * Invokes the private parseLatestVersion() on a VersionInformation whose
-     * module reports FALLBACK_VERSION as its bundled version, so a test can
-     * assert either the parsed tag or the fallback.
+     * Set up.
      *
-     * @param string $body The raw HTTP response body to parse
+     * @return void
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Registry::cache(new CacheFactory());
+    }
+
+    /**
+     * Runs the real version check against a stubbed HTTP client, so the release-API
+     * response can be dictated without reaching the network.
+     *
+     * Every call gets a unique module name. The check memoises its result in the
+     * FILE cache under a key built from that name, so a shared name would let the
+     * first case's result answer every later one — and, because that cache outlives
+     * the process, every later run too.
+     *
+     * @param Response|ConnectException $response The response the client returns, or
+     *                                            the transport failure it raises
      *
      * @return string
-     *
-     * @throws ReflectionException
      */
-    private function invokeParse(string $body): string
+    private function fetchLatestVersionFor(Response|ConnectException $response): string
     {
         $module = self::createStub(ModuleCustomInterface::class);
         $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
+        $module->method('name')->willReturn('version-information-test-' . uniqid('', true));
 
-        $sut    = new VersionInformation($module);
-        $method = (new ReflectionClass(VersionInformation::class))->getMethod('parseLatestVersion');
+        $client = self::createStub(ClientInterface::class);
 
-        $result = $method->invoke($sut, $body);
+        if ($response instanceof ConnectException) {
+            $client->method('request')->willThrowException($response);
+        } else {
+            $client->method('request')->willReturn($response);
+        }
 
-        self::assertIsString($result);
-
-        return $result;
+        return (new VersionInformation($module, $client))->fetchLatestVersion();
     }
 
     /**
@@ -103,32 +126,86 @@ final class VersionInformationTest extends TestCase
     }
 
     /**
-     * The tag_name parse is the sole functional deviation from the webtrees
-     * core version check; this pins it against stubbed GitHub JSON responses.
+     * The tag_name parse is the sole functional deviation from the webtrees core
+     * version check; this pins it against stubbed GitHub JSON responses.
      *
      * @param string $body
      * @param string $expected
      *
-     * @throws ReflectionException
+     * @return void
      */
     #[Test]
     #[DataProvider('parseDataProvider')]
     public function returnsParsedTagNameOrBundledVersionFallback(string $body, string $expected): void
     {
-        self::assertSame($expected, $this->invokeParse($body));
+        self::assertSame($expected, $this->fetchLatestVersionFor(new Response(200, [], $body)));
     }
 
     /**
-     * A 200 response with a malformed JSON body surfaces the JsonException
-     * rather than being silently swallowed (it is not a GuzzleException).
+     * A 200 response with a malformed JSON body surfaces the JsonException rather
+     * than being silently swallowed (it is not a GuzzleException).
      *
-     * @throws ReflectionException
+     * @return void
      */
     #[Test]
-    public function parseLatestVersionThrowsOnMalformedJson(): void
+    public function malformedJsonBodySurfacesTheJsonException(): void
     {
         $this->expectException(JsonException::class);
 
-        $this->invokeParse('{ not valid json');
+        $this->fetchLatestVersionFor(new Response(200, [], '{ not valid json'));
+    }
+
+    /**
+     * A non-200 response is not parsed at all — the bundled version stands.
+     *
+     * @return void
+     *
+     * @throws JsonException
+     */
+    #[Test]
+    public function nonOkResponseFallsBackToTheBundledVersion(): void
+    {
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(
+                new Response(404, [], json_encode(['tag_name' => '9.9.9'], JSON_THROW_ON_ERROR))
+            )
+        );
+    }
+
+    /**
+     * A transport failure (the server is unreachable) is swallowed deliberately: an
+     * update check must never break the control panel it renders in.
+     *
+     * @return void
+     */
+    #[Test]
+    public function transportFailureFallsBackToTheBundledVersion(): void
+    {
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(
+                new ConnectException('Connection refused', new Request('GET', 'https://example.invalid'))
+            )
+        );
+    }
+
+    /**
+     * With no update URL configured the check short-circuits: no HTTP request is
+     * made and the bundled version is reported.
+     *
+     * @return void
+     */
+    #[Test]
+    public function emptyLatestVersionUrlSkipsTheRequest(): void
+    {
+        $module = self::createStub(ModuleCustomInterface::class);
+        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('');
+
+        $client = self::createMock(ClientInterface::class);
+        $client->expects(self::never())->method('request');
+
+        self::assertSame(self::FALLBACK_VERSION, (new VersionInformation($module, $client))->fetchLatestVersion());
     }
 }

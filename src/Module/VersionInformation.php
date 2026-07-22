@@ -15,6 +15,7 @@ use Fig\Http\Message\StatusCodeInterface;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
 
@@ -47,14 +48,29 @@ final readonly class VersionInformation
     /**
      * Constructor.
      *
-     * @param ModuleCustomInterface $module The module
+     * @param ModuleCustomInterface $module     The module
+     * @param ClientInterface|null  $httpClient The HTTP client used to query the
+     *                                          release API. Optional: consumers pass
+     *                                          nothing and get the default client,
+     *                                          while a test supplies one instead of
+     *                                          reaching the network.
      */
     public function __construct(
-        /**
-         * The module.
-         */
         private ModuleCustomInterface $module,
+        private ?ClientInterface $httpClient = null,
     ) {
+    }
+
+    /**
+     * Returns the HTTP client to query the release API with.
+     *
+     * @return ClientInterface
+     */
+    private function httpClient(): ClientInterface
+    {
+        return $this->httpClient ?? new Client([
+            'timeout' => 3,
+        ]);
     }
 
     /**
@@ -77,11 +93,10 @@ final readonly class VersionInformation
             $this->module->name() . '-latest-version',
             function (): string {
                 try {
-                    $client = new Client([
-                        'timeout' => 3,
-                    ]);
-
-                    $response = $client->get($this->module->customModuleLatestVersionUrl());
+                    $response = $this->httpClient()->request(
+                        'GET',
+                        $this->module->customModuleLatestVersionUrl()
+                    );
 
                     if ($response->getStatusCode() === StatusCodeInterface::STATUS_OK) {
                         return $this->parseLatestVersion($response->getBody()->getContents());

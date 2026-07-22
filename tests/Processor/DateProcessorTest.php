@@ -22,10 +22,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use ReflectionException;
-use ReflectionMethod;
-use ReflectionProperty;
 
 /**
  * DateProcessorTest.
@@ -77,47 +73,36 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
-     * Builds a constructor-less DateProcessor with the given date property set
-     * via reflection, so a reflection test can invoke a method that reads it.
+     * Builds a DateProcessor the way a consumer does: around an individual, through
+     * the real constructor. The individual is a stub because it is the collaborator,
+     * not the unit under test — the constructor reads its birth and death dates.
      *
-     * @param string $propertyName The private date property to populate
-     * @param string $input        The GEDCOM date string to store there
+     * @param string $birthDate The GEDCOM birth date the individual reports
+     * @param string $deathDate The GEDCOM death date the individual reports
      *
      * @return DateProcessor
-     *
-     * @throws ReflectionException
      */
-    private function dateProcessorWith(string $propertyName, string $input): DateProcessor
+    private function dateProcessorFor(string $birthDate = '', string $deathDate = ''): DateProcessor
     {
-        $dateProcessor = (new ReflectionClass(DateProcessor::class))->newInstanceWithoutConstructor();
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthDate')->willReturn(new Date($birthDate));
+        $individual->method('getDeathDate')->willReturn(new Date($deathDate));
 
-        (new ReflectionProperty(DateProcessor::class, $propertyName))->setValue($dateProcessor, new Date($input));
-
-        return $dateProcessor;
+        return new DateProcessor($individual);
     }
 
     /**
-     * Tests extracting the year from a date.
+     * Asserts the value is plain text. The webtrees date accessors this wraps can
+     * return markup, and the value is consumed by templates that escape it, so any
+     * leaking tag would reach the user verbatim.
      *
-     * @param int    $expected
-     * @param string $input
-     * @param string $propertyName
-     * @param string $methodeName
+     * @param string $result The value to check
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
-    public function assertExtractedYear(
-        int $expected,
-        string $input,
-        string $propertyName,
-        string $methodeName,
-    ): void {
-        $result = (new ReflectionMethod(DateProcessor::class, $methodeName))
-            ->invokeArgs($this->dateProcessorWith($propertyName, $input), []);
-
-        self::assertSame($expected, $result);
+    private function assertPlainText(string $result): void
+    {
+        self::assertSame(strip_tags($result), $result);
     }
 
     /**
@@ -127,19 +112,12 @@ final class DateProcessorTest extends TestCase
      * @param int    $expected
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
     public function getBirthYear(string $input, int $expected): void
     {
-        $this->assertExtractedYear(
-            $expected,
-            $input,
-            'birthDate',
-            'getBirthYear'
-        );
+        self::assertSame($expected, $this->dateProcessorFor($input)->getBirthYear());
     }
 
     /**
@@ -149,19 +127,12 @@ final class DateProcessorTest extends TestCase
      * @param int    $expected
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
     public function getDeathYear(string $input, int $expected): void
     {
-        $this->assertExtractedYear(
-            $expected,
-            $input,
-            'deathDate',
-            'getDeathYear'
-        );
+        self::assertSame($expected, $this->dateProcessorFor('', $input)->getDeathYear());
     }
 
     /**
@@ -187,36 +158,11 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
-     * Tests that the date value does not contain HTML tags.
-     *
-     * @param string $input
-     * @param string $propertyName
-     * @param string $methodeName
-     *
-     * @return void
-     *
-     * @throws ReflectionException
-     */
-    public function assertDateNotContainsHtml(
-        string $input,
-        string $propertyName,
-        string $methodeName,
-    ): void {
-        $result = (new ReflectionMethod(DateProcessor::class, $methodeName))
-            ->invokeArgs($this->dateProcessorWith($propertyName, $input), []);
-
-        self::assertIsString($result);
-        self::assertSame(strip_tags($result), $result);
-    }
-
-    /**
      * Tests extracting the plain birthdate from a date.
      *
      * @param string $input
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('dateDataProvider')]
@@ -224,11 +170,7 @@ final class DateProcessorTest extends TestCase
     {
         I18N::init('en-US', true);
 
-        $this->assertDateNotContainsHtml(
-            $input,
-            'birthDate',
-            'getBirthDate'
-        );
+        $this->assertPlainText($this->dateProcessorFor($input)->getBirthDate());
     }
 
     /**
@@ -237,8 +179,6 @@ final class DateProcessorTest extends TestCase
      * @param string $input
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('dateDataProvider')]
@@ -246,11 +186,7 @@ final class DateProcessorTest extends TestCase
     {
         I18N::init('en-US', true);
 
-        $this->assertDateNotContainsHtml(
-            $input,
-            'deathDate',
-            'getDeathDate'
-        );
+        $this->assertPlainText($this->dateProcessorFor('', $input)->getDeathDate());
     }
 
     /**
