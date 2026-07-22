@@ -16,6 +16,14 @@ use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use JsonException;
+
+use function is_array;
+use function is_string;
+use function json_decode;
+use function preg_match;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * Class VersionInformation.
@@ -66,22 +74,7 @@ class VersionInformation
                     $response = $client->get($this->module->customModuleLatestVersionUrl());
 
                     if ($response->getStatusCode() === StatusCodeInterface::STATUS_OK) {
-                        $json = json_decode(
-                            $response->getBody()->getContents(),
-                            true,
-                            512,
-                            JSON_THROW_ON_ERROR
-                        );
-
-                        if (is_array($json)) {
-                            /** @var string $version */
-                            $version = $json['tag_name'] ?? '';
-
-                            // Does the response look like a version?
-                            if (preg_match('/^\d+\.\d+\.\d+/', $version) === 1) {
-                                return $version;
-                            }
-                        }
+                        return $this->parseLatestVersion($response->getBody()->getContents());
                     }
                 } catch (GuzzleException) {
                     // Can't connect to the server?
@@ -91,5 +84,42 @@ class VersionInformation
             },
             86400
         );
+    }
+
+    /**
+     * Parses the latest version from a GitHub "latest release" API response body.
+     *
+     * This is the one functional deviation from the webtrees core version check:
+     * the core reads the response body directly as a plain version string, while
+     * GitHub's API returns a JSON object whose `tag_name` carries the version.
+     * Falls back to the module's own bundled version when the body carries no
+     * usable version tag.
+     *
+     * @param string $body The raw HTTP response body
+     *
+     * @return string The parsed version number, or the bundled module version as a fallback
+     *
+     * @throws JsonException When the body is not valid JSON
+     */
+    private function parseLatestVersion(string $body): string
+    {
+        $json = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+
+        if (is_array($json)) {
+            $version = $json['tag_name'] ?? '';
+
+            // Does the response look like a version? A non-string tag_name
+            // (GitHub returns a string, but a spoofed/malformed body could carry
+            // an array or object) must not reach preg_match(), which would throw
+            // an uncaught TypeError instead of falling back to the bundled version.
+            if (
+                is_string($version)
+                && (preg_match('/^\d+\.\d+\.\d+/', $version) === 1)
+            ) {
+                return $version;
+            }
+        }
+
+        return $this->module->customModuleVersion();
     }
 }
