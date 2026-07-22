@@ -488,4 +488,50 @@ final class IsoCountryMapTest extends TestCase
             'clearCache() must reset every static cache, including ones added later'
         );
     }
+
+    /**
+     * @return array<string, array{string, bool, bool}>
+     */
+    public static function shapeDataProvider(): array
+    {
+        // [ candidate, is alpha-2 shape, is alpha-3 shape ]
+        return [
+            'two upper-case letters'     => ['DE', true, false],
+            'two lower-case letters'     => ['de', true, false],
+            'mixed case is tolerated'    => ['dE', true, false],
+            'three letters'              => ['DEU', false, true],
+            'three lower-case letters'   => ['deu', false, true],
+            'single letter'              => ['D', false, false],
+            'four letters'               => ['DEUT', false, false],
+            'empty string'               => ['', false, false],
+            'digit instead of letter'    => ['D1', false, false],
+            'trailing space'             => ['DE ', false, false],
+            'leading space'              => [' DE', false, false],
+            'non-ascii letters'          => ['DÜ', false, false],
+            'newline after a valid code' => ["DE\n", false, false],
+        ];
+    }
+
+    /**
+     * The shape tests gate which tokens are even looked up, so they must reject
+     * anything that is not exactly two (or three) ASCII letters — including a token
+     * that merely starts that way. The trailing-newline case is the one that a
+     * non-anchored pattern would wrongly accept.
+     *
+     * @param string $candidate
+     * @param bool   $isAlpha2
+     * @param bool   $isAlpha3
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('shapeDataProvider')]
+    public function shapeChecksAcceptOnlyExactLetterCounts(
+        string $candidate,
+        bool $isAlpha2,
+        bool $isAlpha3,
+    ): void {
+        self::assertSame($isAlpha2, IsoCountryMap::isAlpha2Shape($candidate));
+        self::assertSame($isAlpha3, IsoCountryMap::isAlpha3Shape($candidate));
+    }
 }

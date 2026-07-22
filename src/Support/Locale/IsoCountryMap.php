@@ -238,7 +238,7 @@ final class IsoCountryMap
      */
     public static function isAlpha2Shape(string $value): bool
     {
-        return preg_match('/^[A-Za-z]{2}$/', $value) === 1;
+        return preg_match('/\\A[A-Za-z]{2}\\z/', $value) === 1;
     }
 
     /**
@@ -253,7 +253,7 @@ final class IsoCountryMap
      */
     public static function isAlpha3Shape(string $value): bool
     {
-        return preg_match('/^[A-Za-z]{3}$/', $value) === 1;
+        return preg_match('/\\A[A-Za-z]{3}\\z/', $value) === 1;
     }
 
     /**
