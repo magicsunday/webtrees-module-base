@@ -13,7 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Facade;
 
 use MagicSunday\Webtrees\ModuleBase\Facade\ModuleAwareDataFacadeTrait;
 use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
-use PHPUnit\Framework\Attributes\CoversTrait;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -31,7 +31,7 @@ use function trait_exists;
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-#[CoversTrait(ModuleAwareDataFacadeTrait::class)]
+#[CoversNothing]
 final class ModuleAwareDataFacadeTraitTest extends TestCase
 {
     /**
