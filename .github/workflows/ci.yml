@@ -30,6 +30,9 @@ jobs:
               with:
                   php-version: ${{ matrix.php }}
                   tools: composer:v2
+                  # pcov drives the mutation run below. It is line-coverage only,
+                  # so it costs far less than Xdebug on the steps that ignore it.
+                  coverage: pcov
 
             - name: Validate composer.json and composer.lock
               run: composer validate
@@ -90,6 +93,17 @@ jobs:
               if: ${{ always() && steps.install.conclusion == 'success' }}
               run: |
                   composer ci:test:php:cpd
+
+            # Mutation testing runs on one leg only: it re-runs the suite once per
+            # mutant, and the score is a property of the tests, not of the PHP
+            # version. It is deliberately NOT part of the `ci:test` aggregate —
+            # that aggregate is the pre-commit hook, and this is too slow to pay
+            # on every commit — so this step is the only place it runs.
+            - id: infection
+              name: Mutation Testing
+              if: ${{ always() && steps.install.conclusion == 'success' && matrix.php == '8.4' }}
+              run: |
+                  composer ci:test:php:infection
 
             - id: cgl
               name: CGL
