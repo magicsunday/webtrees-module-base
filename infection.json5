@@ -1,0 +1,30 @@
+{
+    "$schema": "./.build/vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "logs": {
+        "text": "php://stdout"
+    },
+    "tmpDir": ".build/cache/infection",
+    "testFramework": "phpunit",
+    // Count a timed-out mutant as ESCAPED, not as killed. Infection's default treats
+    // a timeout as a kill, which quietly inflates the score: a mutation that made the
+    // suite hang is not a mutation the tests caught. The floors below are measured
+    // with this on, so they mean what they say.
+    "timeoutsAsEscaped": true,
+    // Measured baseline with the above on: 82.29 (100% mutation code coverage).
+    // The floor sits below it because the timeout count varies with machine load
+    // and now feeds the score, so pinning the exact baseline would red the build on
+    // infrastructure noise. Deliberately no `maxTimeouts` hard limit on top: that
+    // would gate on the same non-deterministic quantity a second time, this time
+    // without the surrounding score to absorb it — a flake source, not a signal.
+    // Raise this as the score improves; never lower it to admit a regression.
+    "minMsi": 80,
+    "minCoveredMsi": 80,
+    "mutators": {
+        "@default": true
+    }
+}

@@ -26,6 +26,9 @@
         "discard-changes": true,
         "sort-packages": true,
         "optimize-autoloader": true,
+        "allow-plugins": {
+            "infection/extension-installer": true
+        },
         "policy": {
             "advisories": {
                 "ignore": {
@@ -49,6 +52,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.0",
+        "infection/infection": "^0.34",
         "overtrue/phplint": "^9.0",
         "phpat/phpat": "^0.12.4",
         "phpstan/phpstan": "^2.0",
@@ -95,6 +99,9 @@
         ],
         "ci:test:php:unit:coverage": [
             "XDEBUG_MODE=coverage phpunit --configuration phpunit.xml --display-all-issues --coverage-html .build/coverage/"
+        ],
+        "ci:test:php:infection": [
+            "XDEBUG_MODE=coverage infection --threads=max --no-progress --no-interaction"
         ],
         "ci:test": [
             "@ci:test:php:lint",
