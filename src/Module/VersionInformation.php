@@ -26,7 +26,17 @@ use function preg_match;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Class VersionInformation.
+ * Overrides the webtrees core module version check so an update notice can be
+ * derived from a GitHub "latest release" API response. The sole functional
+ * deviation from the core check is the response format: the core reads the
+ * response body directly as a plain version string, whereas GitHub returns a
+ * JSON object whose `tag_name` carries the version (see parseLatestVersion()).
+ *
+ * No chart module references this class directly: it is instantiated by this
+ * library's own `Traits\ModuleCustomTrait::customModuleLatestVersion()`, which
+ * overrides the core method named above and is invoked by the webtrees control
+ * panel. It is therefore not dead code despite the absence of a direct consumer
+ * reference.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

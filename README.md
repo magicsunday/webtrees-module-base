@@ -55,7 +55,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`NameAbbreviation`** — backed enum + `resolve()` helper for the name-abbreviation strategy used in chart labels (auto / given-first / surname-first)
 
 ### `src/Module/`
-- **`VersionInformation`** — checks GitHub releases for newer module versions, with file cache (used by the chart modules' admin pages)
+- **`VersionInformation`** — checks GitHub releases for newer module versions, with file cache. No chart module references it directly; it is instantiated by this library's own `Traits\ModuleCustomTrait::customModuleLatestVersion()` (which overrides webtrees' core method), and the webtrees control panel invokes that trait method
 
 ### `src/Contract/`
 - **`ModuleAssetUrlInterface`** — marker interface that declares webtrees' `assetUrl()` helper so `ImageProcessor` can be type-narrowed without `method_exists` runtime checks

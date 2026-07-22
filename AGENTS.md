@@ -83,7 +83,7 @@ tests/
 - **`Support/Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 alpha-2 codes, built on `ext-intl` (`Locale::getDisplayRegion`), the reason this library requires the `intl` extension, and on `mbstring` for folding the ICU display names. Used by `PlaceProcessor`'s `CityCountry`, `CityIso2` and `CityIso3` styles.
 
 ### Modules
-- **`Module/VersionInformation`** — checks GitHub releases for newer module versions, with file cache. Used by all three chart modules' admin pages.
+- **`Module/VersionInformation`** — checks GitHub releases for newer module versions, with file cache. No chart module references it directly; the library's `Traits/ModuleCustomTrait::customModuleLatestVersion()` override instantiates it (invoked by the webtrees control panel), so it is not dead code despite having no direct consumer reference.
 
 ### Contracts
 - **`Contract/ModuleAssetUrlInterface`** — marker interface declaring `assetUrl(string $asset): string`. Custom modules that use webtrees' `ModuleCustomTrait` already satisfy this method via the trait; consumers add `implements ModuleAssetUrlInterface` to their `Module` class so type narrowing works for `ImageProcessor`'s constructor.
