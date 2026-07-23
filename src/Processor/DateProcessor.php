@@ -95,10 +95,15 @@ final readonly class DateProcessor
     }
 
     /**
-     * Returns the formatted birth date without HTML tags using webtrees'
-     * locale-aware display.
+     * Returns the formatted birth date from webtrees' locale-aware display.
      *
-     * @return string
+     * The value is plain text: {@see self::decodeValue()} strips the markup
+     * webtrees wraps the date in and decodes its HTML entities. It is meant for
+     * a text sink (an SVG `<text>` node, a JavaScript string) — a consumer that
+     * renders it into HTML MUST escape it at that sink, because the decoding
+     * turns an entity like `&amp;` back into a literal `&`.
+     *
+     * @return string The formatted birth date as plain text the caller must escape at an HTML sink
      */
     public function getBirthDate(): string
     {
@@ -106,10 +111,15 @@ final readonly class DateProcessor
     }
 
     /**
-     * Returns the formatted death date without HTML tags using webtrees'
-     * locale-aware display.
+     * Returns the formatted death date from webtrees' locale-aware display.
      *
-     * @return string
+     * The value is plain text: {@see self::decodeValue()} strips the markup
+     * webtrees wraps the date in and decodes its HTML entities. It is meant for
+     * a text sink (an SVG `<text>` node, a JavaScript string) — a consumer that
+     * renders it into HTML MUST escape it at that sink, because the decoding
+     * turns an entity like `&amp;` back into a literal `&`.
+     *
+     * @return string The formatted death date as plain text the caller must escape at an HTML sink
      */
     public function getDeathDate(): string
     {
@@ -370,11 +380,14 @@ final readonly class DateProcessor
 
     /**
      * Removes HTML tags and converts/decodes HTML entities to their
-     * corresponding characters.
+     * corresponding characters, yielding plain text for a text sink. The
+     * decode step means the result may contain characters that are unsafe in an
+     * HTML context (`<`, `&`, `"`), so a caller rendering it into HTML must
+     * escape it there — see the note on {@see self::getBirthDate()}.
      *
-     * @param string $value
+     * @param string $value The webtrees display() markup to reduce to plain text
      *
-     * @return string
+     * @return string The plain-text value, to be escaped by the caller at any HTML sink
      */
     private function decodeValue(string $value): string
     {
