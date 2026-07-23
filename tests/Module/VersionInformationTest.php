@@ -370,11 +370,11 @@ final class VersionInformationTest extends TestCase
     }
 
     /**
-     * The release request pins the SSRF-relevant transport options: redirects
-     * are capped and restricted to http(s) so the scheme guard cannot be
-     * sidestepped by a redirect, the body is streamed rather than buffered whole,
-     * and the connection has a bounded timeout. These options are the security
-     * contract, so they are asserted at the client boundary.
+     * The release request pins its transport options: redirects are capped and
+     * restricted to http(s), the body is streamed rather than buffered whole,
+     * and the connection and the request are both time-bounded so a slow or
+     * misconfigured endpoint cannot hold the control panel open. These options
+     * are asserted at the client boundary.
      *
      * @return void
      *
@@ -411,5 +411,6 @@ final class VersionInformationTest extends TestCase
         );
         self::assertTrue($captured['stream'] ?? false);
         self::assertSame(3, $captured['connect_timeout'] ?? null);
+        self::assertSame(10, $captured['timeout'] ?? null);
     }
 }

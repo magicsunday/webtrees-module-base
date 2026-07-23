@@ -86,6 +86,15 @@ final readonly class VersionInformation
     private const int MAX_REDIRECTS = 3;
 
     /**
+     * The request timeout, in seconds. It complements connect_timeout — which
+     * bounds only opening the connection — with a bound on the request itself,
+     * so a stalled or slow endpoint cannot hold the control-panel check open.
+     * The exact enforcement (a whole-transfer deadline vs a per-read one)
+     * depends on the Guzzle handler the runtime selects for a streamed request.
+     */
+    private const int REQUEST_TIMEOUT_SECONDS = 10;
+
+    /**
      * Constructor.
      *
      * @param ModuleCustomInterface $module     The module
@@ -196,6 +205,9 @@ final readonly class VersionInformation
                 try {
                     $response = $this->httpClient()->request('GET', $url, [
                         'connect_timeout' => self::CONNECT_TIMEOUT_SECONDS,
+                        // A request timeout on top of connect_timeout, so a
+                        // stalled or slow endpoint cannot hold the control panel open.
+                        'timeout' => self::REQUEST_TIMEOUT_SECONDS,
                         // Stream the body instead of buffering it whole, so
                         // readCappedBody() can refuse an oversized response
                         // before it is held in memory.
