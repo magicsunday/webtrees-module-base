@@ -197,6 +197,44 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
+     * Builds an individual stub whose sole primary NAME record carries the given
+     * formatted and plain name — the shape the constructor needs to pick the primary
+     * name and build its XPath instance over it. When a facts collection is supplied
+     * it is returned from facts(), so the nickname-reading paths can be driven too.
+     *
+     * @param string                     $fullNameHtml The formatted (HTML) primary name webtrees supplies
+     * @param string                     $plainName    The same name without markup, as `fullNN` carries it
+     * @param Collection<int, Fact>|null $facts        The individual's facts, when a NICK path is exercised
+     *
+     * @return Individual
+     */
+    private function individualWithPrimaryName(
+        string $fullNameHtml,
+        string $plainName,
+        ?Collection $facts = null,
+    ): Individual {
+        $individual = self::createStub(Individual::class);
+
+        if ($facts instanceof Collection) {
+            $individual->method('facts')->willReturn($facts);
+        }
+
+        $individual->method('getAllNames')->willReturn([
+            [
+                'full'   => $fullNameHtml,
+                'fullNN' => $plainName,
+                'type'   => 'BIRT',
+                'surn'   => '',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+        ]);
+        $individual->method('getPrimaryName')->willReturn(0);
+
+        return $individual;
+    }
+
+    /**
      * Builds a NameProcessor the way a consumer does: around an individual, through
      * the real constructor. That constructor is where the work happens — it picks the
      * primary name and builds the XPath instance over it — so constructing for real
@@ -209,20 +247,7 @@ final class NameProcessorTest extends TestCase
      */
     private function nameProcessorFor(string $fullNameHtml): NameProcessor
     {
-        $individual = self::createStub(Individual::class);
-        $individual->method('getAllNames')->willReturn([
-            [
-                'full'   => $fullNameHtml,
-                'fullNN' => $fullNameHtml,
-                'type'   => 'BIRT',
-                'surn'   => '',
-                'givn'   => '',
-                'sort'   => '',
-            ],
-        ]);
-        $individual->method('getPrimaryName')->willReturn(0);
-
-        return new NameProcessor($individual);
+        return new NameProcessor($this->individualWithPrimaryName($fullNameHtml, $fullNameHtml));
     }
 
     /**
@@ -491,21 +516,9 @@ final class NameProcessorTest extends TestCase
             ['NICK', $nick],
         ]);
 
-        $individual = self::createStub(Individual::class);
-        $individual->method('facts')->willReturn(new Collection([$nameFact]));
-        $individual->method('getAllNames')->willReturn([
-            [
-                'full'   => $fullNameHtml,
-                'fullNN' => $plainName,
-                'type'   => 'BIRT',
-                'surn'   => '',
-                'givn'   => '',
-                'sort'   => '',
-            ],
-        ]);
-        $individual->method('getPrimaryName')->willReturn(0);
-
-        return new NameProcessor($individual);
+        return new NameProcessor(
+            $this->individualWithPrimaryName($fullNameHtml, $plainName, new Collection([$nameFact]))
+        );
     }
 
     /**
@@ -577,19 +590,11 @@ final class NameProcessorTest extends TestCase
             ['NICK', 'Jonny'],
         ]);
 
-        $individual = self::createStub(Individual::class);
-        $individual->method('facts')->willReturn(new Collection([$marriedName, $birthName]));
-        $individual->method('getAllNames')->willReturn([
-            [
-                'full'   => '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
-                'fullNN' => 'John Doe',
-                'type'   => 'BIRT',
-                'surn'   => '',
-                'givn'   => '',
-                'sort'   => '',
-            ],
-        ]);
-        $individual->method('getPrimaryName')->willReturn(0);
+        $individual = $this->individualWithPrimaryName(
+            '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+            'John Doe',
+            new Collection([$marriedName, $birthName])
+        );
 
         self::assertSame('Jonny', (new NameProcessor($individual))->getNickname());
     }
