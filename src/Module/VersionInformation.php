@@ -11,13 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Module;
 
+use Exception;
 use Fig\Http\Message\StatusCodeInterface;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use JsonException;
-use Throwable;
 
 use function is_array;
 use function is_string;
@@ -115,12 +115,15 @@ final readonly class VersionInformation
                     if ($response->getStatusCode() === StatusCodeInterface::STATUS_OK) {
                         return $this->parseLatestVersion($response->getBody()->getContents());
                     }
-                } catch (Throwable) {
-                    // An update check must never break the page it renders in. This
-                    // runs inside the control panel, so anything the request or the
-                    // body read throws — a transport error, a detached stream, or
-                    // whatever an injected client raises — degrades to the bundled
-                    // version instead of reaching the error handler.
+                } catch (Exception) {
+                    // An update check must not break the control panel over an
+                    // operational failure. This runs inside the admin page, so a
+                    // transport error, a detached stream, a non-JSON body, or whatever
+                    // the request or an injected client raises degrades to the bundled
+                    // version instead of reaching the error handler. A genuine
+                    // programming Error is deliberately not caught here: it should
+                    // surface loudly rather than be masked and cached as the fallback
+                    // for a day.
                 }
 
                 return $this->module->customModuleVersion();
