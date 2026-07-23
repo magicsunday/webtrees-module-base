@@ -291,6 +291,34 @@ final class IsoCountryMapTest extends TestCase
     }
 
     /**
+     * A segment that is not alpha-3-shaped can never resolve to a code, so its
+     * null result must not be memoised. resolve() reaches resolveAlpha3() for
+     * every segment that misses the country map — every ordinary city or street
+     * name — so caching those would grow $alpha3Cache to the tree's distinct
+     * segments instead of the bounded three-letter space it is meant to hold.
+     *
+     * @return void
+     */
+    #[Test]
+    public function resolvingNonAlpha3SegmentsLeavesTheCacheEmpty(): void
+    {
+        $map = new IsoCountryMap();
+
+        // One segment per reason a token fails the alpha-3 shape — too short,
+        // too long, multi-word, digit-bearing. resolve() forwards each to
+        // resolveAlpha3() after it misses the country map, and none may be
+        // memoised. assertSame([], …) below breaks on the first cached entry,
+        // so the set only has to cover the distinct shapes, not bulk.
+        foreach (['Zz', 'Abcd', 'Some City', 'Place1'] as $segment) {
+            self::assertNull($map->resolve($segment));
+        }
+
+        $alpha3Cache = new ReflectionProperty(IsoCountryMap::class, 'alpha3Cache');
+
+        self::assertSame([], $alpha3Cache->getValue(), 'a non-alpha-3 segment must not be memoised');
+    }
+
+    /**
      * The UK home-nation codes the webtrees core counts as countries
      * (CountryService::iso3166(): ENG / SCT / WLS / NIR) must fold onto GB. They
      * are Chapman / GEDCOM subdivision codes, not ISO-3166-1 alpha-3, so ICU

@@ -288,9 +288,10 @@ final class IsoCountryMap
      * is shorter than inverting a second table. Returns null for any token ICU
      * does not recognise as a region — it echoes an unknown subtag back
      * unchanged, which is treated as "no match". The per-token result (hit or
-     * null) is memoised in
-     * {@see self::$alpha3Cache} so a whole-tree scan resolves each distinct code
-     * through ICU only once.
+     * null) is memoised in {@see self::$alpha3Cache} for the alpha-3-shaped
+     * tokens it resolves, so a whole-tree scan resolves each distinct code
+     * through ICU only once; a segment that is not alpha-3-shaped returns null
+     * without being cached, keeping the memo bounded to the three-letter space.
      *
      * @param string                $normalised Already lower-cased, whitespace-collapsed candidate
      * @param array<string, string> $map        The reverse name → ISO-2 lookup
@@ -301,23 +302,30 @@ final class IsoCountryMap
             return self::$alpha3Cache[$normalised];
         }
 
+        // Only an alpha-3-shaped token can resolve to a code. Every other
+        // segment that reaches here — an ordinary city or street name that
+        // missed the country map — would resolve to null, and memoising those
+        // would grow the cache to the tree's distinct segments rather than the
+        // bounded three-letter space it is meant to hold. Return without caching.
+        if (!self::isAlpha3Shape($normalised)) {
+            return null;
+        }
+
+        // Bridge through a fixed locale so the canonical display name matches
+        // the en_US key the reverse map is always seeded with first. ICU echoes
+        // an unknown subtag back unchanged (uppercased), so an echo equal to the
+        // token means "no region".
+        $name = (string) Locale::getDisplayRegion(self::REGION_TAG_PREFIX . strtoupper($normalised), 'en_US');
+
         $resolved = null;
 
-        if (self::isAlpha3Shape($normalised)) {
-            // Bridge through a fixed locale so the canonical display name
-            // matches the en_US key the reverse map is always seeded with
-            // first. ICU echoes an unknown subtag back unchanged (uppercased),
-            // so an echo equal to the token means "no region".
-            $name = (string) Locale::getDisplayRegion(self::REGION_TAG_PREFIX . strtoupper($normalised), 'en_US');
-
-            // mb_strtolower(), not strtolower(): the display name can contain
-            // non-ASCII letters (a resolved region name like "Åland Islands",
-            // though the echoed-back subtag is always ASCII) that strtolower()
-            // leaves unfolded, which would then mismatch $normalised — already
-            // folded via mb_strtolower() inside self::normalise().
-            if (($name !== '') && (mb_strtolower($name, 'UTF-8') !== $normalised)) {
-                $resolved = $map[$this->normalise($name)] ?? null;
-            }
+        // mb_strtolower(), not strtolower(): the display name can contain
+        // non-ASCII letters (a resolved region name like "Åland Islands",
+        // though the echoed-back subtag is always ASCII) that strtolower()
+        // leaves unfolded, which would then mismatch $normalised — already
+        // folded via mb_strtolower() inside self::normalise().
+        if (($name !== '') && (mb_strtolower($name, 'UTF-8') !== $normalised)) {
+            $resolved = $map[$this->normalise($name)] ?? null;
         }
 
         return self::$alpha3Cache[$normalised] = $resolved;
