@@ -18,13 +18,18 @@ use Fisharebest\Webtrees\Registry;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use JsonException;
+use Psr\Http\Message\StreamInterface;
 
 use function is_array;
 use function is_string;
 use function json_decode;
+use function parse_url;
 use function preg_match;
+use function strlen;
+use function strtolower;
 
 use const JSON_THROW_ON_ERROR;
+use const PHP_URL_SCHEME;
 
 /**
  * Overrides the webtrees core module version check so an update notice can be
@@ -60,6 +65,27 @@ final readonly class VersionInformation
     private const string VERSION_TAG_PATTERN = '/\A\d{1,5}\.\d{1,5}\.\d{1,5}(?:[-+][0-9A-Za-z.\-+]{1,32})?\z/';
 
     /**
+     * The inclusive byte ceiling for the release response body. A release
+     * payload is a small JSON object, so a body larger than this is refused
+     * unparsed rather than buffered whole — a hostile endpoint cannot exhaust
+     * the control panel's memory by streaming an oversized response.
+     */
+    private const int MAX_BODY_BYTES = 262144;
+
+    /**
+     * The connection-establishment timeout, in seconds. Bounds how long each
+     * redirect hop may spend opening its connection; combined with the capped
+     * redirect count it keeps the connection phase from running away. The total
+     * transfer time is governed separately by the client's own timeout.
+     */
+    private const int CONNECT_TIMEOUT_SECONDS = 3;
+
+    /**
+     * The maximum number of redirects the release request follows.
+     */
+    private const int MAX_REDIRECTS = 3;
+
+    /**
      * Constructor.
      *
      * @param ModuleCustomInterface $module     The module
@@ -88,6 +114,63 @@ final readonly class VersionInformation
     }
 
     /**
+     * Returns whether the URL uses an http(s) scheme. Any other scheme
+     * (file://, php://, data://, …) is refused before the URL reaches the HTTP
+     * client, so a misconfigured or hostile update URL cannot be used to read a
+     * local resource.
+     *
+     * @param string $url The update URL to check
+     *
+     * @return bool
+     */
+    private function isHttpUrl(string $url): bool
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        if (!is_string($scheme)) {
+            return false;
+        }
+
+        $scheme = strtolower($scheme);
+
+        return ($scheme === 'http') || ($scheme === 'https');
+    }
+
+    /**
+     * Reads the response body into a string capped at {@see self::MAX_BODY_BYTES},
+     * or null when there is no usable body — the stream is empty or it exceeds
+     * the cap. A single read() may return fewer bytes than requested even when
+     * more follow (chunked or network-backed streams), so the read accumulates
+     * until EOF rather than treating one short read as the whole body. It reads
+     * one byte past the cap to tell "at cap" from "over cap", refusing an
+     * oversized body rather than parsing a truncated one.
+     *
+     * @param StreamInterface $stream The response body to read
+     *
+     * @return string|null The body, or null when it is empty or exceeds the cap
+     */
+    private function readCappedBody(StreamInterface $stream): ?string
+    {
+        $body = '';
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read(self::MAX_BODY_BYTES + 1 - strlen($body));
+
+            if ($chunk === '') {
+                break;
+            }
+
+            $body .= $chunk;
+
+            if (strlen($body) > self::MAX_BODY_BYTES) {
+                return null;
+            }
+        }
+
+        return $body === '' ? null : $body;
+    }
+
+    /**
      * This method an extended version of
      * ModuleCustomTrait::customModuleLatestVersion, allowing to automatically
      * use the latest GitHub release version.
@@ -98,22 +181,41 @@ final readonly class VersionInformation
      */
     public function fetchLatestVersion(): string
     {
-        // No update URL provided
-        if ($this->module->customModuleLatestVersionUrl() === '') {
+        $url = $this->module->customModuleLatestVersionUrl();
+
+        // No update URL, or one whose scheme is not http(s): report the bundled
+        // version without a request. The scheme guard keeps a misconfigured or
+        // hostile URL (file://, php://, …) from being handed to the HTTP client.
+        if (($url === '') || !$this->isHttpUrl($url)) {
             return $this->module->customModuleVersion();
         }
 
         return Registry::cache()->file()->remember(
             $this->module->name() . '-latest-version',
-            function (): string {
+            function () use ($url): string {
                 try {
-                    $response = $this->httpClient()->request(
-                        'GET',
-                        $this->module->customModuleLatestVersionUrl()
-                    );
+                    $response = $this->httpClient()->request('GET', $url, [
+                        'connect_timeout' => self::CONNECT_TIMEOUT_SECONDS,
+                        // Stream the body instead of buffering it whole, so
+                        // readCappedBody() can refuse an oversized response
+                        // before it is held in memory.
+                        'stream' => true,
+                        // Bound and pin redirects: at most a few hops, only over
+                        // http(s), so the scheme guard above cannot be sidestepped
+                        // by a redirect to another scheme or an unbounded chain.
+                        'allow_redirects' => [
+                            'max'       => self::MAX_REDIRECTS,
+                            'protocols' => ['http', 'https'],
+                            'strict'    => true,
+                        ],
+                    ]);
 
                     if ($response->getStatusCode() === StatusCodeInterface::STATUS_OK) {
-                        return $this->parseLatestVersion($response->getBody()->getContents());
+                        $body = $this->readCappedBody($response->getBody());
+
+                        if ($body !== null) {
+                            return $this->parseLatestVersion($body);
+                        }
                     }
                 } catch (Exception) {
                     // An update check must not break the control panel over an

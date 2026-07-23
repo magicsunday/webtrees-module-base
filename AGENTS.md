@@ -24,12 +24,17 @@ directly via setup-php.
 `composer.json` carries no comments, so the rationale lives here — and the entry
 mirrors the identical one in the chart modules and webtrees-statistics.
 
-This package requires `fisharebest/webtrees` only to develop and test against its
-API. It is a **library consumed into** an administrator's own webtrees install,
-and the release artifact ships this package's `src/` alone, so it neither vendors
-nor distributes webtrees' transitive dependencies. `guzzlehttp/guzzle` is one of
-those: exact-pinned by each webtrees release, not chosen by us, not patchable by
-us, and upgraded by the administrator's webtrees — not by this package.
+This package requires `fisharebest/webtrees` for its API — to develop and test
+against, and at runtime to drive on the host install (for example
+`Module/VersionInformation`'s release-version check runs on webtrees' bundled
+`guzzlehttp/guzzle`). It is a **library consumed into** an administrator's own
+webtrees install, and the release artifact ships this package's `src/` alone, so
+it neither vendors nor distributes webtrees' transitive dependencies.
+`guzzlehttp/guzzle` is one of those: exact-pinned by each webtrees release, not
+chosen by us, not patchable by us, and upgraded by the administrator's webtrees —
+not by this package. This package declares no direct `guzzle` constraint, so the
+host webtrees governs its version even though this package now drives it at
+runtime.
 
 Composer's advisory policy blocks *resolution*, not merely the `composer audit`
 report (`--no-audit` / `COMPOSER_NO_AUDIT` suppress only the report). So whenever
