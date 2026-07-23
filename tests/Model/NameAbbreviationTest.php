@@ -28,42 +28,110 @@ use PHPUnit\Framework\TestCase;
 final class NameAbbreviationTest extends TestCase
 {
     /**
-     * @return array<string, array{0: string, 1: string, 2: string}>
+     * @return array<string, array{NameAbbreviation, string, NameAbbreviation}>
      */
     public static function resolveDataProvider(): array
     {
+        // [ configured strategy, tree's surname tradition, resolved strategy ]
         return [
-            'AUTO with icelandic tradition picks SURNAME' => [
-                NameAbbreviation::AUTO, 'icelandic', NameAbbreviation::SURNAME,
+            'Auto with icelandic tradition picks Surname' => [
+                NameAbbreviation::Auto, 'icelandic', NameAbbreviation::Surname,
             ],
-            'AUTO with paternal tradition picks GIVEN' => [
-                NameAbbreviation::AUTO, 'paternal', NameAbbreviation::GIVEN,
+            'Auto with paternal tradition picks Given' => [
+                NameAbbreviation::Auto, 'paternal', NameAbbreviation::Given,
             ],
-            'AUTO with empty tradition picks GIVEN' => [
-                NameAbbreviation::AUTO, '', NameAbbreviation::GIVEN,
+            'Auto with empty tradition picks Given' => [
+                NameAbbreviation::Auto, '', NameAbbreviation::Given,
             ],
-            'AUTO with unknown tradition picks GIVEN' => [
-                NameAbbreviation::AUTO, 'something-new', NameAbbreviation::GIVEN,
+            'Auto with unknown tradition picks Given' => [
+                NameAbbreviation::Auto, 'something-new', NameAbbreviation::Given,
             ],
-            'GIVEN passes through regardless of tradition' => [
-                NameAbbreviation::GIVEN, 'icelandic', NameAbbreviation::GIVEN,
+            'Given passes through regardless of tradition' => [
+                NameAbbreviation::Given, 'icelandic', NameAbbreviation::Given,
             ],
-            'SURNAME passes through regardless of tradition' => [
-                NameAbbreviation::SURNAME, 'paternal', NameAbbreviation::SURNAME,
+            'Surname passes through regardless of tradition' => [
+                NameAbbreviation::Surname, 'paternal', NameAbbreviation::Surname,
             ],
         ];
     }
 
+    /**
+     * Resolving maps the configured strategy against the tree's tradition, and
+     * never yields Auto: the JS layer receives a concrete strategy.
+     *
+     * @param NameAbbreviation $configured
+     * @param string           $surnameTradition
+     * @param NameAbbreviation $expected
+     *
+     * @return void
+     */
     #[Test]
     #[DataProvider('resolveDataProvider')]
     public function resolveMapsConfigurationAgainstSurnameTradition(
-        string $configured,
+        NameAbbreviation $configured,
         string $surnameTradition,
-        string $expected,
+        NameAbbreviation $expected,
     ): void {
-        self::assertSame(
-            $expected,
-            NameAbbreviation::resolve($configured, $surnameTradition)
-        );
+        self::assertSame($expected, $configured->resolve($surnameTradition));
+    }
+
+    /**
+     * Resolving always yields a strategy the JS layer understands — for ANY case
+     * against ANY tradition, not just the curated rows above. Asserted as membership
+     * rather than "not Auto": resolve() returns $this for every non-Auto case, so a
+     * newly added case left unhandled would still satisfy a not-Auto check while
+     * emitting a value no consumer knows.
+     *
+     * @return void
+     */
+    #[Test]
+    public function resolveNeverYieldsAuto(): void
+    {
+        foreach (NameAbbreviation::cases() as $case) {
+            foreach (['icelandic', 'paternal', '', 'something-new'] as $tradition) {
+                self::assertContains(
+                    $case->resolve($tradition),
+                    [NameAbbreviation::Given, NameAbbreviation::Surname],
+                    'resolve() must yield a concrete strategy the JS layer understands'
+                );
+            }
+        }
+    }
+
+    /**
+     * @return array<string, array{string, NameAbbreviation|null}>
+     */
+    public static function storedValueDataProvider(): array
+    {
+        // [ value as persisted in module preferences, expected case ]
+        return [
+            'AUTO maps to Auto'              => ['AUTO', NameAbbreviation::Auto],
+            'GIVEN maps to Given'            => ['GIVEN', NameAbbreviation::Given],
+            'SURNAME maps to Surname'        => ['SURNAME', NameAbbreviation::Surname],
+            'an unknown value is refused'    => ['nonsense', null],
+            'the lookup is case-sensitive'   => ['auto', null],
+            'an empty preference is refused' => ['', null],
+        ];
+    }
+
+    /**
+     * The backing values are what module preferences persist, so they are part of
+     * the contract: a value stored by an earlier version must still map to the same
+     * case, and anything else must be refused rather than silently accepted.
+     *
+     * Driven through a data provider on purpose — comparing a literal against the
+     * case it defines is a tautology PHPStan resolves statically, and would stay
+     * green if a case were renamed together with its value.
+     *
+     * @param string                $stored
+     * @param NameAbbreviation|null $expected
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('storedValueDataProvider')]
+    public function storedValuesMapBackToTheirCase(string $stored, ?NameAbbreviation $expected): void
+    {
+        self::assertSame($expected, NameAbbreviation::tryFrom($stored));
     }
 }

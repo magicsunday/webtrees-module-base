@@ -11,15 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
-use DOMXPath;
+use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Individual;
+use Illuminate\Support\Collection;
 use MagicSunday\Webtrees\ModuleBase\Processor\NameProcessor;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use ReflectionException;
+
+use function array_map;
 
 /**
  * NameProcessorTest.
@@ -32,62 +33,59 @@ use ReflectionException;
 final class NameProcessorTest extends TestCase
 {
     /**
-     * @return string[][]
+     * @return array<string, array{string, list<string>, list<string>}>
      */
-    public static function convertToHtmlEntitiesDataProvider(): array
+    public static function nonAsciiNameDataProvider(): array
     {
-        // [ input, expected ]
+        // [ formatted name, expected first names, expected last names ]
         return [
-            // German umlauts
-            [
-                '<div>abc <span>äöü</span> <p>&#228;&#246;&#252;</p></div>',
-                '<div>abc <span>&#228;&#246;&#252;</span> <p>&#228;&#246;&#252;</p></div>',
+            'utf-8 umlauts' => [
+                '<span class="NAME" dir="auto" translate="no">Jörg <span class="SURN">Müller</span></span>',
+                ['Jörg'],
+                ['Müller'],
             ],
-            [
-                '<div>abc <span>&auml;&ouml;&uuml;</span> <p>&#228;&#246;&#252;</p></div>',
-                '<div>abc <span>&auml;&ouml;&uuml;</span> <p>&#228;&#246;&#252;</p></div>',
+            'named entities in the source markup' => [
+                '<span class="NAME" dir="auto" translate="no">J&ouml;rg <span class="SURN">M&uuml;ller</span></span>',
+                ['Jörg'],
+                ['Müller'],
             ],
-
-            // Euro sign
-            [
-                '€ &euro; &#8364;',
-                '&#8364; &euro; &#8364;',
+            'numeric entities in the source markup' => [
+                '<span class="NAME" dir="auto" translate="no">J&#246;rg <span class="SURN">M&#252;ller</span></span>',
+                ['Jörg'],
+                ['Müller'],
             ],
-
-            // Korean
-            [
-                '박성욱',
-                '&#48149;&#49457;&#50865;',
-            ],
-            [
-                '<span><span>&#48149;</span>&#49457;&#50865;</span>',
-                '<span><span>&#48149;</span>&#49457;&#50865;</span>',
+            'korean' => [
+                '<span class="NAME" dir="auto" translate="no">성욱 <span class="SURN">박</span></span>',
+                ['성욱'],
+                ['박'],
             ],
         ];
     }
 
     /**
-     * Tests conversion of UTF-8 characters to HTML entities.
+     * Non-ASCII names survive the DOM round-trip. webtrees hands the processor UTF-8
+     * (sometimes already entity-encoded); the DOM parser it uses would mangle raw
+     * multi-byte input, so the name is entity-encoded on the way in. What must hold
+     * for a consumer is that the extracted name reads back as the original
+     * characters — never as mojibake or as literal entity text.
      *
-     * @param string $input
-     * @param string $expected
+     * @param string       $fullNameHtml
+     * @param list<string> $expectedFirstNames
+     * @param list<string> $expectedLastNames
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
-    #[DataProvider('convertToHtmlEntitiesDataProvider')]
-    public function convertToHtmlEntities(string $input, string $expected): void
-    {
-        $nameProcessor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
+    #[DataProvider('nonAsciiNameDataProvider')]
+    public function nonAsciiNamesSurviveExtraction(
+        string $fullNameHtml,
+        array $expectedFirstNames,
+        array $expectedLastNames,
+    ): void {
+        $nameProcessor = $this->nameProcessorFor($fullNameHtml);
 
-        $reflectionClass  = new ReflectionClass(NameProcessor::class);
-        $reflectionMethod = $reflectionClass->getMethod('convertToHtmlEntities');
-
-        $result = $reflectionMethod->invokeArgs($nameProcessor, [$input]);
-
-        self::assertSame($expected, $result);
+        self::assertSame($expectedFirstNames, $nameProcessor->getFirstNames());
+        self::assertSame($expectedLastNames, $nameProcessor->getLastNames());
     }
 
     /**
@@ -95,7 +93,7 @@ final class NameProcessorTest extends TestCase
      */
     public static function individualNameDataProvider(): array
     {
-        // [ input, expected => [ First names, Last names, Preferred first name, Nick names ] ]
+        // [ formatted name, expected => [ first names, last names, preferred name ] ]
         return [
             [
                 '<span class="NAME" dir="auto" translate="no"><span class="starredname">Max</span> Hermann <span class="SURN">Mustermann</span></span>',
@@ -199,32 +197,57 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * @param string|string[] $expected
-     * @param string          $input
-     * @param string          $methodeName
+     * Builds an individual stub whose sole primary NAME record carries the given
+     * formatted and plain name — the shape the constructor needs to pick the primary
+     * name and build its XPath instance over it. When a facts collection is supplied
+     * it is returned from facts(), so the nickname-reading paths can be driven too.
      *
-     * @return void
+     * @param string                     $fullNameHtml The formatted (HTML) primary name webtrees supplies
+     * @param string                     $plainName    The same name without markup, as `fullNN` carries it
+     * @param Collection<int, Fact>|null $facts        The individual's facts, when a NICK path is exercised
      *
-     * @throws ReflectionException
+     * @return Individual
      */
-    private function assertExtractedNames($expected, string $input, string $methodeName): void
+    private function individualWithPrimaryName(
+        string $fullNameHtml,
+        string $plainName,
+        ?Collection $facts = null,
+    ): Individual {
+        $individual = self::createStub(Individual::class);
+
+        if ($facts instanceof Collection) {
+            $individual->method('facts')->willReturn($facts);
+        }
+
+        $individual->method('getAllNames')->willReturn([
+            [
+                'full'   => $fullNameHtml,
+                'fullNN' => $plainName,
+                'type'   => 'BIRT',
+                'surn'   => '',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+        ]);
+        $individual->method('getPrimaryName')->willReturn(0);
+
+        return $individual;
+    }
+
+    /**
+     * Builds a NameProcessor the way a consumer does: around an individual, through
+     * the real constructor. That constructor is where the work happens — it picks the
+     * primary name and builds the XPath instance over it — so constructing for real
+     * is what puts those paths under test.
+     *
+     * @param string $fullNameHtml The individual's formatted primary name (webtrees
+     *                             supplies HTML here)
+     *
+     * @return NameProcessor
+     */
+    private function nameProcessorFor(string $fullNameHtml): NameProcessor
     {
-        $reflectionClass  = new ReflectionClass(NameProcessor::class);
-        $reflectionMethod = $reflectionClass->getMethod('getDomXPathInstance');
-
-        $nameProcessor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
-
-        /** @var DOMXPath $domXPath */
-        $domXPath = $reflectionMethod->invoke($nameProcessor, $input);
-
-        $reflectionProperty = $reflectionClass->getProperty('xPath');
-        $reflectionProperty->setValue($nameProcessor, $domXPath);
-
-        $result = $reflectionClass
-            ->getMethod($methodeName)
-            ->invoke($nameProcessor);
-
-        self::assertSame($expected, $result);
+        return new NameProcessor($this->individualWithPrimaryName($fullNameHtml, $fullNameHtml));
     }
 
     /**
@@ -234,14 +257,12 @@ final class NameProcessorTest extends TestCase
      * @param array<int, string[]> $expected
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getFirstNames(string $input, array $expected): void
+    public function extractsGivenNameTokensFromTheFormattedName(string $input, array $expected): void
     {
-        $this->assertExtractedNames($expected[0], $input, 'getFirstNames');
+        self::assertSame($expected[0], $this->nameProcessorFor($input)->getFirstNames());
     }
 
     /**
@@ -251,14 +272,12 @@ final class NameProcessorTest extends TestCase
      * @param array<int, string[]> $expected
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getLastNames(string $input, array $expected): void
+    public function extractsSurnameTokensFromTheFormattedName(string $input, array $expected): void
     {
-        $this->assertExtractedNames($expected[1], $input, 'getLastNames');
+        self::assertSame($expected[1], $this->nameProcessorFor($input)->getLastNames());
     }
 
     /**
@@ -268,83 +287,92 @@ final class NameProcessorTest extends TestCase
      * @param array<int, string[]> $expected
      *
      * @return void
-     *
-     * @throws ReflectionException
      */
     #[Test]
     #[DataProvider('individualNameDataProvider')]
-    public function getPreferredName(string $input, array $expected): void
+    public function reportsTheStarredNamePartAsPreferredName(string $input, array $expected): void
     {
         // getPreferredName returns only one match, but test data is stored as an array
-        $this->assertExtractedNames($expected[2][0], $input, 'getPreferredName');
+        self::assertSame($expected[2][0], $this->nameProcessorFor($input)->getPreferredName());
     }
 
     /**
-     * Invokes the real getMarriedSurnames() on a constructor-less NameProcessor
-     * whose $individual property is set via reflection. The class is final, so
-     * it cannot be subclassed or stubbed; a real instance built without its
-     * constructor runs the real method body.
+     * Reports the married surnames an individual with the given NAME records has,
+     * built the way a consumer builds it: around a stubbed individual, through the
+     * real constructor, calling the public method.
      *
-     * @param array<int, array<string, string>> $individualNames
-     * @param Individual|null                   $spouse
+     * @param array<int, array<string, string>> $individualNames The individual's NAME records
+     * @param Individual|null                   $spouse          The spouse whose surname must match, if any
      *
      * @return string[]
-     *
-     * @throws ReflectionException
      */
-    private function invokeGetMarriedSurnames(array $individualNames, ?Individual $spouse = null): array
+    private function marriedSurnamesFor(array $individualNames, ?Individual $spouse = null): array
     {
         $individualStub = self::createStub(Individual::class);
-        $individualStub->method('getAllNames')->willReturn($individualNames);
 
-        $processor = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
+        // The cases below describe only what getMarriedSurnames() reads (type +
+        // surn). The constructor additionally needs a primary name it can build its
+        // XPath over, so fill in the remaining keys — `+` keeps whatever the case
+        // already specified.
+        $individualStub->method('getAllNames')->willReturn(array_map(
+            static fn (array $name): array => $name + [
+                'full'   => '<span class="NAME" dir="auto" translate="no">Test <span class="SURN">Person</span></span>',
+                'fullNN' => 'Test Person',
+                'givn'   => '',
+                'surn'   => '',
+            ],
+            $individualNames
+        ));
+        $individualStub->method('getPrimaryName')->willReturn(0);
 
-        $reflectionClass = new ReflectionClass(NameProcessor::class);
-        $reflectionClass->getProperty('individual')->setValue($processor, $individualStub);
-
-        $result = $reflectionClass->getMethod('getMarriedSurnames')->invoke($processor, $spouse);
-
-        self::assertIsArray($result);
-
-        return array_values(array_filter($result, is_string(...)));
+        return (new NameProcessor($individualStub))->getMarriedSurnames($spouse);
     }
 
     /**
-     * @throws ReflectionException
+     * An individual with only a plain NAME record has no married surname to report.
+     *
+     * @return void
      */
     #[Test]
     public function getMarriedSurnamesReturnsEmptyWhenNoMarnmRecord(): void
     {
-        self::assertSame([], $this->invokeGetMarriedSurnames([
+        self::assertSame([], $this->marriedSurnamesFor([
             ['type' => 'NAME', 'surn' => 'Schmidt'],
         ]));
     }
 
     /**
-     * @throws ReflectionException
+     * With no spouse to match against, the _MARNM surname is reported as-is.
+     *
+     * @return void
      */
     #[Test]
     public function getMarriedSurnamesReturnsMarnmSurnameWhenNoSpouseGiven(): void
     {
-        self::assertSame(['Müller'], $this->invokeGetMarriedSurnames([
+        self::assertSame(['Müller'], $this->marriedSurnamesFor([
             ['type' => 'NAME', 'surn' => 'Schmidt'],
             ['type' => '_MARNM', 'surn' => 'Müller'],
         ]));
     }
 
     /**
-     * @throws ReflectionException
+     * A _MARNM surname holding several space-separated parts is split into one entry per part.
+     *
+     * @return void
      */
     #[Test]
     public function getMarriedSurnamesSplitsMultipleSurnameParts(): void
     {
-        self::assertSame(['Müller', 'Meier'], $this->invokeGetMarriedSurnames([
+        self::assertSame(['Müller', 'Meier'], $this->marriedSurnamesFor([
             ['type' => '_MARNM', 'surn' => 'Müller Meier'],
         ]));
     }
 
     /**
-     * @throws ReflectionException
+     * Given a spouse, only the _MARNM record whose surname matches that spouse is reported —
+     * an individual can carry several married names from different marriages.
+     *
+     * @return void
      */
     #[Test]
     public function getMarriedSurnamesMatchesSpouseSurname(): void
@@ -356,7 +384,7 @@ final class NameProcessorTest extends TestCase
 
         // The first _MARNM ("Andere") doesn't match the spouse's surname,
         // so it must be skipped; the second _MARNM ("Müller") matches.
-        self::assertSame(['Müller'], $this->invokeGetMarriedSurnames(
+        self::assertSame(['Müller'], $this->marriedSurnamesFor(
             [
                 ['type' => 'NAME', 'surn' => 'Schmidt'],
                 ['type' => '_MARNM', 'surn' => 'Andere'],
@@ -367,7 +395,10 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * @throws ReflectionException
+     * When no _MARNM record matches the spouse's surname, nothing is reported rather than
+     * falling back to an unrelated married name.
+     *
+     * @return void
      */
     #[Test]
     public function getMarriedSurnamesReturnsEmptyWhenSpouseSurnameDoesNotMatchAnyMarnm(): void
@@ -377,7 +408,7 @@ final class NameProcessorTest extends TestCase
             ['type' => 'NAME', 'surn' => 'Schmidt'],
         ]);
 
-        self::assertSame([], $this->invokeGetMarriedSurnames(
+        self::assertSame([], $this->marriedSurnamesFor(
             [
                 ['type' => '_MARNM', 'surn' => 'Müller'],
             ],
@@ -386,67 +417,78 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, list<string>, list<string>, string, string}>
+     * @return array<string, array{string, string, string, string}>
      */
     public static function injectNicknameDataProvider(): array
     {
-        // [ fullName, firstNames, lastNames, nick, expected ]
+        // [ formatted name, plain name, nick, expected ]
         return [
             'Empty nick returns input unchanged' => [
-                'John Doe', ['John'], ['Doe'], '', 'John Doe',
+                '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+                'John Doe', '', 'John Doe',
             ],
             'Inserts after last given name (single-word surname)' => [
-                'John Doe', ['John'], ['Doe'], 'Jonny', 'John "Jonny" Doe',
+                '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+                'John Doe', 'Jonny', 'John "Jonny" Doe',
             ],
             'Multiple given names: inserts after the last one' => [
+                '<span class="NAME" dir="auto" translate="no">Friedrich Wilhelm August <span class="SURN">von</span> <span class="SURN">Habsburg-Lothringen</span></span>',
                 'Friedrich Wilhelm August von Habsburg-Lothringen',
-                ['Friedrich', 'Wilhelm', 'August'],
-                ['von', 'Habsburg-Lothringen'],
                 'Fritz',
                 'Friedrich Wilhelm August "Fritz" von Habsburg-Lothringen',
             ],
             'Surname particle in given-name area: nickname stays before particle+surname' => [
+                '<span class="NAME" dir="auto" translate="no">Friedrich von <span class="SURN">Berg</span></span>',
                 'Friedrich von Berg',
-                ['Friedrich', 'von'],
-                ['Berg'],
                 'Fritz',
                 'Friedrich von "Fritz" Berg',
             ],
+            'Last given name absent from the plain name: appends instead of inserting' => [
+                // The formatted name yields given "Ludwig" / surname "Beethoven", but the
+                // plain name carries neither given name — so the search inside the
+                // pre-surname slice finds nothing and the nickname is appended.
+                '<span class="NAME" dir="auto" translate="no">Ludwig <span class="SURN">Beethoven</span></span>',
+                'van Beethoven', 'Luigi', 'van Beethoven "Luigi"',
+            ],
+            'Surname absent from the plain name: the whole string stays searchable' => [
+                // strpos() cannot locate "Mustermann" in the plain name, so the haystack
+                // is not truncated and the given name is still found in the full string.
+                '<span class="NAME" dir="auto" translate="no">Max <span class="SURN">Mustermann</span></span>',
+                'Max Schmidt', 'Maxi', 'Max "Maxi" Schmidt',
+            ],
             'Idempotent: nick already inline' => [
-                'John "Jonny" Doe', ['John'], ['Doe'], 'Jonny', 'John "Jonny" Doe',
+                '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+                'John "Jonny" Doe', 'Jonny', 'John "Jonny" Doe',
             ],
             'No given names: appends nick' => [
-                'Anonymous', [], [], 'Jonny', 'Anonymous "Jonny"',
+                '<span class="NAME" dir="auto" translate="no"><span class="SURN">Anonymous</span></span>',
+                'Anonymous', 'Jonny', 'Anonymous "Jonny"',
             ],
             'Hits last occurrence when given name repeats' => [
+                '<span class="NAME" dir="auto" translate="no">Maria Anna Maria <span class="SURN">Schmidt</span></span>',
                 'Maria Anna Maria Schmidt',
-                ['Maria', 'Anna', 'Maria'],
-                ['Schmidt'],
                 'Mimi',
                 'Maria Anna Maria "Mimi" Schmidt',
             ],
             'Last given name is substring of surname' => [
                 // Issue 199: strrpos used to anchor on "Jan" inside "Jansen",
                 // splitting the surname and producing "Hendrik Jan Jan \"Henk\"sen".
+                '<span class="NAME" dir="auto" translate="no">Hendrik Jan <span class="SURN">Jansen</span></span>',
                 'Hendrik Jan Jansen',
-                ['Hendrik', 'Jan'],
-                ['Jansen'],
                 'Henk',
                 'Hendrik Jan "Henk" Jansen',
             ],
             'Last given name is substring of surname (second sample)' => [
+                '<span class="NAME" dir="auto" translate="no">Pieter Jan <span class="SURN">Jansen</span></span>',
                 'Pieter Jan Jansen',
-                ['Pieter', 'Jan'],
-                ['Jansen'],
                 'Piet',
                 'Pieter Jan "Piet" Jansen',
             ],
             'Empty last names list falls back to whole-string search' => [
-                // No surname tokens supplied (e.g. mononym): the search range
-                // stays the whole string, anchoring on the last given name.
+                // No surname tokens (a mononym): the search range stays the whole
+                // string, anchoring on the last given name.
+                '<span class="NAME" dir="auto" translate="no">Madonna</span>',
                 'Madonna',
-                ['Madonna'],
-                [],
                 'Madge',
                 'Madonna "Madge"',
             ],
@@ -454,28 +496,106 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
-     * Tests that injectNickname inserts the quoted nickname after the last
-     * given name without splitting the surname when the given name is a
-     * substring of it.
+     * Builds a NameProcessor whose individual also reports a GEDCOM nickname, so the
+     * nickname-injecting path can be driven from the public API.
      *
-     * @param list<string> $firstNames
-     * @param list<string> $lastNames
+     * @param string $fullNameHtml The formatted (HTML) primary name
+     * @param string $plainName    The same name without markup, as `fullNN` carries it
+     * @param string $nick         The GEDCOM `2 NICK` value, or an empty string
      *
-     * @throws ReflectionException
+     * @return NameProcessor
+     */
+    private function nameProcessorWithNickname(
+        string $fullNameHtml,
+        string $plainName,
+        string $nick,
+    ): NameProcessor {
+        $nameFact = self::createStub(Fact::class);
+        $nameFact->method('attribute')->willReturnMap([
+            ['TYPE', ''],
+            ['NICK', $nick],
+        ]);
+
+        return new NameProcessor(
+            $this->individualWithPrimaryName($fullNameHtml, $plainName, new Collection([$nameFact]))
+        );
+    }
+
+    /**
+     * Tests that the nickname is quoted and placed after the last given name, so it
+     * lands before whatever follows (a surname particle plus surname, or the surname
+     * itself) and never splits the surname when a given name is a substring of it.
+     *
+     * @param string $fullNameHtml
+     * @param string $plainName
+     * @param string $nick
+     * @param string $expected
+     *
+     * @return void
      */
     #[Test]
     #[DataProvider('injectNicknameDataProvider')]
-    public function injectNickname(
-        string $fullName,
-        array $firstNames,
-        array $lastNames,
+    public function injectsQuotedNicknameAfterTheLastGivenName(
+        string $fullNameHtml,
+        string $plainName,
         string $nick,
         string $expected,
     ): void {
-        $processor        = (new ReflectionClass(NameProcessor::class))->newInstanceWithoutConstructor();
-        $reflectionMethod = (new ReflectionClass(NameProcessor::class))->getMethod('injectNickname');
-        $result           = $reflectionMethod->invoke($processor, $fullName, $firstNames, $lastNames, $nick);
+        self::assertSame(
+            $expected,
+            $this->nameProcessorWithNickname($fullNameHtml, $plainName, $nick)->getFullNameWithNickname()
+        );
+    }
 
-        self::assertSame($expected, $result);
+    /**
+     * getFullName() reports the unformatted name and rewrites webtrees' "name
+     * unknown" placeholders into an ellipsis, so a consumer never renders the raw
+     * GEDCOM sentinel to a user.
+     *
+     * @return void
+     */
+    #[Test]
+    public function getFullNameReplacesUnknownNamePlaceholders(): void
+    {
+        $processor = $this->nameProcessorWithNickname(
+            '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+            Individual::PRAENOMEN_NESCIO . ' ' . Individual::NOMEN_NESCIO,
+            ''
+        );
+
+        self::assertSame('… …', $processor->getFullName());
+    }
+
+    /**
+     * The nickname is read from the primary NAME fact only. A nickname carried by a
+     * married-name or also-known-as variant belongs to that identity, not to the
+     * birth identity getFullName() reports, so it must be skipped.
+     *
+     * @return void
+     */
+    #[Test]
+    public function getNicknameSkipsNonPrimaryNameVariants(): void
+    {
+        $marriedName = self::createStub(Fact::class);
+        $marriedName->method('attribute')->willReturnMap([
+            ['TYPE', '_MARNM'],
+            ['NICK', 'Married-Nick'],
+        ]);
+
+        // An explicit lower-case "birth" TYPE: the guard upper-cases before comparing,
+        // so this must still be accepted as the primary identity.
+        $birthName = self::createStub(Fact::class);
+        $birthName->method('attribute')->willReturnMap([
+            ['TYPE', 'birth'],
+            ['NICK', 'Jonny'],
+        ]);
+
+        $individual = $this->individualWithPrimaryName(
+            '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+            'John Doe',
+            new Collection([$marriedName, $birthName])
+        );
+
+        self::assertSame('Jonny', (new NameProcessor($individual))->getNickname());
     }
 }

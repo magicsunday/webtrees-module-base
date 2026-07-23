@@ -32,13 +32,7 @@ final readonly class ImageProcessor
      * @param Individual                                    $individual The individual to process
      */
     public function __construct(
-        /**
-         * The module.
-         */
         private ModuleCustomInterface&ModuleAssetUrlInterface $module,
-        /**
-         * The individual.
-         */
         private Individual $individual,
     ) {
     }

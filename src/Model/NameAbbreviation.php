@@ -13,56 +13,60 @@ namespace MagicSunday\Webtrees\ModuleBase\Model;
 
 /**
  * Name abbreviation strategy used by chart modules when a name does not fit the
- * available width. Resolves the AUTO setting against a tree's surname tradition
- * so the JS layer always receives a concrete GIVEN or SURNAME value.
+ * available width. Resolves the Auto setting against a tree's surname tradition
+ * so the JS layer always receives a concrete Given or Surname value.
+ *
+ * The backing values are the strings persisted in module preferences and posted
+ * by the admin form, so `tryFrom()` is the boundary between stored configuration
+ * and typed code: convert once on the way in, then pass the case around.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-final class NameAbbreviation
+enum NameAbbreviation: string
 {
     /**
-     * Use the tree's surname tradition to pick GIVEN or SURNAME automatically.
+     * Use the tree's surname tradition to pick Given or Surname automatically.
      */
-    public const string AUTO = 'AUTO';
+    case Auto = 'AUTO';
 
     /**
      * Abbreviate given names first (default for most traditions).
      */
-    public const string GIVEN = 'GIVEN';
+    case Given = 'GIVEN';
 
     /**
      * Abbreviate surnames first (matches Icelandic patronymic usage).
      */
-    public const string SURNAME = 'SURNAME';
+    case Surname = 'SURNAME';
 
     /**
-     * All valid configuration values, in display order.
-     *
-     * @var list<string>
+     * The tree's SURNAME_TRADITION value for Icelandic naming. Its surnames are
+     * patronymics and people are addressed by given name, so the surname is the
+     * part to shorten — which is why it is the one tradition Auto treats
+     * differently.
      */
-    public const array CHOICES = [self::AUTO, self::GIVEN, self::SURNAME];
+    private const string ICELANDIC_TRADITION = 'icelandic';
 
     /**
-     * Resolves a configured strategy against a tree's surname tradition. AUTO
-     * maps to SURNAME for Icelandic-tradition trees (where surnames are
-     * typically patronymics and people are addressed by given name) and GIVEN
-     * for everything else. Concrete values pass through unchanged.
+     * Resolves this strategy against a tree's surname tradition. Auto maps to
+     * Surname for Icelandic-tradition trees (where surnames are typically
+     * patronymics and people are addressed by given name) and to Given for
+     * everything else. A concrete case resolves to itself.
      *
-     * @param string $configured       One of self::AUTO, self::GIVEN, self::SURNAME
      * @param string $surnameTradition The tree's SURNAME_TRADITION preference value
      *
-     * @return string Either self::GIVEN or self::SURNAME
+     * @return self Always Given or Surname, never Auto
      */
-    public static function resolve(string $configured, string $surnameTradition): string
+    public function resolve(string $surnameTradition): self
     {
-        if ($configured !== self::AUTO) {
-            return $configured;
+        if ($this !== self::Auto) {
+            return $this;
         }
 
-        return $surnameTradition === 'icelandic'
-            ? self::SURNAME
-            : self::GIVEN;
+        return $surnameTradition === self::ICELANDIC_TRADITION
+            ? self::Surname
+            : self::Given;
     }
 }
