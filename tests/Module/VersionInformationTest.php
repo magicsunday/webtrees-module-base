@@ -111,7 +111,7 @@ final class VersionInformationTest extends TestCase
                 json_encode(['tag_name' => '2.6.0'], JSON_THROW_ON_ERROR),
                 '2.6.0',
             ],
-            'A pre-release suffix is preserved (prefix match, not anchored)' => [
+            'A pre-release suffix is preserved' => [
                 json_encode(['tag_name' => '2.6.0-beta1'], JSON_THROW_ON_ERROR),
                 '2.6.0-beta1',
             ],
