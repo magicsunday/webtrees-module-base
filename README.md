@@ -55,9 +55,24 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 ### `src/Model/`
 - **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel)
 - **`NameAbbreviation`** — backed enum + `resolve()` helper for the name-abbreviation strategy used in chart labels (auto / given-first / surname-first)
+- **`PlaceStyle`** — enum for the way a place name is shortened (`Full`, `Levels`, `CityCountry`, `CityIso2`, `CityIso3`)
+- **`PlaceFormatSpec`** — `final readonly` value object holding a fully resolved place-formatting instruction (style, level count, from-which-end)
+- **`PlaceFormatChoice`** — backed enum for the place-detail options a module offers in its configuration; label-free, so the consuming module supplies its own translations
+
+### `src/Support/`
+- **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API
+- **`TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings
+- **`Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 codes, built on `ext-intl`; used by `PlaceProcessor`'s country-resolving styles
 
 ### `src/Module/`
 - **`VersionInformation`** — checks GitHub releases for newer module versions, with file cache. No chart module references it directly; it is instantiated by this library's own `Traits\ModuleCustomTrait::customModuleLatestVersion()` (which overrides webtrees' core method), and the webtrees control panel invokes that trait method
+
+### `src/Traits/`
+- **`ModuleCustomTrait`** — overrides webtrees' `customModuleLatestVersion()` to route through `VersionInformation`, and provides the `assetUrl()` helper the marker interface declares
+- **`ModuleChartTrait`** — shared chart-module helpers for the consuming modules
+
+### `src/Facade/`
+- **`ModuleAwareDataFacadeTrait`** / **`RouteAwareDataFacadeTrait`** — traits a chart module's DataFacade uses to receive the module instance and route access
 
 ### `src/Contract/`
 - **`ModuleAssetUrlInterface`** — marker interface that declares webtrees' `assetUrl()` helper so `ImageProcessor` can be type-narrowed without `method_exists` runtime checks
