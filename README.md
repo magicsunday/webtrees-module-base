@@ -11,8 +11,9 @@ This package ships no UI of its own — it is consumed as a Composer dependency 
 - [webtrees-fan-chart](https://github.com/magicsunday/webtrees-fan-chart) — SVG ancestor fan chart
 - [webtrees-pedigree-chart](https://github.com/magicsunday/webtrees-pedigree-chart) — SVG pedigree chart
 - [webtrees-descendants-chart](https://github.com/magicsunday/webtrees-descendants-chart) — SVG descendants chart
+- [webtrees-statistics](https://github.com/magicsunday/webtrees-statistics) — genealogy statistics dashboard (consumes only the shared core plus `IsoCountryMap`)
 
-> **Scope note:** not every base component is consumed by all three charts yet. The place-name subsystem (`PlaceProcessor`, its `PlaceFormat*` / `PlaceStyle` models and `IsoCountryMap`) and the compact, generation-aware date API (`DateProcessor`'s `getFormatted*` / `get*Full` methods, `CompactDateFormat` and the `Symbols` enum) are currently used only by the fan chart; the pedigree and descendants charts consume just the shared core (name/image processing and `DateProcessor`'s legacy locale-aware methods). These fan-only pieces live in the base as deliberate pre-investment, so a second chart can adopt them without a namespace move.
+> **Scope note:** not every base component is consumed by every module yet. The place-name subsystem (`PlaceProcessor`, its `PlaceFormat*` / `PlaceStyle` models) and the compact, generation-aware date API (`DateProcessor`'s `getFormatted*` / `get*Full` methods, `CompactDateFormat` and the `Symbols` enum) are currently used only by the fan chart; the pedigree and descendants charts consume just the shared core (name/image processing and `DateProcessor`'s legacy locale-aware methods). `IsoCountryMap` is shared by the fan chart and the statistics module. These still-fan-only pieces live in the base as deliberate pre-investment, so a second consumer can adopt them without a namespace move — as the statistics module already did for `IsoCountryMap`.
 
 ## Requirements
 
