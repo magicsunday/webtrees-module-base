@@ -27,6 +27,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
+use function array_shift;
 use function json_encode;
 use function str_repeat;
 
@@ -195,7 +196,8 @@ final class VersionInformationTest extends TestCase
     public function bodyReadFailureFallsBackToTheBundledVersion(): void
     {
         $stream = self::createStub(StreamInterface::class);
-        $stream->method('getContents')->willThrowException(new RuntimeException('stream detached'));
+        $stream->method('eof')->willReturn(false);
+        $stream->method('read')->willThrowException(new RuntimeException('stream detached'));
 
         self::assertSame(
             self::FALLBACK_VERSION,
@@ -255,5 +257,159 @@ final class VersionInformationTest extends TestCase
         $client->expects(self::never())->method('request');
 
         self::assertSame(self::FALLBACK_VERSION, (new VersionInformation($module, $client))->fetchLatestVersion());
+    }
+
+    /**
+     * A configured update URL whose scheme is not http(s) is refused before the
+     * request: no HTTP client call is made and the bundled version stands. This
+     * stops a misconfigured or hostile URL (file://, php://, …) from being
+     * handed to Guzzle to read a local resource.
+     *
+     * @return void
+     */
+    #[Test]
+    public function aNonHttpLatestVersionUrlSkipsTheRequest(): void
+    {
+        $module = self::createStub(ModuleCustomInterface::class);
+        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('file:///etc/passwd');
+
+        $client = self::createMock(ClientInterface::class);
+        $client->expects(self::never())->method('request');
+
+        self::assertSame(self::FALLBACK_VERSION, (new VersionInformation($module, $client))->fetchLatestVersion());
+    }
+
+    /**
+     * A URL scheme is matched case-insensitively, as RFC 3986 requires: a
+     * mixed-case `HtTpS` scheme is a valid https URL and must be accepted (the
+     * request is made and its version parsed), not refused by the scheme guard.
+     *
+     * @return void
+     *
+     * @throws JsonException
+     */
+    #[Test]
+    public function aMixedCaseHttpsSchemeIsAccepted(): void
+    {
+        $module = self::createStub(ModuleCustomInterface::class);
+        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('HtTpS://example.invalid/releases/latest');
+        $module->method('name')->willReturn('version-information-test');
+
+        $client = self::createStub(ClientInterface::class);
+        $client->method('request')->willReturn(
+            new Response(200, [], json_encode(['tag_name' => '2.6.0'], JSON_THROW_ON_ERROR))
+        );
+
+        self::assertSame('2.6.0', (new VersionInformation($module, $client))->fetchLatestVersion());
+    }
+
+    /**
+     * A response body larger than the cap is refused rather than truncated and
+     * parsed. The body is a complete, valid version document followed by enough
+     * trailing whitespace to exceed the cap: json_decode tolerates trailing
+     * whitespace, so a truncated prefix would still parse to the version — thus
+     * getting the bundled fallback back proves the oversized body was refused
+     * outright, not merely that a decode of a truncated body failed.
+     *
+     * @return void
+     *
+     * @throws JsonException
+     */
+    #[Test]
+    public function anOversizedResponseBodyFallsBackToTheBundledVersion(): void
+    {
+        $body = json_encode(['tag_name' => '2.6.0'], JSON_THROW_ON_ERROR) . str_repeat(' ', 300000);
+
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(new Response(200, [], $body))
+        );
+    }
+
+    /**
+     * A body delivered across several reads is reassembled, not truncated to the
+     * first chunk. A network-backed stream returns a partial chunk before EOF, so
+     * the capped read accumulates until EOF; this drives a stream that yields a
+     * valid JSON body in three reads, and getting the parsed version back proves
+     * the chunks were concatenated rather than the last one overwriting the rest.
+     *
+     * @return void
+     */
+    #[Test]
+    public function aBodyDeliveredInSeveralReadsIsReassembled(): void
+    {
+        /** @var list<string> $chunks */
+        $chunks = ['{"tag_na', 'me":"2.6', '.0"}'];
+
+        $stream = self::createStub(StreamInterface::class);
+        $stream->method('eof')->willReturnCallback(static fn (): bool => $chunks === []);
+        $stream->method('read')->willReturnCallback(
+            static function () use (&$chunks): string {
+                return array_shift($chunks) ?? '';
+            }
+        );
+
+        self::assertSame('2.6.0', $this->fetchLatestVersionFor(new Response(200, [], ''), $stream));
+    }
+
+    /**
+     * A 200 response with an empty body carries no version, so the bundled
+     * version stands rather than an empty string being parsed.
+     *
+     * @return void
+     */
+    #[Test]
+    public function anEmptyResponseBodyFallsBackToTheBundledVersion(): void
+    {
+        self::assertSame(
+            self::FALLBACK_VERSION,
+            $this->fetchLatestVersionFor(new Response(200, [], ''))
+        );
+    }
+
+    /**
+     * The release request pins the SSRF-relevant transport options: redirects
+     * are capped and restricted to http(s) so the scheme guard cannot be
+     * sidestepped by a redirect, the body is streamed rather than buffered whole,
+     * and the connection has a bounded timeout. These options are the security
+     * contract, so they are asserted at the client boundary.
+     *
+     * @return void
+     *
+     * @throws JsonException
+     */
+    #[Test]
+    public function theReleaseRequestPinsRedirectAndStreamingOptions(): void
+    {
+        $module = self::createStub(ModuleCustomInterface::class);
+        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
+        $module->method('name')->willReturn('version-information-test');
+
+        $captured = [];
+
+        $client = self::createStub(ClientInterface::class);
+        $client->method('request')->willReturnCallback(
+            function (string $method, string $uri, array $options) use (&$captured): Response {
+                $captured = $options;
+
+                return new Response(200, [], json_encode(['tag_name' => '2.6.0'], JSON_THROW_ON_ERROR));
+            }
+        );
+
+        (new VersionInformation($module, $client))->fetchLatestVersion();
+
+        self::assertSame(
+            [
+                'max'       => 3,
+                'protocols' => ['http', 'https'],
+                'strict'    => true,
+            ],
+            $captured['allow_redirects'] ?? null
+        );
+        self::assertTrue($captured['stream'] ?? false);
+        self::assertSame(3, $captured['connect_timeout'] ?? null);
     }
 }
