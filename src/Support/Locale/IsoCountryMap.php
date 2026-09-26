@@ -406,9 +406,7 @@ final class IsoCountryMap
      */
     private function lookupMap(): array
     {
-        if (self::$reverseLookup === null) {
-            self::$reverseLookup = $this->buildReverseLookup();
-        }
+        self::$reverseLookup ??= $this->buildReverseLookup();
 
         return self::$reverseLookup;
     }
