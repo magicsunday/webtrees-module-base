@@ -36,6 +36,18 @@ use PHPUnit\Framework\Attributes\CoversNothing;
  * The four leaf layers depend on no other `src/` layer; Processor composes the
  * leaves; Facade and Traits are the thin composition layer on top.
  *
+ * Deptrac first, phpat only where Deptrac cannot (magicsunday/coding-standard's
+ * opt-in phpstan/phpat.neon). The Processor edge is a Deptrac rule (deptrac.yaml),
+ * because Processor is a layer of this package alone. What stays here is what
+ * Deptrac cannot express:
+ *
+ *   - the four leaf rules: Model, Support, Contract and Module are layers of the
+ *     SHARED ruleset (coding-standard's deptrac/layers.yaml), which lets them reach
+ *     each other. Deptrac unites rulesets across imports, so a rule in deptrac.yaml
+ *     could only widen those layers, never narrow them to a pure leaf;
+ *   - the four final-class rules: a class modifier is a structural invariant, and
+ *     Deptrac has no notion of one.
+ *
  * A scope limit worth stating: phpat can only make a class-like the SUBJECT of
  * a rule when PHPStan reports it as a standalone declaration — a class,
  * interface or enum. It never analyses a trait on its own (a trait is checked
@@ -92,6 +104,9 @@ final class ArchitectureTest
      * `Model` is a leaf: value objects and enums depend on no other `src/`
      * layer, so a formatter or processor can never leak back into the data shape.
      *
+     * Why phpat: narrows the shared Deptrac `Model` layer, which Deptrac can only
+     * widen from this package (rulesets are united across imports).
+     *
      * @return Rule
      */
     #[TestRule]
@@ -107,6 +122,9 @@ final class ArchitectureTest
     /**
      * `Support` is a leaf: the locale helpers depend on no other `src/` layer,
      * so they stay reusable without dragging a processor or facade along.
+     *
+     * Why phpat: narrows the shared Deptrac `Support` layer, which Deptrac can only
+     * widen from this package (rulesets are united across imports).
      *
      * @return Rule
      */
@@ -124,6 +142,9 @@ final class ArchitectureTest
      * `Contract` holds marker interfaces only; they depend on no other `src/`
      * layer so any layer can implement them without a cycle.
      *
+     * Why phpat: narrows the shared Deptrac `Contract` layer, which Deptrac can only
+     * widen from this package (rulesets are united across imports).
+     *
      * @return Rule
      */
     #[TestRule]
@@ -140,6 +161,9 @@ final class ArchitectureTest
      * `Module` holds the version-check helper; it depends on no other `src/`
      * layer.
      *
+     * Why phpat: narrows the shared Deptrac `Module` layer, which Deptrac can only
+     * widen from this package (rulesets are united across imports).
+     *
      * @return Rule
      */
     #[TestRule]
@@ -153,25 +177,10 @@ final class ArchitectureTest
     }
 
     /**
-     * Processors compose the leaf layers (Contract, Model, Support) but never
-     * the composition on top of them: not the facade traits, the module traits,
-     * or the module helper.
-     *
-     * @return Rule
-     */
-    #[TestRule]
-    public function processorDependsOnlyOnLeaves(): Rule
-    {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace(self::NAMESPACE_ROOT . '\\Processor'))
-            ->shouldNot()
-            ->dependOn()
-            ->classes($this->everythingUnderRootExcept('Processor', 'Contract', 'Model', 'Support'));
-    }
-
-    /**
      * `Model` value objects are final; the enums are implicitly final and are
      * excluded from the check.
+     *
+     * Why phpat: a structural invariant (a class modifier) Deptrac cannot inspect.
      *
      * @return Rule
      */
@@ -188,6 +197,8 @@ final class ArchitectureTest
     /**
      * `Support` helpers are final.
      *
+     * Why phpat: a structural invariant (a class modifier) Deptrac cannot inspect.
+     *
      * @return Rule
      */
     #[TestRule]
@@ -203,6 +214,8 @@ final class ArchitectureTest
      * Processors are final: no consumer subclasses them, and the compact and
      * legacy APIs are meant to be used, not overridden.
      *
+     * Why phpat: a structural invariant (a class modifier) Deptrac cannot inspect.
+     *
      * @return Rule
      */
     #[TestRule]
@@ -216,6 +229,8 @@ final class ArchitectureTest
 
     /**
      * The module-level helper is final.
+     *
+     * Why phpat: a structural invariant (a class modifier) Deptrac cannot inspect.
      *
      * @return Rule
      */

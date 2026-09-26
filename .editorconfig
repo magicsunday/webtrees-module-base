@@ -1,0 +1,17 @@
+# Shared .editorconfig for magicsunday/* projects. Copy to `.editorconfig` at the
+# repo root. 4-space indent everywhere; Makefiles keep hard tabs.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[{Makefile,*.mk}]
+indent_style = tab

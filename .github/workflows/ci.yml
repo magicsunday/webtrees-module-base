@@ -92,6 +92,18 @@ jobs:
               run: |
                   composer ci:test:php:phpstan -- --error-format=github
 
+            - id: templates
+              name: Templates
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  composer ci:test:php:templates
+
+            - id: deptrac
+              name: Deptrac
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  composer ci:test:php:deptrac
+
             - id: rector
               name: Rector
               if: ${{ always() && steps.install.conclusion == 'success' }}
