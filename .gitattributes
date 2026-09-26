@@ -1,5 +1,6 @@
 # Exclude from distribution archives (composer --prefer-dist, git archive)
 /.coderabbit.yaml      export-ignore
+/.editorconfig         export-ignore
 /.github/              export-ignore
 .gitattributes         export-ignore
 .gitignore             export-ignore
@@ -11,6 +12,7 @@
 .jscpd.json            export-ignore
 /tests/                export-ignore
 /AGENTS.md             export-ignore
+/deptrac.yaml          export-ignore
 /node_modules/         export-ignore
 /package.json          export-ignore
 /package-lock.json     export-ignore

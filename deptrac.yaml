@@ -1,0 +1,32 @@
+# Deptrac configuration: the canonical layers and ruleset are imported from
+# magicsunday/coding-standard (deptrac/layers.yaml); this file adds the one layer of
+# this package the shared ruleset does not know, Processor.
+#
+# Deptrac UNITES rulesets across imports: a rule declared here for a shared layer
+# (Model, Support, Contract, Module, ...) can only widen what layers.yaml allows,
+# never narrow it. This package's stricter "pure leaf" rules for those four shared
+# layers therefore stay phpat rules (tests/Architecture/ArchitectureTest.php, loaded
+# through coding-standard's opt-in phpstan/phpat.neon), next to its structural
+# final-class rules.
+imports:
+    - .build/vendor/magicsunday/coding-standard/deptrac/layers.yaml
+
+deptrac:
+    paths:
+        - src
+
+    layers:
+        -
+            name: Processor
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Processor/.*'
+
+    ruleset:
+        # The processors format data for the chart modules; they build on the leaves
+        # (contracts, value models, support helpers) and nothing above them.
+        Processor:
+            - Contract
+            - Model
+            - Support

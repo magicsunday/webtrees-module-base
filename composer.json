@@ -51,16 +51,9 @@
         "fisharebest/webtrees": "~2.2.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.0",
         "infection/infection": "^0.34",
-        "overtrue/phplint": "^9.0",
-        "phpat/phpat": "^0.12.4",
-        "phpstan/phpstan": "^2.0",
-        "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^12.0 || ^13.0",
-        "rector/rector": "^2.0"
+        "magicsunday/coding-standard": "^2.1",
+        "phpat/phpat": "^0.12.4"
     },
     "autoload": {
         "psr-4": {
@@ -82,6 +75,9 @@
         "ci:test:php:cgl": [
             "@ci:cgl --dry-run"
         ],
+        "ci:test:php:deptrac": [
+            "deptrac analyse --no-progress"
+        ],
         "ci:test:php:lint": [
             "phplint --configuration .phplint.yml"
         ],
@@ -93,6 +89,9 @@
         ],
         "ci:test:php:rector": [
             "@ci:rector --dry-run"
+        ],
+        "ci:test:php:templates": [
+            "check-consumer-config.php ."
         ],
         "ci:test:php:unit": [
             "phpunit --configuration phpunit.xml --display-all-issues"
@@ -110,7 +109,9 @@
             "@ci:test:php:rector",
             "@ci:test:php:unit",
             "@ci:test:php:cpd",
-            "@ci:test:php:cgl"
+            "@ci:test:php:cgl",
+            "@ci:test:php:templates",
+            "@ci:test:php:deptrac"
         ],
         "ci:test:php:cpd": [
             "npx jscpd --config .jscpd.json --skip-comments --no-tips"

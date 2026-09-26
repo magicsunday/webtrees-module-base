@@ -9,7 +9,10 @@
          colors="true"
          displayDetailsOnPhpunitDeprecations="true"
          executionOrder="depends"
+         failOnDeprecation="true"
+         failOnNotice="true"
          failOnPhpunitDeprecation="true"
+         failOnPhpunitNotice="true"
          failOnRisky="true"
          failOnWarning="true"
 >
