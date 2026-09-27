@@ -52,7 +52,7 @@
     },
     "require-dev": {
         "infection/infection": "^0.34",
-        "magicsunday/coding-standard": "^2.1",
+        "magicsunday/coding-standard": "^2.3",
         "phpat/phpat": "^0.12.4"
     },
     "autoload": {
@@ -76,10 +76,17 @@
             "@ci:cgl --dry-run"
         ],
         "ci:test:php:deptrac": [
-            "deptrac analyse --no-progress"
+            "deptrac analyse --no-progress",
+            "deptrac debug:unassigned",
+            "@php -r \"is_dir('.build') || mkdir('.build', 0777, true);\"",
+            "deptrac analyse --no-progress --formatter=graphviz-dot --output=.build/deptrac-layers.dot",
+            "check-deptrac-cycles.php .build/deptrac-layers.dot"
         ],
         "ci:test:php:lint": [
             "phplint --configuration .phplint.yml"
+        ],
+        "ci:test:php:phpat-subjects": [
+            "check-phpat-subjects.php ."
         ],
         "ci:test:php:psr4": [
             "composer dump-autoload --optimize --strict-psr"
@@ -106,6 +113,7 @@
             "@ci:test:php:lint",
             "@ci:test:php:psr4",
             "@ci:test:php:phpstan",
+            "@ci:test:php:phpat-subjects",
             "@ci:test:php:rector",
             "@ci:test:php:unit",
             "@ci:test:php:cpd",

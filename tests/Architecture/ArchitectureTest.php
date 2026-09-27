@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Architecture;
 
 use PHPat\Selector\Selector;
-use PHPat\Selector\SelectorInterface;
 use PHPat\Test\Attributes\TestRule;
 use PHPat\Test\Builder\Rule;
 use PHPat\Test\PHPat;
@@ -21,7 +20,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 /**
  * Architecture rules executed by phpat through PHPStan. Each `#[TestRule]`
  * method returns one rule that pins a structural invariant so the codebase
- * cannot silently drift past the layering the production code relies on.
+ * cannot silently drift past the shape the production code relies on.
  *
  * Layering in this library (an arrow means "may depend on"):
  *
@@ -37,26 +36,21 @@ use PHPUnit\Framework\Attributes\CoversNothing;
  * leaves; Facade and Traits are the thin composition layer on top.
  *
  * Deptrac first, phpat only where Deptrac cannot (magicsunday/coding-standard's
- * opt-in phpstan/phpat.neon). The Processor edge is a Deptrac rule (deptrac.yaml),
- * because Processor is a layer of this package alone. What stays here is what
- * Deptrac cannot express:
- *
- *   - the four leaf rules: Model, Support, Contract and Module are layers of the
- *     SHARED ruleset (coding-standard's deptrac/layers.yaml), which lets them reach
- *     each other. Deptrac unites rulesets across imports, so a rule in deptrac.yaml
- *     could only widen those layers, never narrow them to a pure leaf;
- *   - the four final-class rules: a class modifier is a structural invariant, and
- *     Deptrac has no notion of one.
+ * opt-in phpstan/phpat.neon). The whole layering above is enforced by Deptrac
+ * (deptrac.yaml): the leaves and Facade are narrowed through overlay layers
+ * (Deptrac checks a class against every layer it belongs to, so an overlay with
+ * a shorter allow-list narrows a shared layer even though rulesets are united
+ * across imports), and unlike phpat, Deptrac also checks the outgoing
+ * dependencies of the trait-only Facade and Traits layers. What stays here is
+ * what Deptrac cannot express: the four final-class rules, because a class
+ * modifier is a structural invariant and Deptrac has no notion of one.
  *
  * A scope limit worth stating: phpat can only make a class-like the SUBJECT of
  * a rule when PHPStan reports it as a standalone declaration — a class,
- * interface or enum. It never analyses a trait on its own (a trait is checked
- * only inside the class that uses it), so a rule keyed on the Facade or Traits
- * layer as its subject would match nothing and silently pass. Both of those
- * layers are traits, so their outgoing dependencies are NOT pinned here; the
- * leaf rules still forbid every other layer from depending ON them. Verified by
- * breaking one rule of each declared kind (class, interface, enum) and watching
- * phpat report it — a trait-subject rule stayed green under the same violation.
+ * interface or enum. It never analyses a trait on its own, so a rule keyed on
+ * the Facade or Traits layer as its subject would match nothing and silently
+ * pass; `check-phpat-subjects.php` (`composer ci:test:php:phpat-subjects`)
+ * fails on such a vacuous subject.
  *
  * This class is not a PHPUnit test (it is excluded from the test suite in
  * phpunit.xml) — `#[CoversNothing]` only keeps it honest under
@@ -73,108 +67,6 @@ final class ArchitectureTest
      * The library's root namespace, used to build the per-layer selectors.
      */
     private const string NAMESPACE_ROOT = 'MagicSunday\\Webtrees\\ModuleBase';
-
-    /**
-     * Selects everything under the library root EXCEPT the layers a rule
-     * permits, so a "X may depend only on Y" invariant is expressed as "X must
-     * not depend on anything else under the root". Deriving the forbidden set
-     * from the whole root rather than a hand-maintained layer list means a new
-     * top-level namespace is forbidden by default — it cannot slip past a leaf
-     * rule until someone remembers to register it.
-     *
-     * @param string ...$allowed The layers the subject may depend on (its own
-     *                           layer is always implicitly allowed)
-     *
-     * @return SelectorInterface
-     */
-    private function everythingUnderRootExcept(string ...$allowed): SelectorInterface
-    {
-        $selectors = [Selector::inNamespace(self::NAMESPACE_ROOT)];
-
-        // The test namespace lives under the root too but is never a production
-        // dependency; exclude it so the rules speak only about `src/`.
-        foreach (['Test', ...$allowed] as $layer) {
-            $selectors[] = Selector::Not(Selector::inNamespace(self::NAMESPACE_ROOT . '\\' . $layer));
-        }
-
-        return Selector::AllOf(...$selectors);
-    }
-
-    /**
-     * `Model` is a leaf: value objects and enums depend on no other `src/`
-     * layer, so a formatter or processor can never leak back into the data shape.
-     *
-     * Why phpat: narrows the shared Deptrac `Model` layer, which Deptrac can only
-     * widen from this package (rulesets are united across imports).
-     *
-     * @return Rule
-     */
-    #[TestRule]
-    public function modelIsALeaf(): Rule
-    {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace(self::NAMESPACE_ROOT . '\\Model'))
-            ->shouldNot()
-            ->dependOn()
-            ->classes($this->everythingUnderRootExcept('Model'));
-    }
-
-    /**
-     * `Support` is a leaf: the locale helpers depend on no other `src/` layer,
-     * so they stay reusable without dragging a processor or facade along.
-     *
-     * Why phpat: narrows the shared Deptrac `Support` layer, which Deptrac can only
-     * widen from this package (rulesets are united across imports).
-     *
-     * @return Rule
-     */
-    #[TestRule]
-    public function supportIsALeaf(): Rule
-    {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace(self::NAMESPACE_ROOT . '\\Support'))
-            ->shouldNot()
-            ->dependOn()
-            ->classes($this->everythingUnderRootExcept('Support'));
-    }
-
-    /**
-     * `Contract` holds marker interfaces only; they depend on no other `src/`
-     * layer so any layer can implement them without a cycle.
-     *
-     * Why phpat: narrows the shared Deptrac `Contract` layer, which Deptrac can only
-     * widen from this package (rulesets are united across imports).
-     *
-     * @return Rule
-     */
-    #[TestRule]
-    public function contractIsALeaf(): Rule
-    {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace(self::NAMESPACE_ROOT . '\\Contract'))
-            ->shouldNot()
-            ->dependOn()
-            ->classes($this->everythingUnderRootExcept('Contract'));
-    }
-
-    /**
-     * `Module` holds the version-check helper; it depends on no other `src/`
-     * layer.
-     *
-     * Why phpat: narrows the shared Deptrac `Module` layer, which Deptrac can only
-     * widen from this package (rulesets are united across imports).
-     *
-     * @return Rule
-     */
-    #[TestRule]
-    public function moduleIsALeaf(): Rule
-    {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace(self::NAMESPACE_ROOT . '\\Module'))
-            ->shouldNot()
-            ->dependOn()
-            ->classes($this->everythingUnderRootExcept('Module'));
-    }
 
     /**
      * `Model` value objects are final; the enums are implicitly final and are

@@ -1,13 +1,34 @@
 # Deptrac configuration: the canonical layers and ruleset are imported from
-# magicsunday/coding-standard (deptrac/layers.yaml); this file adds the one layer of
-# this package the shared ruleset does not know, Processor.
+# magicsunday/coding-standard (deptrac/layers.yaml); this file adds the layers of
+# this package the shared ruleset does not know (Processor, Traits) and narrows the
+# four shared layers this package keeps as pure leaves (Model, Support, Contract,
+# Module) plus the shared Facade layer, which here may reach Contract only.
 #
-# Deptrac UNITES rulesets across imports: a rule declared here for a shared layer
-# (Model, Support, Contract, Module, ...) can only widen what layers.yaml allows,
-# never narrow it. This package's stricter "pure leaf" rules for those four shared
-# layers therefore stay phpat rules (tests/Architecture/ArchitectureTest.php, loaded
-# through coding-standard's opt-in phpstan/phpat.neon), next to its structural
-# final-class rules.
+# How the leaves are narrowed. Deptrac UNITES rulesets across imports, so a rule
+# declared here for a shared layer can only widen what layers.yaml allows, never
+# narrow it. But Deptrac checks a class against EVERY layer it belongs to, and a
+# dependency must be allowed by each of them. Each leaf therefore gets an OVERLAY
+# layer (LeafModel, LeafSupport, LeafContract, LeafModule) that collects the same
+# src/ directory as its shared twin and allows nothing but that directory: the
+# shared Model layer still permits Model -> Contract, but the same class sits in
+# LeafModel too, which does not, so the edge is reported. DataFacade overlays
+# Facade the same way, with Contract as its one allowed target. Vendor classes are
+# uncovered and never count against the allow-lists.
+#
+# Consequences of the overlap, all deliberate:
+#
+#   - Deptrac skips an intra-layer edge only when EVERY layer of the dependent is
+#     the depender's own layer. A class in two layers never meets that, so both the
+#     shared layer and its overlay must list themselves AND each other, and every
+#     layer depending on an overlaid layer (Processor, Facade, Traits) must list
+#     the overlay next to the shared layer.
+#   - Deptrac warns "is in more than one layer" once per overlapped class. The
+#     warning does not fail the run and is the expected signature of an overlay.
+#   - The overlays are hidden from the graphviz layer graph; see formatters below.
+#
+# Every src/ class must belong to a layer: `deptrac debug:unassigned` runs in
+# `composer ci:test:php:deptrac` next to the analysis and fails on any class that
+# no layer collects (and that no rule would therefore constrain).
 imports:
     - .build/vendor/magicsunday/coding-standard/deptrac/layers.yaml
 
@@ -22,11 +43,112 @@ deptrac:
                 -
                     type: directory
                     value: 'src/Processor/.*'
+        -
+            name: Traits
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Traits/.*'
+        -
+            name: DataFacade
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Facade/.*'
+        -
+            name: LeafModel
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Model/.*'
+        -
+            name: LeafSupport
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Support/.*'
+        -
+            name: LeafContract
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Contract/.*'
+        -
+            name: LeafModule
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Module/.*'
 
     ruleset:
         # The processors format data for the chart modules; they build on the leaves
         # (contracts, value models, support helpers) and nothing above them.
         Processor:
             - Contract
+            - LeafContract
             - Model
+            - LeafModel
             - Support
+            - LeafSupport
+
+        # The data-facade traits type their module against the marker interface and
+        # need nothing else from src/. The shared Facade layer is an orchestration
+        # layer allowed most of the domain core, so it is narrowed by an overlay the
+        # same way as the leaves below.
+        Facade:
+            - Facade
+            - DataFacade
+            - LeafContract
+        DataFacade:
+            - Facade
+            - DataFacade
+            - Contract
+            - LeafContract
+
+        # The ModuleCustomTrait helpers drive the release-version check.
+        Traits:
+            - Module
+            - LeafModule
+
+        # The four leaves: each may depend on its own directory only.
+        Model:
+            - Model
+            - LeafModel
+        LeafModel:
+            - Model
+            - LeafModel
+        Support:
+            - Support
+            - LeafSupport
+        LeafSupport:
+            - Support
+            - LeafSupport
+        Contract:
+            - Contract
+            - LeafContract
+        LeafContract:
+            - Contract
+            - LeafContract
+        # The shared Module layer is the webtrees composition root and may depend on
+        # everything; this package's src/Module holds only VersionInformation, a leaf.
+        Module:
+            - Module
+            - LeafModule
+        LeafModule:
+            - Module
+            - LeafModule
+
+    formatters:
+        graphviz:
+            # The layer graph check-deptrac-cycles.php reads. Each overlay collects a
+            # subset of its shared twin's classes, so every edge touching an overlay
+            # has an identical edge touching the twin, and a cycle through an overlay
+            # stays visible through the twin. Hiding them removes only the
+            # twin <-> overlay pair the self-allowances above produce: two names for
+            # the same classes, not a dependency between layers.
+            hidden_layers:
+                - DataFacade
+                - LeafModel
+                - LeafSupport
+                - LeafContract
+                - LeafModule
