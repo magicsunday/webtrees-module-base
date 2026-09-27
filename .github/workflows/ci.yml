@@ -92,6 +92,12 @@ jobs:
               run: |
                   composer ci:test:php:phpstan -- --error-format=github
 
+            - id: phpat-subjects
+              name: phpat subjects
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  composer ci:test:php:phpat-subjects
+
             - id: templates
               name: Templates
               if: ${{ always() && steps.install.conclusion == 'success' }}
