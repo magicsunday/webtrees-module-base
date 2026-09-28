@@ -1,5 +1,7 @@
 # Deptrac configuration: the canonical layers and ruleset are imported from
-# magicsunday/coding-standard (deptrac/layers.yaml); this file adds the layers of
+# magicsunday/coding-standard (deptrac/layers.yaml; ^3.0: one strict, acyclic order
+# Support < Enum < Model, Configuration < Contract < Repository, Adapter, Service
+# < Facade < Module); this file adds the layers of
 # this package the shared ruleset does not know (Processor, Traits) and narrows the
 # four shared layers this package keeps as pure leaves (Model, Support, Contract,
 # Module) plus the shared Facade layer, which here may reach Contract only.
@@ -10,7 +12,7 @@
 # dependency must be allowed by each of them. Each leaf therefore gets an OVERLAY
 # layer (LeafModel, LeafSupport, LeafContract, LeafModule) that collects the same
 # src/ directory as its shared twin and allows nothing but that directory: the
-# shared Model layer still permits Model -> Contract, but the same class sits in
+# shared Model layer still permits Model -> Support, but the same class sits in
 # LeafModel too, which does not, so the edge is reported. DataFacade overlays
 # Facade the same way, with Contract as its one allowed target. Vendor classes are
 # uncovered and never count against the allow-lists.
