@@ -52,7 +52,7 @@
         "fisharebest/webtrees": "~2.2.0"
     },
     "require-dev": {
-        "infection/infection": "^0.34",
+        "infection/infection": "^0.35.2",
         "magicsunday/coding-standard": "^3.0",
         "phpat/phpat": "^0.12.4"
     },
