@@ -1,0 +1,9 @@
+{
+    "name": "webtrees-module-base-devtools",
+    "description": "Pinned tooling used by the CI gates. Not published and not part of the library.",
+    "private": true,
+    "license": "GPL-3.0-or-later",
+    "devDependencies": {
+        "jscpd": "5.3.2"
+    }
+}

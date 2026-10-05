@@ -51,8 +51,9 @@ package, so consumers are unaffected.
 - **`composer ci:test` MUST run before every commit** — catches phplint, PHPStan (level max), the phpat subject-liveness check, Rector, PHPUnit, PHP-CS-Fixer, the coding-standard template lockstep and Deptrac issues before they reach GitHub CI.
 - Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`, `composer ci:test:php:psr4`, `composer ci:test:php:phpat-subjects`, `composer ci:test:php:templates`, `composer ci:test:php:deptrac`.
 - Single PHPUnit test: `composer ci:test:php:unit -- --filter TestClassName`.
+- A fresh checkout needs `npm ci` once before `composer ci:test`, because the copy-paste step runs the installed `node_modules/.bin/jscpd`.
 - Auto-fix: `composer ci:cgl` (PHP-CS-Fixer), `composer ci:rector` (Rector).
-- No Makefile: this library has no JS build, no translation catalogue and no release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules package.json package-lock.json`.
+- No Makefile: this library has no JS build, no translation catalogue and no release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules`, followed by `npm ci`.
 
 ## Architecture
 
@@ -142,7 +143,7 @@ Per project policy, `composer.json`, `phpstan.neon`, `rector.php`, `phpunit.xml`
 - `composer ci:test` runs phpstan with `level: max`. Never use `@phpstan-ignore` annotations — fix the code, or add a scoped `ignoreErrors` entry in `phpstan.neon` keyed by identifier and path with a rationale comment (see the `trait.unused` entries there for the pattern).
 - `assetUrl()` lives on `ModuleCustomTrait`, not on any interface. Anywhere this library needs it, the parameter type uses an intersection with `ModuleAssetUrlInterface` (see `Contract/`). Never use `method_exists` to work around missing-method type errors.
 - PHPUnit 12 prefers `self::createStub()` over `$this->createMock()` for tests that only need a target object for reflection-based access (no mock-call expectations).
-- Cache directories live under `.build/cache/` (phpstan, rector, phpunit, php-cs-fixer, phplint); Deptrac writes `.deptrac.cache` to the repository root (git-ignored, as in fan-chart); jscpd resolves out of `node_modules/`, installed by the composer `post-install-cmd`/`post-update-cmd` hooks. The canonical "force regeneration" reset is `rm -rf .build node_modules package.json package-lock.json`, followed by a fresh `composer update` in the buildbox — note that this discards the installed dependencies too, so budget for the re-resolve.
+- Cache directories live under `.build/cache/` (phpstan, rector, phpunit, php-cs-fixer, phplint); Deptrac writes `.deptrac.cache` to the repository root (git-ignored, as in fan-chart); jscpd resolves out of `node_modules/`, installed from the committed lockfile with `npm ci` and pinned to an exact version in `package.json`. CI runs it as its own job through the shared `cpd.yml` workflow of the `.github` repository, reported as `cpd / Copy-paste detection`. The canonical "force regeneration" reset is `rm -rf .build node_modules`, followed by a fresh `composer update` in the buildbox and an `npm ci` — note that this discards the installed dependencies too, so budget for the re-resolve.
 
 ## Git flow
 
