@@ -9,6 +9,13 @@ permissions:
     contents: read
 
 jobs:
+    # Copy-paste detection runs in the shared Node-only lane, since jscpd is a
+    # Node tool.
+    cpd:
+        uses: magicsunday/.github/.github/workflows/cpd.yml@main
+        permissions:
+            contents: read
+
     build:
         # Pinned explicitly so the required-status-check contexts stay `build (8.3)`
         # etc. even though the matrix carries an extra `mutation` dimension below.
@@ -121,12 +128,6 @@ jobs:
               if: ${{ always() && steps.install.conclusion == 'success' }}
               run: |
                   composer ci:test:php:unit
-
-            - id: cpd
-              name: Copy-Paste Detection
-              if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  composer ci:test:php:cpd
 
             # Mutation testing. Deliberately NOT part of the `ci:test` aggregate —
             # that aggregate is what the pre-commit hook runs over the whole

@@ -123,13 +123,7 @@
             "@ci:test:php:deptrac"
         ],
         "ci:test:php:cpd": [
-            "npx jscpd --config .jscpd.json --skip-comments --no-tips"
-        ],
-        "post-install-cmd": [
-            "npm install jscpd@^5.0.11"
-        ],
-        "post-update-cmd": [
-            "npm install jscpd@^5.0.11"
+            "node_modules/.bin/jscpd --config .jscpd.json --skip-comments --no-tips --fail-on-empty"
         ]
     }
 }
