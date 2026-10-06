@@ -27,8 +27,8 @@ use function sprintf;
  * Runs every check of the abstract catalogue structure test case against fixture
  * catalogues. A fixture with a defect isolates it, and the test pins which checks must
  * go red for it. A fixture without a defect pins that none of the checks goes red for
- * it, and for an input that only looks suspicious (for example a path with glob
- * characters or Windows line endings) it pins that the checks stay quiet. Fixtures
+ * it. This includes inputs that only look suspicious, such as a path with glob
+ * characters or Windows line endings. Fixtures
  * without any catalogue are a directory that holds only a placeholder file and a
  * directory that does not exist (its fixture name has no directory on purpose,
  * because git cannot store it).

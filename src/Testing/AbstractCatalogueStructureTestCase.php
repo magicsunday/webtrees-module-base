@@ -56,7 +56,7 @@ use const PREG_SET_ORDER;
  *
  * A module extends this case in its own test suite and names the directory that holds
  * its catalogues, one subdirectory per locale with a messages.po and its compiled
- * messages.mo. Most checks then run once per shipped locale, the others look at the
+ * messages.mo. Most checks then run once per shipped locale. The others look at the
  * catalogues of all locales at once.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
@@ -143,8 +143,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Every plural entry of the compiled catalogue, the file webtrees actually loads,
      * must carry exactly as many forms as the plural rule of the locale selects from.
-     * With a different count webtrees ignores the entry and shows English, and the
-     * entry still hides the webtrees translation of the same text.
+     * With a different count webtrees ignores the entry and shows English. The entry
+     * still hides the webtrees translation of the same text.
      *
      * @param string $locale The name of the locale directory
      */
@@ -175,8 +175,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * The tests that scan the plural entries of the compiled catalogues pass on an empty
-     * scan. At least one compiled catalogue therefore has to carry a plural entry, which
-     * fails loudly when the reader stops recognising plural keys.
+     * scan. At least one compiled catalogue therefore has to carry a plural entry. The
+     * test then fails loudly when the reader stops recognising plural keys.
      */
     #[Test]
     public function compiledCataloguesCarryPluralEntries(): void
@@ -298,7 +298,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             $compiled,
             sprintf(
                 '%s: messages.mo is out of date or the source holds a fuzzy entry or a plural entry with an empty'
-                . ' first form. Compile messages.mo again from messages.po',
+                . ' first form. Compile messages.mo again from messages.po.',
                 $locale,
             ),
         );
