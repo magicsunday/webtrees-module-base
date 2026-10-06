@@ -152,8 +152,12 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 'dropped-integer-placeholder',
                 ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
             ],
-            'numbered placeholders in another order' => ['reordered-numbered-placeholders', []],
-            'wrong placeholder in the first form'    => [
+            'numbered placeholders in another order'   => ['reordered-numbered-placeholders', []],
+            'unnumbered placeholders in another order' => [
+                'reordered-unnumbered-placeholders',
+                ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
+            ],
+            'wrong placeholder in the first form' => [
                 'wrong-first-form-placeholder',
                 ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
             ],

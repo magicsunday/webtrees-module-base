@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+msgid "Hello"
+msgstr "Ahoj"
+
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] "%s rok"
+msgstr[1] "%s roky"
+msgstr[2] "%s let"
+
+msgid "%s of %d"
+msgid_plural "%s of %d"
+msgstr[0] "%d z %s"
+msgstr[1] "%d z %s"
+msgstr[2] "%d z %s"
+

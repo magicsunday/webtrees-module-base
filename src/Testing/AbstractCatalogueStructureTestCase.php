@@ -349,7 +349,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * A form that drops or invents a placeholder breaks the sentence it is formatted
      * into. Every form must use the placeholders of the singular or of the plural
      * source text. Only the string and integer placeholders (`%s`, `%d`, numbered ones
-     * included) are compared, because the source texts use no other conversion.
+     * included) are compared, because the source texts use no other conversion. Numbered
+     * placeholders may change their position, unnumbered ones may not.
      *
      * @param string $locale The name of the locale directory
      */
@@ -460,12 +461,15 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     }
 
     /**
-     * Returns the placeholders of a text, sorted so that their position in the sentence
-     * does not matter. A doubled percent sign is a literal one and not a placeholder.
+     * Returns the placeholders of a text. Unnumbered placeholders keep their order,
+     * because the formatter binds them to its arguments one after the other. Numbered
+     * placeholders name their argument, so their position in the sentence does not
+     * matter and they are sorted. A doubled percent sign is a literal one and not a
+     * placeholder.
      *
      * @param string $text The text to read
      *
-     * @return list<string> The placeholders in sorted order
+     * @return list<string> The unnumbered placeholders in text order, then the numbered ones sorted
      */
     private function placeholders(string $text): array
     {
@@ -473,11 +477,22 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
         preg_match_all('/%(?:\d+\$)?[sd]/', $text, $matches);
 
-        $placeholders = $matches[0];
+        $unnumbered = [];
+        $numbered   = [];
 
-        sort($placeholders);
+        foreach ($matches[0] as $placeholder) {
+            if (str_contains($placeholder, '$')) {
+                $numbered[] = $placeholder;
 
-        return $placeholders;
+                continue;
+            }
+
+            $unnumbered[] = $placeholder;
+        }
+
+        sort($numbered);
+
+        return [...$unnumbered, ...$numbered];
     }
 
     /**
