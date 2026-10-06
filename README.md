@@ -95,7 +95,7 @@ final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
 }
 ```
 
-  webtrees merges a module's catalogue over the catalogue of webtrees itself, so a plural entry with the wrong number of forms or an empty form damages the translation of the same text everywhere in the installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module. The subclass carries `#[CoversNothing]` because it covers no class. A `phpunit.xml` with `requireCoverageMetadata="true"` demands the attribute.
+  webtrees merges a module's catalogue over the catalogue of webtrees itself, so a plural entry with the wrong number of forms or an empty form damages the translation of the same text everywhere in the installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module. The subclass carries `#[CoversNothing]` because it covers no class. A `phpunit.xml` with `requireCoverageMetadata="true"` demands the attribute. A module whose catalogues carry no plural string overrides `shipsPluralEntries()` and returns `false`. The case then checks that no plural entry exists, so one added later fails until the override is removed.
 
 ## Development
 
