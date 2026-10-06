@@ -275,11 +275,12 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * The compiled catalogue is committed next to its source. A catalogue compiled
-     * from an older source would let the checks above pass on stale data. The two
-     * readers return the entries in different order, which carries no meaning. The PO
-     * reader keeps an entry marked fuzzy in the source, while the compiler leaves it out
-     * of the compiled file. The compiler also leaves out a plural entry whose first form
-     * is empty. Such an entry shows up here as a mismatch until it is resolved.
+     * from an older source would let the checks above pass on stale data. The PO
+     * reader and the compiled catalogue reader return the entries in different order,
+     * which carries no meaning. The PO reader keeps an entry marked fuzzy in the
+     * source, while the compiler leaves it out of the compiled file. The compiler also
+     * leaves out a plural entry whose first form is empty. Such an entry shows up here
+     * as a mismatch until it is resolved.
      *
      * @param string $locale The name of the locale directory
      */
@@ -298,7 +299,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             $compiled,
             sprintf(
                 '%s: messages.mo is out of date or the source holds a fuzzy entry or a plural entry with an empty'
-                . ' first form. Compile messages.mo again from messages.po.',
+                . ' first form. Compile messages.mo again from messages.po and resolve a fuzzy'
+                . ' entry or an empty first form in the source.',
                 $locale,
             ),
         );
@@ -544,9 +546,10 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     }
 
     /**
-     * Returns the raw text of the source catalogue of a locale, with Windows line endings
-     * turned into plain ones and a final line break ensured, so that the line anchored
-     * patterns match on every checkout and for a file that ends without a line break.
+     * Returns the raw text of the source catalogue of a locale. Windows line endings are
+     * turned into plain ones and a final line break is ensured. The line anchored
+     * patterns then match on every checkout and for a file that ends without a line
+     * break.
      *
      * @param string $locale The name of the locale directory
      *
