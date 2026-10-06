@@ -19,18 +19,17 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function array_keys;
-use function basename;
 use function count;
-use function dirname;
 use function explode;
 use function file_get_contents;
-use function glob;
 use function implode;
 use function in_array;
+use function is_dir;
 use function is_file;
 use function ksort;
 use function preg_match;
 use function preg_match_all;
+use function scandir;
 use function sort;
 use function sprintf;
 use function str_contains;
@@ -56,7 +55,8 @@ use const PREG_SET_ORDER;
  *
  * A module extends this case in its own test suite and names the directory that holds
  * its catalogues, one subdirectory per locale with a messages.po and its compiled
- * messages.mo. Every check then runs once per shipped locale.
+ * messages.mo. Most checks then run once per shipped locale, two look at the catalogues of all
+ * locales at once.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -86,7 +86,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     {
         $locales = [];
 
-        foreach (static::localesWithFile('messages.po') as $locale) {
+        foreach (self::localesWithFile('messages.po') as $locale) {
             $locales[$locale] = [$locale];
         }
 
@@ -101,10 +101,10 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     #[Test]
     public function everyLocaleHasItsSourceAndItsCompiledCatalogue(): void
     {
-        $sources = static::localesWithFile('messages.po');
+        $sources = self::localesWithFile('messages.po');
 
         self::assertNotSame([], $sources);
-        self::assertSame($sources, static::localesWithFile('messages.mo'));
+        self::assertSame($sources, self::localesWithFile('messages.mo'));
     }
 
     /**
@@ -178,7 +178,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     {
         $found = 0;
 
-        foreach (static::localesWithFile('messages.mo') as $locale) {
+        foreach (self::localesWithFile('messages.mo') as $locale) {
             $found += count($this->pluralEntries($this->compiledCatalogue($locale)));
         }
 
@@ -286,7 +286,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             $source,
             $compiled,
             sprintf(
-                '%s: messages.mo is out of date, run `make lang`, or the source holds a fuzzy entry'
+                '%s: messages.mo is out of date, compile it again from messages.po, or the source holds a fuzzy entry'
                 . ' or a plural entry with an empty first form',
                 $locale,
             ),
@@ -394,13 +394,16 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      *
      * @return list<string>
      */
-    public static function localesWithFile(string $file): array
+    private static function localesWithFile(string $file): array
     {
-        $paths = glob(static::languageDirectory() . '/*/' . $file);
-        $found = [];
+        $directory = static::languageDirectory();
+        $entries   = is_dir($directory) ? scandir($directory) : false;
+        $found     = [];
 
-        foreach ($paths === false ? [] : $paths as $path) {
-            $found[] = basename(dirname($path));
+        foreach ($entries === false ? [] : $entries as $entry) {
+            if (($entry !== '.') && ($entry !== '..') && is_file($directory . '/' . $entry . '/' . $file)) {
+                $found[] = $entry;
+            }
         }
 
         sort($found);

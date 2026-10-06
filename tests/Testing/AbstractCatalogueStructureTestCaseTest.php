@@ -35,6 +35,10 @@ use function sprintf;
 #[CoversClass(AbstractCatalogueStructureTestCase::class)]
 final class AbstractCatalogueStructureTestCaseTest extends TestCase
 {
+    /**
+     * Resets the shared directory of the double, so that no test sees the directory of a
+     * previous one.
+     */
     protected function tearDown(): void
     {
         CatalogueStructureCaseDouble::$directory = '';
@@ -102,7 +106,26 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 'stale-compiled',
                 ['compiledCatalogueMatchesTheSourceCatalogue@cs'],
             ],
-            'source without a compiled catalogue' => [
+            'compiled catalogue without a source' => [
+                'orphan-compiled',
+                ['everyLocaleHasItsSourceAndItsCompiledCatalogue'],
+            ],
+            'directory without any locale' => [
+                'no-locales',
+                [
+                    'everyLocaleHasItsSourceAndItsCompiledCatalogue',
+                    'compiledCataloguesCarryPluralEntries',
+                ],
+            ],
+            'plural entry the source reader cannot read' => [
+                'unreadable-plural-entry',
+                [
+                    'sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs',
+                    'compiledCatalogueMatchesTheSourceCatalogue@cs',
+                ],
+            ],
+            'catalogue directory with glob characters in its path' => ['glob-characters[1]', []],
+            'source without a compiled catalogue'                  => [
                 'missing-compiled',
                 [
                     'everyLocaleHasItsSourceAndItsCompiledCatalogue',
@@ -118,7 +141,12 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
     }
 
     /**
-     * @param list<string> $expectedFailures
+     * Runs every check against one fixture and compares the set of checks that fail with
+     * the expected one, so a fixture pins exactly the checks its single defect turns red.
+     *
+     * @param string       $fixture          The name of the fixture directory
+     * @param list<string> $expectedFailures The "check@locale" names that must fail, or the check name for
+     *                                       a check without a locale
      */
     #[Test]
     #[DataProvider('fixtures')]
@@ -147,6 +175,24 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
         sort($expectedFailures);
 
         self::assertSame($expectedFailures, $failures);
+    }
+
+    /**
+     * The data provider hands every locale that has a source catalogue to the checks, keyed
+     * by the locale so that a failure names it.
+     */
+    #[Test]
+    public function providesEveryShippedLocaleKeyedByItsName(): void
+    {
+        CatalogueStructureCaseDouble::$directory = __DIR__ . '/../fixtures/catalogues/clean';
+
+        self::assertSame(
+            [
+                'cs'      => ['cs'],
+                'zh-Hans' => ['zh-Hans'],
+            ],
+            CatalogueStructureCaseDouble::shippedLocales(),
+        );
     }
 
     /**
@@ -183,7 +229,7 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
     /**
      * Runs one check and tells whether it reported a failed assertion.
      *
-     * @param Closure(): void $check
+     * @param Closure(): void $check The check to run, which may raise a failed assertion
      */
     private function fails(Closure $check): bool
     {
