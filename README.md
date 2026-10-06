@@ -82,6 +82,10 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`AbstractCatalogueStructureTestCase`** — a PHPUnit test case that checks the translation catalogues a module ships. Extend it in the module's `tests/` and return the catalogue directory from `languageDirectory()`:
 
 ```php
+use MagicSunday\Webtrees\ModuleBase\Testing\AbstractCatalogueStructureTestCase;
+use PHPUnit\Framework\Attributes\CoversNothing;
+
+#[CoversNothing]
 final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
 {
     protected static function languageDirectory(): string
@@ -91,7 +95,7 @@ final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
 }
 ```
 
-  webtrees merges a module's catalogue over its own, so a plural entry with the wrong number of forms or an empty form damages the translation of the whole installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module.
+  webtrees merges a module's catalogue over its own, so a plural entry with the wrong number of forms or an empty form damages the translation of the whole installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module. The subclass carries `#[CoversNothing]` because it covers no class, which a `phpunit.xml` with `requireCoverageMetadata="true"` demands.
 
 ## Development
 
