@@ -30,8 +30,8 @@ use function sprintf;
  * it, and for an input that only looks suspicious (for example a path with glob
  * characters or Windows line endings) it pins that the checks stay quiet. Fixtures
  * without any catalogue are a directory that holds only a placeholder file and a
- * directory that does not exist (its fixture name has no directory on purpose, git
- * cannot store it).
+ * directory that does not exist (its fixture name has no directory on purpose,
+ * because git cannot store it).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
