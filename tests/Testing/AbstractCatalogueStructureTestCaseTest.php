@@ -25,9 +25,13 @@ use function sprintf;
 
 /**
  * Runs every check of the abstract catalogue structure test case against fixture
- * catalogues. Each fixture with a defect isolates exactly one, and the test pins which checks
- * must go red for it. The fixtures without a defect (a clean catalogue, also under a path
- * with glob characters) pin that none of the checks goes red for them.
+ * catalogues. A fixture with a defect isolates exactly one, and the test pins which
+ * checks must go red for it. A fixture without a defect pins that none of the checks
+ * goes red for it, and for an input that only looks suspicious (a path with glob
+ * characters, Windows line endings, a literal percent sign, a singular source text
+ * without a placeholder) it pins that the checks stay quiet. Two fixtures hold no
+ * catalogue at all, an empty directory and a directory that does not exist (its
+ * fixture name has no directory on purpose, git cannot store it).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -134,6 +138,46 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                     'sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs',
                 ],
             ],
+            'defects in plural entries that sort after a clean one' => [
+                'defects-after-a-clean-entry',
+                [
+                    'pluralEntriesCarryExactlyTheFormsOfThePluralRule@cs',
+                    'sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs',
+                    'noPluralFormIsEmpty@cs',
+                    'everyPluralEntryRendersForEveryNumber@cs',
+                    'pluralFormsKeepThePlaceholdersOfTheSource@cs',
+                ],
+            ],
+            'integer placeholder dropped from a form' => [
+                'dropped-integer-placeholder',
+                ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
+            ],
+            'numbered placeholders in another order' => ['reordered-numbered-placeholders', []],
+            'wrong placeholder in the first form'    => [
+                'wrong-first-form-placeholder',
+                ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
+            ],
+            'empty form that only the number one selects' => [
+                'empty-form-selected-by-one',
+                [
+                    'noPluralFormIsEmpty@ar',
+                    'everyPluralEntryRendersForEveryNumber@ar',
+                    'pluralFormsKeepThePlaceholdersOfTheSource@ar',
+                ],
+            ],
+            'source without a header' => [
+                'no-header',
+                ['headerDeclaresThePluralRuleOfWebtrees@cs'],
+            ],
+            'header with an empty plural formula' => [
+                'header-empty-formula',
+                ['headerDeclaresThePluralRuleOfWebtrees@cs'],
+            ],
+            'plural entries only in the last locale' => [
+                'plural-only-in-last-locale',
+                ['sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs'],
+            ],
+            'sources with Windows line endings'        => ['crlf-line-endings', []],
             'literal percent sign in the source text'  => ['literal-percent', []],
             'numbered placeholder dropped from a form' => [
                 'wrong-numbered-placeholder',

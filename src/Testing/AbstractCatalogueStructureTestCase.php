@@ -44,19 +44,19 @@ use const PREG_SET_ORDER;
  * Locks the structure of the shipped translation catalogues.
  *
  * webtrees merges the compiled catalogue of a module over its own, so an entry that
- * webtrees cannot use does not just degrade the module that ships it. A plural entry with the wrong
- * number of forms makes webtrees fall back to English, and one with an empty form
- * behind a filled first form renders an empty string for every number that selects
- * that form. Because the entry replaces the webtrees translation of the same text,
- * the damage reaches pages that have nothing to do with this module.
+ * webtrees cannot use does not just degrade the module that ships it. A plural entry
+ * with the wrong number of forms makes webtrees fall back to English, and one with an
+ * empty form behind a filled first form renders an empty string for every number that
+ * selects that form. Because the entry replaces the webtrees translation of the same
+ * text, the damage reaches pages that have nothing to do with this module.
  *
  * The expected number of forms is taken from the plural rule class webtrees itself
  * uses for the locale, never from the PO header, which webtrees does not read.
  *
  * A module extends this case in its own test suite and names the directory that holds
  * its catalogues, one subdirectory per locale with a messages.po and its compiled
- * messages.mo. Most checks then run once per shipped locale, the others look at the catalogues of all
- * locales at once.
+ * messages.mo. Most checks then run once per shipped locale, the others look at the
+ * catalogues of all locales at once.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -113,6 +113,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * wrongly by tools that evaluate it, and its form count must agree with the
      * rule webtrees applies, otherwise a translator is asked for the wrong number of
      * forms and the file is wrong from the start.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -142,6 +144,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * must carry exactly as many forms as the plural rule of the locale selects from.
      * With a different count webtrees ignores the entry and shows English, and the
      * entry still hides the webtrees translation of the same text.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -193,6 +197,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * The compiler leaves out an entry without any translation, so the compiled catalogue
      * cannot tell how many slots such an entry has in the source. The slot count can
      * therefore only be checked in the source file.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -240,6 +246,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * An empty plural form behind a filled first form is kept by the compiler, and
      * webtrees returns it unchanged. The number that selects it would render as nothing.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -271,6 +279,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * reader keeps an entry marked fuzzy in the source, while the compiler leaves it out
      * of the compiled file, and it leaves out a plural entry whose first form is empty
      * as well. Such an entry shows up here as a mismatch until it is resolved.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -298,6 +308,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * highest one. An empty form behind a filled first form shows up as an empty result
      * for the numbers that select it. A wrong form count is not seen here, because
      * webtrees then shows the English text, which the form count test above covers.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -335,6 +347,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * into. Every form must use the placeholders of the singular or of the plural
      * source text. Only the string and integer placeholders (`%s`, `%d`, numbered ones
      * included) are compared, the source texts use no other conversion.
+     *
+     * @param string $locale The name of the locale directory
      */
     #[Test]
     #[DataProvider('shippedLocales')]
@@ -509,7 +523,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     }
 
     /**
-     * Returns the raw text of the source catalogue of a locale.
+     * Returns the raw text of the source catalogue of a locale, with Windows line endings
+     * turned into plain ones so that the line anchored patterns match on every checkout.
      */
     private function poSource(string $locale): string
     {
@@ -520,7 +535,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             sprintf('%s: the source catalogue cannot be read', $locale),
         );
 
-        return $source;
+        return str_replace("\r\n", "\n", $source);
     }
 
     /**

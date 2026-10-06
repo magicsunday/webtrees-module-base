@@ -16,3 +16,9 @@
 /node_modules/         export-ignore
 /package.json          export-ignore
 /package-lock.json     export-ignore
+
+# The catalogue fixtures are read byte for byte. The compiled catalogues are binary and
+# the sources keep LF, except the fixture that carries CRLF on purpose.
+*.mo                                                  binary
+/tests/fixtures/catalogues/**/*.po                    text eol=lf
+/tests/fixtures/catalogues/crlf-line-endings/**/*.po  -text
