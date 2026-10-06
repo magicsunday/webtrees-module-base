@@ -80,7 +80,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Provides every locale the module ships a catalogue for.
      *
-     * @return array<string, array{string}>
+     * @return array<string, array{string}> The data rows, one per locale, keyed by the locale
      */
     public static function shippedLocales(): array
     {
@@ -385,6 +385,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Returns the header of the source catalogue of a locale as plain text, with the
      * quoted lines of the header joined and unescaped the way a PO reader sees them.
+     *
+     * @param string $locale The name of the locale directory
      */
     private function headerText(string $locale): string
     {
@@ -406,7 +408,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Lists the locales that have the named catalogue file, sorted.
      *
-     * @return list<string>
+     * @param string $file The name of the catalogue file
+     *
+     * @return list<string> The names of the locale directories
      */
     private static function localesWithFile(string $file): array
     {
@@ -433,9 +437,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * Returns the plural entries of a catalogue, keyed by the singular and plural
      * source text joined by the plural separator, with the forms split into a list.
      *
-     * @param array<string, string> $catalogue
+     * @param array<string, string> $catalogue The catalogue as the translation reader returns it
      *
-     * @return array<string, list<string>>
+     * @return array<string, list<string>> The forms of every plural entry, keyed by its source texts
      */
     private function pluralEntries(array $catalogue): array
     {
@@ -454,7 +458,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * Returns the placeholders of a text, sorted so that their position in the sentence
      * does not matter. A doubled percent sign is a literal one and not a placeholder.
      *
-     * @return list<string>
+     * @param string $text The text to read
+     *
+     * @return list<string> The placeholders in sorted order
      */
     private function placeholders(string $text): array
     {
@@ -472,7 +478,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Reads the compiled catalogue webtrees loads for a locale.
      *
-     * @return array<string, string>
+     * @param string $locale The name of the locale directory
+     *
+     * @return array<string, string> The entries keyed by their source texts
      */
     private function compiledCatalogue(string $locale): array
     {
@@ -492,7 +500,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Splits the key of a plural entry into the singular and the plural source text.
      *
-     * @return array{string, string}
+     * @param string $key The key of a plural entry
+     *
+     * @return array{string, string} The singular and the plural source text
      */
     private function sourceTexts(string $key): array
     {
@@ -508,6 +518,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * Returns the number of plural forms webtrees selects from for a locale.
+     *
+     * @param string $locale The name of the locale directory
      */
     private function pluralRuleFormCount(string $locale): int
     {
@@ -516,6 +528,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * Returns the path of the source catalogue of a locale.
+     *
+     * @param string $locale The name of the locale directory
      */
     private function poFile(string $locale): string
     {
@@ -525,6 +539,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * Returns the raw text of the source catalogue of a locale, with Windows line endings
      * turned into plain ones so that the line anchored patterns match on every checkout.
+     *
+     * @param string $locale The name of the locale directory
      */
     private function poSource(string $locale): string
     {

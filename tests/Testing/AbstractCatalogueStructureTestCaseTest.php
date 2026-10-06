@@ -25,13 +25,14 @@ use function sprintf;
 
 /**
  * Runs every check of the abstract catalogue structure test case against fixture
- * catalogues. A fixture with a defect isolates exactly one, and the test pins which
- * checks must go red for it. A fixture without a defect pins that none of the checks
- * goes red for it, and for an input that only looks suspicious (a path with glob
- * characters, Windows line endings, a literal percent sign, a singular source text
- * without a placeholder) it pins that the checks stay quiet. Two fixtures hold no
- * catalogue at all, an empty directory and a directory that does not exist (its
- * fixture name has no directory on purpose, git cannot store it).
+ * catalogues. A fixture with a defect isolates one (one fixture carries two on purpose,
+ * in entries that sort after a clean one), and the test pins which checks must go red
+ * for it. A fixture without a defect pins that none of the checks
+ * goes red for it, and for an input that only looks suspicious (for example a path with
+ * glob characters or Windows line endings) it pins that the checks stay quiet. Fixtures
+ * without any catalogue are a directory that holds only a placeholder file and a
+ * directory that does not exist (its fixture name has no directory on purpose, git
+ * cannot store it).
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -177,6 +178,7 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 'plural-only-in-last-locale',
                 ['sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs'],
             ],
+            'numeric message id in the catalogue'      => ['numeric-msgid', []],
             'sources with Windows line endings'        => ['crlf-line-endings', []],
             'literal percent sign in the source text'  => ['literal-percent', []],
             'numbered placeholder dropped from a form' => [
@@ -232,16 +234,19 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
 
     /**
      * Runs every check against one fixture and compares the set of checks that fail with
-     * the expected one, so a fixture pins exactly the checks its single defect turns red.
+     * the expected one, so a fixture pins exactly the checks its defect turns red.
      *
      * @param string       $fixture          The name of the fixture directory
-     * @param list<string> $expectedFailures The "check@locale" names that must fail, or the check name for
-     *                                       a check without a locale
+     * @param list<string> $expectedFailures The checks that must fail, each named after the check
+     *                                       and, for a check that takes a locale, followed by an
+     *                                       at sign and that locale
      */
     #[Test]
     #[DataProvider('fixtures')]
-    public function failsExactlyTheChecksThatMatchTheDefect(string $fixture, array $expectedFailures): void
-    {
+    public function failsExactlyTheChecksThatMatchTheDefect(
+        string $fixture,
+        array $expectedFailures,
+    ): void {
         CatalogueStructureCaseDouble::$directory = __DIR__ . '/../fixtures/catalogues/' . $fixture;
 
         $case     = new CatalogueStructureCaseDouble('failsExactlyTheChecksThatMatchTheDefect');
@@ -293,13 +298,34 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
     private function localeChecks(): array
     {
         return [
-            'headerDeclaresThePluralRuleOfWebtrees'            => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->headerDeclaresThePluralRuleOfWebtrees($locale),
-            'pluralEntriesCarryExactlyTheFormsOfThePluralRule' => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->pluralEntriesCarryExactlyTheFormsOfThePluralRule($locale),
-            'sourcePluralEntriesHaveTheSlotsOfThePluralRule'   => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->sourcePluralEntriesHaveTheSlotsOfThePluralRule($locale),
-            'noPluralFormIsEmpty'                              => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->noPluralFormIsEmpty($locale),
-            'compiledCatalogueMatchesTheSourceCatalogue'       => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->compiledCatalogueMatchesTheSourceCatalogue($locale),
-            'everyPluralEntryRendersForEveryNumber'            => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->everyPluralEntryRendersForEveryNumber($locale),
-            'pluralFormsKeepThePlaceholdersOfTheSource'        => static fn (CatalogueStructureCaseDouble $case, string $locale) => $case->pluralFormsKeepThePlaceholdersOfTheSource($locale),
+            'headerDeclaresThePluralRuleOfWebtrees' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->headerDeclaresThePluralRuleOfWebtrees($locale),
+            'pluralEntriesCarryExactlyTheFormsOfThePluralRule' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->pluralEntriesCarryExactlyTheFormsOfThePluralRule($locale),
+            'sourcePluralEntriesHaveTheSlotsOfThePluralRule' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->sourcePluralEntriesHaveTheSlotsOfThePluralRule($locale),
+            'noPluralFormIsEmpty' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->noPluralFormIsEmpty($locale),
+            'compiledCatalogueMatchesTheSourceCatalogue' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->compiledCatalogueMatchesTheSourceCatalogue($locale),
+            'everyPluralEntryRendersForEveryNumber' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->everyPluralEntryRendersForEveryNumber($locale),
+            'pluralFormsKeepThePlaceholdersOfTheSource' => static fn (
+                CatalogueStructureCaseDouble $case,
+                string $locale,
+            ) => $case->pluralFormsKeepThePlaceholdersOfTheSource($locale),
         ];
     }
 
