@@ -387,6 +387,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * quoted lines of the header joined and unescaped the way a PO reader sees them.
      *
      * @param string $locale The name of the locale directory
+     *
+     * @return string The header text with the quoted lines joined and unescaped
      */
     private function headerText(string $locale): string
     {
@@ -520,6 +522,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * Returns the number of plural forms webtrees selects from for a locale.
      *
      * @param string $locale The name of the locale directory
+     *
+     * @return int The number of plural forms of the plural rule of the locale
      */
     private function pluralRuleFormCount(string $locale): int
     {
@@ -530,6 +534,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * Returns the path of the source catalogue of a locale.
      *
      * @param string $locale The name of the locale directory
+     *
+     * @return string The path of the source catalogue
      */
     private function poFile(string $locale): string
     {
@@ -538,9 +544,12 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * Returns the raw text of the source catalogue of a locale, with Windows line endings
-     * turned into plain ones so that the line anchored patterns match on every checkout.
+     * turned into plain ones and a final line break ensured, so that the line anchored
+     * patterns match on every checkout and for a file that ends without a line break.
      *
      * @param string $locale The name of the locale directory
+     *
+     * @return string The source text with plain line endings
      */
     private function poSource(string $locale): string
     {
@@ -551,12 +560,14 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             sprintf('%s: the source catalogue cannot be read', $locale),
         );
 
-        return str_replace("\r\n", "\n", $source);
+        return rtrim(str_replace("\r\n", "\n", $source), "\n") . "\n";
     }
 
     /**
      * Returns the directory that holds the catalogues of all locales, one subdirectory per
      * locale with a messages.po and its compiled messages.mo.
+     *
+     * @return string The path of the catalogue directory
      */
     abstract protected static function languageDirectory(): string;
 }

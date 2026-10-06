@@ -30,6 +30,8 @@ final class CatalogueStructureCaseDouble extends AbstractCatalogueStructureTestC
 
     /**
      * Returns the directory that holds the catalogues of all locales.
+     *
+     * @return string The path of the catalogue directory
      */
     protected static function languageDirectory(): string
     {
