@@ -176,7 +176,9 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     /**
      * The tests that scan the plural entries of the compiled catalogues pass on an empty
      * scan. At least one compiled catalogue therefore has to carry a plural entry. The
-     * test then fails loudly when the reader stops recognising plural keys.
+     * test then fails loudly when the reader stops recognising plural keys. A module that
+     * declares no plural entries is checked for their absence instead, so one that is
+     * added later fails until the declaration is removed.
      */
     #[Test]
     public function compiledCataloguesCarryPluralEntries(): void
@@ -185,6 +187,16 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
         foreach (self::localesWithFile('messages.mo') as $locale) {
             $found += count($this->pluralEntries($this->compiledCatalogue($locale)));
+        }
+
+        if (!static::shipsPluralEntries()) {
+            self::assertSame(
+                0,
+                $found,
+                'The module declares no plural entries, but a compiled catalogue carries one',
+            );
+
+            return;
         }
 
         self::assertGreaterThan(
@@ -207,6 +219,16 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
     {
         $expected = $this->pluralRuleFormCount($locale);
         $source   = $this->poSource($locale);
+
+        if (!static::shipsPluralEntries()) {
+            self::assertSame(
+                0,
+                preg_match_all('/^msgid_plural /m', $source),
+                sprintf('%s: the module declares no plural entries, but the source catalogue has one', $locale),
+            );
+
+            return;
+        }
 
         $pattern = '/^msgid_plural (.*)\n(?:".*\n)*((?:msgstr\[\d+\] .*\n(?:".*\n)*)+)/m';
         $found   = preg_match_all($pattern, $source, $entries, PREG_SET_ORDER);
@@ -589,4 +611,16 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * @return string The path of the catalogue directory
      */
     abstract protected static function languageDirectory(): string;
+
+    /**
+     * Tells whether the catalogues of the module ship plural entries. A module without any
+     * plural string overrides this and returns false, which turns the anchor that demands
+     * a plural entry into a check that none exists.
+     *
+     * @return bool True when at least one plural entry is expected
+     */
+    protected static function shipsPluralEntries(): bool
+    {
+        return true;
+    }
 }

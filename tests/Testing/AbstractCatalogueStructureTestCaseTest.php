@@ -40,12 +40,13 @@ use function sprintf;
 final class AbstractCatalogueStructureTestCaseTest extends TestCase
 {
     /**
-     * Resets the shared directory of the double, so that no test sees the directory of a
-     * previous one.
+     * Resets the shared directory and the plural declaration of the double, so that no test
+     * sees the state of a previous one, also when a check raised an unexpected exception.
      */
     protected function tearDown(): void
     {
-        CatalogueStructureCaseDouble::$directory = '';
+        CatalogueStructureCaseDouble::$directory          = '';
+        CatalogueStructureCaseDouble::$shipsPluralEntries = true;
 
         parent::tearDown();
     }
@@ -253,9 +254,71 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
         string $fixture,
         array $expectedFailures,
     ): void {
-        CatalogueStructureCaseDouble::$directory = __DIR__ . '/../fixtures/catalogues/' . $fixture;
+        $failures = $this->failingChecks($fixture, true);
 
-        $case     = new CatalogueStructureCaseDouble('failsExactlyTheChecksThatMatchTheDefect');
+        sort($expectedFailures);
+
+        self::assertSame($expectedFailures, $failures);
+    }
+
+    /**
+     * Lists the fixtures a subclass runs against when it declares that its catalogues ship
+     * no plural entries, with the checks that must fail for each of them.
+     *
+     * @return array<string, array{string, list<string>}> The fixture name and the expected failures
+     */
+    public static function fixturesWithoutDeclaredPluralEntries(): array
+    {
+        return [
+            'catalogues without plural entries pass' => ['no-plural-entry', []],
+            'a plural entry fails the declaration'   => [
+                'clean',
+                [
+                    'compiledCataloguesCarryPluralEntries',
+                    'sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs',
+                    'sourcePluralEntriesHaveTheSlotsOfThePluralRule@zh-Hans',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * A subclass that declares no plural entries is checked for the absence instead of the
+     * presence of plural entries, so one that is added later fails until the declaration
+     * is removed.
+     *
+     * @param string       $fixture          The name of the fixture directory
+     * @param list<string> $expectedFailures The checks that must fail, named as in the other matrix test
+     */
+    #[Test]
+    #[DataProvider('fixturesWithoutDeclaredPluralEntries')]
+    public function declaredAbsenceOfPluralEntriesIsCheckedBothWays(
+        string $fixture,
+        array $expectedFailures,
+    ): void {
+        $failures = $this->failingChecks($fixture, false);
+
+        sort($expectedFailures);
+
+        self::assertSame($expectedFailures, $failures);
+    }
+
+    /**
+     * Runs every check against one fixture and returns the sorted names of the checks that
+     * fail.
+     *
+     * @param string $fixture            The name of the fixture directory
+     * @param bool   $shipsPluralEntries Whether the subclass declares that it ships plural entries
+     *
+     * @return list<string> The failing checks, each named after the check and, for a check that
+     *                      takes a locale, followed by an at sign and that locale
+     */
+    private function failingChecks(string $fixture, bool $shipsPluralEntries): array
+    {
+        CatalogueStructureCaseDouble::$directory          = __DIR__ . '/../fixtures/catalogues/' . $fixture;
+        CatalogueStructureCaseDouble::$shipsPluralEntries = $shipsPluralEntries;
+
+        $case     = new CatalogueStructureCaseDouble('failingChecks');
         $failures = [];
 
         foreach ($this->globalChecks() as $name => $check) {
@@ -273,9 +336,8 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
         }
 
         sort($failures);
-        sort($expectedFailures);
 
-        self::assertSame($expectedFailures, $failures);
+        return $failures;
     }
 
     /**

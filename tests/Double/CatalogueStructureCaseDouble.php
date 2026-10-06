@@ -29,6 +29,11 @@ final class CatalogueStructureCaseDouble extends AbstractCatalogueStructureTestC
     public static string $directory = '';
 
     /**
+     * Whether the double declares that its catalogues ship plural entries.
+     */
+    public static bool $shipsPluralEntries = true;
+
+    /**
      * Returns the directory that holds the catalogues of all locales.
      *
      * @return string The path of the catalogue directory
@@ -36,5 +41,15 @@ final class CatalogueStructureCaseDouble extends AbstractCatalogueStructureTestC
     protected static function languageDirectory(): string
     {
         return self::$directory;
+    }
+
+    /**
+     * Returns whether the catalogues of the double are declared to ship plural entries.
+     *
+     * @return bool True when plural entries are expected
+     */
+    protected static function shipsPluralEntries(): bool
+    {
+        return self::$shipsPluralEntries;
     }
 }
