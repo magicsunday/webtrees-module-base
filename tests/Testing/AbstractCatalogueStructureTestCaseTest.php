@@ -178,11 +178,12 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 'plural-only-in-last-locale',
                 ['sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs'],
             ],
-            'numeric message id in the catalogue'      => ['numeric-msgid', []],
-            'wrapped catalogue strings'                => ['wrapped-po-strings', []],
-            'sources with Windows line endings'        => ['crlf-line-endings', []],
-            'literal percent sign in the source text'  => ['literal-percent', []],
-            'numbered placeholder dropped from a form' => [
+            'numeric message id in the catalogue'                     => ['numeric-msgid', []],
+            'comment block before the header and a quoted name in it' => ['commented-header', []],
+            'wrapped catalogue strings'                               => ['wrapped-po-strings', []],
+            'sources with Windows line endings'                       => ['crlf-line-endings', []],
+            'literal percent sign in the source text'                 => ['literal-percent', []],
+            'numbered placeholder dropped from a form'                => [
                 'wrong-numbered-placeholder',
                 ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
             ],
