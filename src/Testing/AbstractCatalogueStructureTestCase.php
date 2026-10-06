@@ -55,7 +55,7 @@ use const PREG_SET_ORDER;
  *
  * A module extends this case in its own test suite and names the directory that holds
  * its catalogues, one subdirectory per locale with a messages.po and its compiled
- * messages.mo. Most checks then run once per shipped locale, two look at the catalogues of all
+ * messages.mo. Most checks then run once per shipped locale, the others look at the catalogues of all
  * locales at once.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
@@ -401,7 +401,11 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
         $found     = [];
 
         foreach ($entries === false ? [] : $entries as $entry) {
-            if (($entry !== '.') && ($entry !== '..') && is_file($directory . '/' . $entry . '/' . $file)) {
+            if (
+                ($entry !== '.')
+                && ($entry !== '..')
+                && is_file($directory . '/' . $entry . '/' . $file)
+            ) {
                 $found[] = $entry;
             }
         }
