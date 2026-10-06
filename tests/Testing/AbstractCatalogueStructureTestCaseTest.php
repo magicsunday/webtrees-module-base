@@ -25,8 +25,9 @@ use function sprintf;
 
 /**
  * Runs every check of the abstract catalogue structure test case against fixture
- * catalogues. Each fixture carries exactly one defect, and the test pins which checks must
- * go red for it. The clean fixture pins that none of them goes red without a defect.
+ * catalogues. Each fixture with a defect isolates exactly one, and the test pins which checks
+ * must go red for it. The fixtures without a defect (a clean catalogue, also under a path
+ * with glob characters) pin that none of the checks goes red for them.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -125,7 +126,52 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 ],
             ],
             'catalogue directory with glob characters in its path' => ['glob-characters[1]', []],
-            'source without a compiled catalogue'                  => [
+            'plural entry with too many forms'                     => [
+                'too-many-forms',
+                [
+                    'headerDeclaresThePluralRuleOfWebtrees@cs',
+                    'pluralEntriesCarryExactlyTheFormsOfThePluralRule@cs',
+                    'sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs',
+                ],
+            ],
+            'literal percent sign in the source text'  => ['literal-percent', []],
+            'numbered placeholder dropped from a form' => [
+                'wrong-numbered-placeholder',
+                ['pluralFormsKeepThePlaceholdersOfTheSource@cs'],
+            ],
+            'singular source text without a placeholder'   => ['singular-without-placeholder', []],
+            'empty form that only the number zero selects' => [
+                'empty-form-selected-by-zero',
+                [
+                    'noPluralFormIsEmpty@lv',
+                    'everyPluralEntryRendersForEveryNumber@lv',
+                    'pluralFormsKeepThePlaceholdersOfTheSource@lv',
+                ],
+            ],
+            'empty form that only numbers from a hundred select' => [
+                'empty-form-selected-by-hundred',
+                [
+                    'noPluralFormIsEmpty@ar',
+                    'everyPluralEntryRendersForEveryNumber@ar',
+                    'pluralFormsKeepThePlaceholdersOfTheSource@ar',
+                ],
+            ],
+            'compiled catalogue of a locale without a source next to a complete one' => [
+                'orphan-next-to-complete',
+                ['everyLocaleHasItsSourceAndItsCompiledCatalogue'],
+            ],
+            'plural entries only in the first locale' => [
+                'plural-only-in-first-locale',
+                ['sourcePluralEntriesHaveTheSlotsOfThePluralRule@zh-Hans'],
+            ],
+            'catalogue directory that does not exist' => [
+                'does-not-exist',
+                [
+                    'everyLocaleHasItsSourceAndItsCompiledCatalogue',
+                    'compiledCataloguesCarryPluralEntries',
+                ],
+            ],
+            'source without a compiled catalogue' => [
                 'missing-compiled',
                 [
                     'everyLocaleHasItsSourceAndItsCompiledCatalogue',
