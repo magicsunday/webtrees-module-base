@@ -96,8 +96,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * Every locale has both its source and its compiled catalogue. A locale that lost its
-     * source drops out of the data provider and would no longer be checked, an orphaned
-     * compiled file would ship unchecked, and an empty provider would check nothing.
+     * source drops out of the data provider and would no longer be checked. An orphaned
+     * compiled file would ship unchecked. An empty provider would check nothing.
      */
     #[Test]
     public function everyLocaleHasItsSourceAndItsCompiledCatalogue(): void
@@ -110,10 +110,10 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
 
     /**
      * The PO header of a locale declares the plural rule the translation tools use. The
-     * declaration must be complete, because a rule split by other header lines is read
-     * wrongly by tools that evaluate it, and its form count must agree with the
-     * rule webtrees applies, otherwise a translator is asked for the wrong number of
-     * forms and the file is wrong from the start.
+     * declaration must be complete. A rule split by other header lines is read wrongly
+     * by tools that evaluate it. Its form count must also agree with the rule webtrees
+     * applies. Otherwise a translator is asked for the wrong number of forms and the
+     * file is wrong from the start.
      *
      * @param string $locale The name of the locale directory
      */
@@ -278,8 +278,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * from an older source would let the checks above pass on stale data. The two
      * readers return the entries in different order, which carries no meaning. The PO
      * reader keeps an entry marked fuzzy in the source, while the compiler leaves it out
-     * of the compiled file, and it leaves out a plural entry whose first form is empty
-     * as well. Such an entry shows up here as a mismatch until it is resolved.
+     * of the compiled file. The compiler also leaves out a plural entry whose first form
+     * is empty. Such an entry shows up here as a mismatch until it is resolved.
      *
      * @param string $locale The name of the locale directory
      */
@@ -297,8 +297,8 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
             $source,
             $compiled,
             sprintf(
-                '%s: messages.mo is out of date, compile it again from messages.po, or the source holds a fuzzy entry'
-                . ' or a plural entry with an empty first form',
+                '%s: messages.mo is out of date or the source holds a fuzzy entry or a plural entry with an empty'
+                . ' first form. Compile messages.mo again from messages.po',
                 $locale,
             ),
         );
@@ -347,7 +347,7 @@ abstract class AbstractCatalogueStructureTestCase extends TestCase
      * A form that drops or invents a placeholder breaks the sentence it is formatted
      * into. Every form must use the placeholders of the singular or of the plural
      * source text. Only the string and integer placeholders (`%s`, `%d`, numbered ones
-     * included) are compared, the source texts use no other conversion.
+     * included) are compared, because the source texts use no other conversion.
      *
      * @param string $locale The name of the locale directory
      */
