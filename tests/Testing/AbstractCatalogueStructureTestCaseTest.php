@@ -25,11 +25,10 @@ use function sprintf;
 
 /**
  * Runs every check of the abstract catalogue structure test case against fixture
- * catalogues. A fixture with a defect isolates one (one fixture carries two on purpose,
- * in entries that sort after a clean one), and the test pins which checks must go red
- * for it. A fixture without a defect pins that none of the checks
- * goes red for it, and for an input that only looks suspicious (for example a path with
- * glob characters or Windows line endings) it pins that the checks stay quiet. Fixtures
+ * catalogues. A fixture with a defect isolates it, and the test pins which checks must
+ * go red for it. A fixture without a defect pins that none of the checks goes red for
+ * it, and for an input that only looks suspicious (for example a path with glob
+ * characters or Windows line endings) it pins that the checks stay quiet. Fixtures
  * without any catalogue are a directory that holds only a placeholder file and a
  * directory that does not exist (its fixture name has no directory on purpose, git
  * cannot store it).
@@ -56,7 +55,8 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
      * Provides every fixture with the checks that must fail for it, written as the name of
      * the check, followed by the locale for a check that takes one.
      *
-     * @return array<string, array{string, list<string>}>
+     * @return array<string, array{string, list<string>}> The fixture rows, keyed by what the fixture shows, each with the fixture
+     *                                                    directory and the expected failing checks
      */
     public static function fixtures(): array
     {
@@ -179,6 +179,7 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 ['sourcePluralEntriesHaveTheSlotsOfThePluralRule@cs'],
             ],
             'numeric message id in the catalogue'      => ['numeric-msgid', []],
+            'wrapped catalogue strings'                => ['wrapped-po-strings', []],
             'sources with Windows line endings'        => ['crlf-line-endings', []],
             'literal percent sign in the source text'  => ['literal-percent', []],
             'numbered placeholder dropped from a form' => [
@@ -293,7 +294,7 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
     /**
      * Lists the checks that inspect the catalogue of one locale, by name.
      *
-     * @return array<string, Closure(CatalogueStructureCaseDouble, string): void>
+     * @return array<string, Closure(CatalogueStructureCaseDouble, string): void> The per-locale checks keyed by method name
      */
     private function localeChecks(): array
     {
@@ -332,7 +333,7 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
     /**
      * Lists the checks that inspect the catalogues of all locales at once, by name.
      *
-     * @return array<string, Closure(CatalogueStructureCaseDouble): void>
+     * @return array<string, Closure(CatalogueStructureCaseDouble): void> The all-locale checks keyed by method name
      */
     private function globalChecks(): array
     {
