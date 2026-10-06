@@ -2,7 +2,7 @@
 # magicsunday/coding-standard (deptrac/layers.yaml; ^3.0: one strict, acyclic order
 # Support < Enum < Model, Configuration < Contract < Repository, Adapter, Service
 # < Facade < Module); this file adds the layers of
-# this package the shared ruleset does not know (Processor, Traits) and narrows the
+# this package the shared ruleset does not know (Processor, Traits, Testing) and narrows the
 # four shared layers this package keeps as pure leaves (Model, Support, Contract,
 # Module) plus the shared Facade layer, which here may reach Contract only.
 #
@@ -51,6 +51,12 @@ deptrac:
                 -
                     type: directory
                     value: 'src/Traits/.*'
+        -
+            name: Testing
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Testing/.*'
         -
             name: DataFacade
             collectors:
@@ -106,6 +112,11 @@ deptrac:
             - DataFacade
             - Contract
             - LeafContract
+
+        # The reusable test cases the consuming modules extend. They depend on PHPUnit
+        # and the webtrees localization library only, never on the rest of src/.
+        Testing:
+            - Testing
 
         # The ModuleCustomTrait helpers drive the release-version check.
         Traits:
