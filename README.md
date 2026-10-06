@@ -79,7 +79,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`ModuleAssetUrlInterface`** — marker interface that declares webtrees' `assetUrl()` helper so `ImageProcessor` can be type-narrowed without `method_exists` runtime checks
 
 ### `src/Testing/`
-- **`AbstractCatalogueStructureTestCase`** — a PHPUnit test case that checks the translation catalogues a module ships. Extend it in the module's `tests/` and return the catalogue directory from `languageDirectory()`:
+- **`AbstractCatalogueStructureTestCase`**, a PHPUnit test case that checks the translation catalogues a module ships. Extend it in the module's `tests/` and return the catalogue directory from `languageDirectory()`:
 
 ```php
 use MagicSunday\Webtrees\ModuleBase\Testing\AbstractCatalogueStructureTestCase;

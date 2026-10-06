@@ -29,6 +29,7 @@ use function is_file;
 use function ksort;
 use function preg_match;
 use function preg_match_all;
+use function rtrim;
 use function scandir;
 use function sort;
 use function sprintf;
