@@ -1,0 +1,18 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: lv\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 : 2;\n"
+
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] "%s gads"
+msgstr[1] "%s gadi"
+msgstr[2] "%s gadu"
+
+msgid "%s day"
+msgid_plural "%s days"
+msgstr[0] "%s diena"
+msgstr[1] "%s dienas"
+msgstr[2] ""
+

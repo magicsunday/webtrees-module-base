@@ -1,0 +1,8 @@
+msgid "Hello"
+msgstr "Ahoj"
+
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] "%s rok"
+msgstr[1] "%s roky"
+msgstr[2] "%s let"

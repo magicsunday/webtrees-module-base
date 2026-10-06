@@ -56,6 +56,9 @@
         "magicsunday/coding-standard": "^3.0",
         "phpat/phpat": "^0.12.4"
     },
+    "suggest": {
+        "phpunit/phpunit": "Needed to extend MagicSunday\\Webtrees\\ModuleBase\\Testing\\AbstractCatalogueStructureTestCase in the consuming module's own test suite"
+    },
     "autoload": {
         "psr-4": {
             "MagicSunday\\Webtrees\\ModuleBase\\": "src/"
