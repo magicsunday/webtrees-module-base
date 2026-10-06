@@ -28,8 +28,8 @@ use function sprintf;
  * catalogues. A fixture with a defect isolates it, and the test pins which checks must
  * go red for it. A fixture without a defect pins that none of the checks goes red for
  * it. This includes inputs that only look suspicious, such as a path with glob
- * characters or Windows line endings. Two fixtures hold no catalogue at all. One is a
- * directory with only a placeholder file. The other names a directory that does not
+ * characters or Windows line endings. Some fixtures hold no catalogue at all. One is a
+ * directory with only a placeholder file. Another names a directory that does not
  * exist, because git cannot store an empty one.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
