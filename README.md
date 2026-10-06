@@ -78,6 +78,21 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 ### `src/Contract/`
 - **`ModuleAssetUrlInterface`** — marker interface that declares webtrees' `assetUrl()` helper so `ImageProcessor` can be type-narrowed without `method_exists` runtime checks
 
+### `src/Testing/`
+- **`AbstractCatalogueStructureTestCase`** — a PHPUnit test case that checks the translation catalogues a module ships. Extend it in the module's `tests/` and return the catalogue directory from `languageDirectory()`:
+
+```php
+final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
+{
+    protected static function languageDirectory(): string
+    {
+        return __DIR__ . '/../resources/lang';
+    }
+}
+```
+
+  webtrees merges a module's catalogue over its own, so a plural entry with the wrong number of forms or an empty form damages the translation of the whole installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module.
+
 ## Development
 
 See [AGENTS.md](AGENTS.md) for the full development workflow, including the

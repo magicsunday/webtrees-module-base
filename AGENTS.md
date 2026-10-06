@@ -67,6 +67,7 @@ src/
   Processor/      — DateProcessor, NameProcessor, ImageProcessor, PlaceProcessor
   Support/        — locale-independent helpers (CompactDateFormat, TextDirection)
   Support/Locale/ — locale-aware helpers (IsoCountryMap)
+  Testing/        — reusable PHPUnit test cases the consuming modules extend (AbstractCatalogueStructureTestCase)
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules
 tests/
   bootstrap.php   — harness only; belongs to no source class, so it stays at the root
@@ -106,6 +107,11 @@ tests/
 ### Traits
 - **`Traits/ModuleChartTrait`** — shared chart-module helpers on top of webtrees' own `ModuleChartTrait`; consuming classes must define a `ROUTE_DEFAULT` class constant.
 - **`Traits/ModuleCustomTrait`** — shared `ModuleCustomInterface` helpers on top of webtrees' own `ModuleCustomTrait`; consuming classes must define `CUSTOM_*` constants and `resourcesFolder()`.
+
+### Testing
+- **`Testing/AbstractCatalogueStructureTestCase`** — structure checks over the translation catalogues a module ships. A module extends it in its own `tests/` and implements `languageDirectory()` (the directory with one subdirectory per locale holding `messages.po` and `messages.mo`). The class lives under `src/` so a module can inherit it, which means it ships with the production code. It extends `PHPUnit\Framework\TestCase`, so PHPUnit is a dev dependency of the consumer and is never loaded at runtime. It is analysed by deptrac as the isolated `Testing` layer, which depends on no other `src/` code.
+- The checks take the expected plural form count from the plural rule class of `fisharebest/localization`, the same one webtrees applies, and never from the PO header. They cover the form count and the slot count, empty forms, the `%s` and `%d` placeholders (numbered ones included), a compiled catalogue that matches its source, a complete `Plural-Forms` header line and a render of every plural entry for a range of numbers.
+- `tests/Testing/AbstractCatalogueStructureTestCaseTest` runs every check against the fixture catalogues under `tests/fixtures/catalogues/`. Each fixture carries exactly one defect and the test pins which checks go red for it. The `.mo` files there are compiled from the sibling `.po` with `msgfmt`, except `stale-compiled` (compiled from the `clean` source on purpose) and `missing-compiled` (no `.mo` on purpose). Regenerate a fixture by editing its `.po` and compiling it again.
 
 ## Code style
 - PSR-12 + PER-CS 2.x with project-specific tightenings (PHP-CS-Fixer config in `.php-cs-fixer.dist.php`).
