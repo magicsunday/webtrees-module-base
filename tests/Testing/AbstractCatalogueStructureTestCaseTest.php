@@ -40,12 +40,13 @@ use function sprintf;
 final class AbstractCatalogueStructureTestCaseTest extends TestCase
 {
     /**
-     * Resets the shared directory of the double, so that no test sees the directory of a
-     * previous one.
+     * Resets the shared directory and the plural declaration of the double, so that no test
+     * sees the state of a previous one, also when a check raised an unexpected exception.
      */
     protected function tearDown(): void
     {
-        CatalogueStructureCaseDouble::$directory = '';
+        CatalogueStructureCaseDouble::$directory          = '';
+        CatalogueStructureCaseDouble::$shipsPluralEntries = true;
 
         parent::tearDown();
     }
@@ -333,8 +334,6 @@ final class AbstractCatalogueStructureTestCaseTest extends TestCase
                 }
             }
         }
-
-        CatalogueStructureCaseDouble::$shipsPluralEntries = true;
 
         sort($failures);
 
