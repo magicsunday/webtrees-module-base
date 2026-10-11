@@ -69,6 +69,9 @@
             "MagicSunday\\Webtrees\\ModuleBase\\Test\\": "tests/"
         }
     },
+    "bin": [
+        "bin/resolve-fuzzy"
+    ],
     "scripts": {
         "ci:cgl": [
             "php-cs-fixer fix --config .php-cs-fixer.dist.php --diff --verbose"
