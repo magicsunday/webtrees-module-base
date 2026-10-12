@@ -1,0 +1,28 @@
+# German translations for the fixture.
+# Copyright (C) Rico Sonntag
+msgid ""
+msgstr ""
+"Project-Id-Version: Fixture\n"
+"Report-Msgid-Bugs-To: https://example.invalid/issues\n"
+"POT-Creation-Date: 1970-01-01 00:00+0000\n"
+"PO-Revision-Date: 2026-01-01 00:00+0000\n"
+"Last-Translator: Fixture <fixture@example.invalid>\n"
+"Language-Team: \n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Births · per year"
+msgstr "Geburten · pro Jahr"
+
+msgid "A very long source text that is wrapped over several lines by the gettext tools because it exceeds the line width · with a separator"
+msgstr "Ein sehr langer Quelltext, den die gettext-Werkzeuge über mehrere Zeilen umbrechen, weil er die Zeilenbreite überschreitet · mit einem Trenner"
+
+msgctxt "month"
+msgid "May · short"
+msgstr "Mai · kurz"
+
+msgid "Say \"hi\" · path C:\\x"
+msgstr "Sag \"hi\" · Pfad C:\\x"

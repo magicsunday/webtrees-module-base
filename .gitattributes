@@ -22,3 +22,4 @@
 *.mo                                                  binary
 /tests/fixtures/catalogues/**/*.po                    text eol=lf
 /tests/fixtures/catalogues/crlf-line-endings/**/*.po  -text
+/tests/fixtures/fuzzy/**  text eol=lf

@@ -123,6 +123,20 @@ jobs:
               run: |
                   composer ci:test:php:rector
 
+            # The tests of the catalogue resolver run the gettext tools. Without them
+            # those tests skip themselves, so the step is what makes them run here and
+            # fails when a tool is missing, instead of letting them skip unnoticed.
+            - id: gettext
+              name: Install the gettext tools
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install --yes --no-install-recommends gettext
+
+                  for tool in msgcat msgattrib msgmerge msgfmt; do
+                      command -v "$tool" > /dev/null || { echo "::error::$tool is not installed"; exit 1; }
+                  done
+
             - id: php-unit
               name: PHP Unit Tests
               if: ${{ always() && steps.install.conclusion == 'success' }}

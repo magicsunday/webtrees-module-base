@@ -2,7 +2,7 @@
 # magicsunday/coding-standard (deptrac/layers.yaml; ^3.0: one strict, acyclic order
 # Support < Enum < Model, Configuration < Contract < Repository, Adapter, Service
 # < Facade < Module); this file adds the layers of
-# this package the shared ruleset does not know (Processor, Traits, Testing) and narrows the
+# this package the shared ruleset does not know (Processor, Traits, Testing, Catalogue) and narrows the
 # four shared layers this package keeps as pure leaves (Model, Support, Contract,
 # Module) plus the shared Facade layer, which here may reach Contract only.
 #
@@ -57,6 +57,12 @@ deptrac:
                 -
                     type: directory
                     value: 'src/Testing/.*'
+        -
+            name: Catalogue
+            collectors:
+                -
+                    type: directory
+                    value: 'src/Catalogue/.*'
         -
             name: DataFacade
             collectors:
@@ -117,6 +123,11 @@ deptrac:
         # and the webtrees localization library only, never on the rest of src/.
         Testing:
             - Testing
+
+        # The resolver for the fuzzy entries of the translation catalogues. It reads text and
+        # runs the gettext tools, so it depends on no other src/ code.
+        Catalogue:
+            - Catalogue
 
         # The ModuleCustomTrait helpers drive the release-version check.
         Traits:
