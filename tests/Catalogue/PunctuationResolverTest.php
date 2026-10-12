@@ -188,6 +188,7 @@ final class PunctuationResolverTest extends TestCase
             'ends in a no-break space'               => ['Place ', 'Place', "Ort\u{A0}"],
             'ends in a no-break space and a space'   => ['Place ', 'Place', "Ort\u{A0} "],
             'ends in an escaped tab'                 => ['Place ', 'Place', 'Ort\t'],
+            'ends in an escaped line feed'           => ['Place ', 'Place', 'Ort\n'],
             'two kinds changed at once'              => ['A - B · C', 'A — B – C', 'X - Y · Z'],
             'two vanished one added'                 => ['A - B · C', 'A — B — C', 'X - Y · Z'],
             'one vanished two added'                 => ['A - B - C', 'A — B · C', 'X - Y - Z'],
