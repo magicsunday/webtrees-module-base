@@ -15,9 +15,7 @@ use Closure;
 
 use function basename;
 use function bin2hex;
-use function chgrp;
 use function chmod;
-use function chown;
 use function copy;
 use function dirname;
 use function file_get_contents;
@@ -29,6 +27,8 @@ use function implode;
 use function is_dir;
 use function is_file;
 use function is_resource;
+use function lchgrp;
+use function lchown;
 use function mkdir;
 use function preg_match;
 use function preg_replace_callback;
@@ -351,13 +351,14 @@ final readonly class CatalogueToolchain
                 // The copy belongs to the process that runs this, which is root in a container, so the owner and the
                 // group of the catalogue are put back. Only root can hand a file to another owner, and a user can hand
                 // it to a group it belongs to. Where that is not allowed the copy keeps the owner of the process, as
-                // it always did, so the result of both calls is not checked.
+                // it always did, so the result of both calls is not checked. The calls do not follow a link, because
+                // someone who can write the directory may swap the copy for a link between the copy and these calls.
                 if ($owner !== false) {
-                    chown($staging, $owner);
+                    lchown($staging, $owner);
                 }
 
                 if ($group !== false) {
-                    chgrp($staging, $group);
+                    lchgrp($staging, $group);
                 }
 
                 return rename($staging, $target);
