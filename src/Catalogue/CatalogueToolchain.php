@@ -15,11 +15,15 @@ use Closure;
 
 use function basename;
 use function bin2hex;
+use function chgrp;
 use function chmod;
+use function chown;
 use function copy;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function filegroup;
+use function fileowner;
 use function fileperms;
 use function implode;
 use function is_dir;
@@ -331,12 +335,33 @@ final readonly class CatalogueToolchain
         // chosen cannot make the copy write through it.
         $staging = dirname($target) . '/.' . basename($target) . '.' . bin2hex(random_bytes(6)) . '.resolving';
 
-        $mode = $this->silently(static fn (): int|false => fileperms($target));
+        $mode  = $this->silently(static fn (): int|false => fileperms($target));
+        $owner = $this->silently(static fn (): int|false => fileowner($target));
+        $group = $this->silently(static fn (): int|false => filegroup($target));
 
         $written = $this->silently(
-            static fn (): bool => copy($source, $staging)
-                && (($mode === false) || chmod($staging, $mode & 0777))
-                && rename($staging, $target)
+            static function () use ($source, $staging, $target, $mode, $owner, $group): bool {
+                if (
+                    !copy($source, $staging)
+                    || (($mode !== false) && !chmod($staging, $mode & 0777))
+                ) {
+                    return false;
+                }
+
+                // The copy belongs to the process that runs this, which is root in a container, so the owner and the
+                // group of the catalogue are put back. Only root can hand a file to another owner, and a user can hand
+                // it to a group it belongs to. Where that is not allowed the copy keeps the owner of the process, as
+                // it always did, so the result of both calls is not checked.
+                if ($owner !== false) {
+                    chown($staging, $owner);
+                }
+
+                if ($group !== false) {
+                    chgrp($staging, $group);
+                }
+
+                return rename($staging, $target);
+            }
         );
 
         if (!$written) {
