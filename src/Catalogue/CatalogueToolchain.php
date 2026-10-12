@@ -236,8 +236,8 @@ final readonly class CatalogueToolchain
      * Reads a catalogue in the canonical layout of gettext.
      *
      * Every layout gettext reads comes out the same: the flags of an entry on one line, one keyword per line without
-     * indentation, a literal on one line, and one blank line between the entries. What reads the text afterwards
-     * has to know that one layout only.
+     * indentation, a literal that is not wrapped by width (it still starts a new line after an embedded line feed),
+     * and one blank line between the entries. What reads the text afterwards has to know that one layout only.
      *
      * @param string $catalogue The path of the messages.po to read
      *
