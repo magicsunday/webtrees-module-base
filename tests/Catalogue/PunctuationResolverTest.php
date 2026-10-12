@@ -261,6 +261,27 @@ final class PunctuationResolverTest extends TestCase
     }
 
     /**
+     * Two entries with the same source text under different contexts are told apart in the lists of entries a person has
+     * to look at.
+     *
+     * @throws CatalogueLayoutException
+     */
+    #[Test]
+    public function namesTheContextOfAnEntryInTheLists(): void
+    {
+        $resolution = (new PunctuationResolver())->resolve(
+            $this->catalogue(
+                "#, fuzzy\n#| msgid \"Deaths per decade\"\nmsgctxt \"chart\"\nmsgid \"Deaths per century\"\nmsgstr \"A\"",
+                "#, fuzzy\n#| msgid \"Deaths per decade\"\nmsgctxt \"table\"\nmsgid \"Deaths per century\"\nmsgstr \"B\"",
+                "#, fuzzy\n#| msgctxt \"chart\"\n#| msgid \"Place \"\nmsgctxt \"chart\"\nmsgid \"Place\"\nmsgstr \"Ort \"",
+            ),
+        );
+
+        self::assertSame(['chart|Deaths per century', 'table|Deaths per century'], $resolution->unresolved);
+        self::assertSame(['chart|Place'], $resolution->rewritten);
+    }
+
+    /**
      * A very long run of no-break spaces in a translation does not stall the check of its trailing space.
      *
      * @throws CatalogueLayoutException
@@ -497,7 +518,7 @@ final class PunctuationResolverTest extends TestCase
         );
 
         self::assertSame(0, $resolution->resolved);
-        self::assertSame(['May · x'], $resolution->unresolved);
+        self::assertSame(['verb|May · x'], $resolution->unresolved);
     }
 
     /**
@@ -513,7 +534,7 @@ final class PunctuationResolverTest extends TestCase
         );
 
         self::assertSame(0, $resolution->resolved);
-        self::assertSame(['May · x'], $resolution->unresolved);
+        self::assertSame(['month|May · x'], $resolution->unresolved);
     }
 
     /**
@@ -864,7 +885,7 @@ final class PunctuationResolverTest extends TestCase
         );
 
         self::assertSame(0, $resolution->resolved);
-        self::assertSame([''], $resolution->unresolved);
+        self::assertSame(['a|'], $resolution->unresolved);
     }
 
     /**

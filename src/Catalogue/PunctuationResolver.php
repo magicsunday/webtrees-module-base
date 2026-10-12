@@ -131,16 +131,17 @@ final readonly class PunctuationResolver
 
             if ($fuzzy) {
                 $replacement = $this->resolveEntry($entry->fields, $entry->comments, $entry->flags);
+                $name        = array_key_exists('msgctxt', $entry->fields) ? $entry->fields['msgctxt'] . '|' . $msgid : $msgid;
 
                 if ($replacement instanceof ResolvedEntry) {
                     $resolved[]  = $replacement->text;
                     $translation = $replacement->translation;
 
                     if ($replacement->rewritten) {
-                        $rewritten[] = $msgid;
+                        $rewritten[] = $name;
                     }
                 } else {
-                    $unresolved[] = $msgid;
+                    $unresolved[] = $name;
                 }
             }
 
