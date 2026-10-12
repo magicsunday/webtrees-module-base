@@ -207,8 +207,7 @@ final readonly class FuzzyResolverCommand
     /**
      * Puts source texts in a fixed order, because the last merge orders the entries like the template.
      *
-     * @param list<string> $sources The source texts as written in the catalogue, each with its context and a bar in
-     *                              front when the entry has one
+     * @param list<string> $sources The source texts as written in the catalogue
      *
      * @return list<string> The same source texts, sorted
      */
