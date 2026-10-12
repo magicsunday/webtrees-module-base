@@ -349,10 +349,9 @@ final readonly class CatalogueToolchain
                 }
 
                 // The copy belongs to the process that runs this, which is root in a container, so the owner and the
-                // group of the catalogue are put back. Only root can hand a file to another owner, and a user can hand
-                // it to a group it belongs to. Where that is not allowed the copy keeps the owner of the process, as
-                // it always did, so the result of both calls is not checked. The calls do not follow a link, because
-                // someone who can write the directory may swap the copy for a link between the copy and these calls.
+                // group of the catalogue are put back. Where the process may not set them, the copy keeps its own, so
+                // the result of both calls is not checked. The calls do not follow a link, because someone who can
+                // write the directory may swap the copy for a link between the copy and these calls.
                 if ($owner !== false) {
                     lchown($staging, $owner);
                 }
