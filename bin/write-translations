@@ -1,0 +1,45 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * This file is part of the package magicsunday/webtrees-module-base.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+use MagicSunday\Webtrees\ModuleBase\Catalogue\WriteTranslationsCommand;
+
+// Composer hands the path of its autoloader to a script it installs as a binary. A script that is
+// started by its path finds the autoloader of the package that holds it, or of the one it is installed in.
+$loaded = false;
+
+foreach ([$GLOBALS['_composer_autoload_path'] ?? null, __DIR__ . '/../../../autoload.php', __DIR__ . '/../.build/vendor/autoload.php'] as $autoload) {
+    if (
+        ($autoload !== null)
+        && is_file($autoload)
+    ) {
+        require $autoload;
+
+        $loaded = true;
+
+        break;
+    }
+}
+
+if (!$loaded) {
+    fwrite(STDERR, "  ✘ No Composer autoloader found, run composer install first.\n");
+
+    exit(1);
+}
+
+exit(
+    (new WriteTranslationsCommand())->run(
+        array_slice($argv, 1),
+        static function (string $line): void {
+            fwrite(STDOUT, $line . "\n");
+        },
+    )
+);

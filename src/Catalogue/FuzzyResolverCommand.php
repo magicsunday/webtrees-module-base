@@ -18,9 +18,6 @@ use function array_slice;
 use function basename;
 use function count;
 use function dirname;
-use function is_file;
-use function is_link;
-use function is_readable;
 use function mb_strimwidth;
 use function sort;
 use function sprintf;
@@ -73,7 +70,7 @@ final readonly class FuzzyResolverCommand
         $catalogues = array_slice($arguments, 1);
 
         // The template is read by every catalogue, so a template that is missing or unreadable fails the whole run.
-        $unreadable = $this->unreadable($template);
+        $unreadable = CatalogueFile::unreadable($template);
 
         if ($unreadable !== null) {
             $write(sprintf('  ✘ %s %s', PrintableText::line($template), $unreadable));
@@ -90,7 +87,7 @@ final readonly class FuzzyResolverCommand
 
         foreach ($catalogues as $catalogue) {
             $declined = false;
-            $unusable = $this->unusable($catalogue);
+            $unusable = CatalogueFile::unusable($catalogue);
 
             if ($unusable !== null) {
                 $write(sprintf('  ✘ %s %s', PrintableText::line($catalogue), $unusable));
@@ -219,35 +216,6 @@ final readonly class FuzzyResolverCommand
         sort($sources);
 
         return $sources;
-    }
-
-    /**
-     * Tells why a catalogue cannot be processed before a tool looks at it.
-     *
-     * @param string $catalogue The path of the catalogue
-     *
-     * @return string|null The rest of the sentence that names the catalogue, null when it can be processed
-     */
-    private function unusable(string $catalogue): ?string
-    {
-        return $this->unreadable($catalogue)
-            ?? (is_link($catalogue) ? 'is a link, name the file it points to' : null);
-    }
-
-    /**
-     * Tells why a file cannot be read before a tool looks at it.
-     *
-     * @param string $path The path of the file
-     *
-     * @return string|null The rest of the sentence that names the file, null when it can be read
-     */
-    private function unreadable(string $path): ?string
-    {
-        return match (true) {
-            !is_file($path)     => 'not found',
-            !is_readable($path) => 'is not readable',
-            default             => null,
-        };
     }
 
     /**

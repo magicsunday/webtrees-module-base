@@ -70,7 +70,8 @@
         }
     },
     "bin": [
-        "bin/resolve-fuzzy"
+        "bin/resolve-fuzzy",
+        "bin/write-translations"
     ],
     "scripts": {
         "ci:cgl": [

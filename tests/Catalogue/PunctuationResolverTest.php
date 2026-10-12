@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Catalogue;
 
+use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueBlockParser;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueLayoutException;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\ParsedEntry;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\PrintableText;
@@ -35,6 +36,7 @@ use function implode;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(PunctuationResolver::class)]
+#[UsesClass(CatalogueBlockParser::class)]
 #[UsesClass(CatalogueLayoutException::class)]
 #[UsesClass(ParsedEntry::class)]
 #[UsesClass(ResolvedEntry::class)]
