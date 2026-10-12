@@ -124,8 +124,8 @@ deptrac:
         Testing:
             - Testing
 
-        # The resolver for the fuzzy entries of the translation catalogues. It reads text and
-        # runs the gettext tools, so it depends on no other src/ code.
+        # The resolver for the fuzzy entries and the writer for the translations of the catalogues. Both
+        # read text and run the gettext tools, so the layer depends on no other src/ code.
         Catalogue:
             - Catalogue
 

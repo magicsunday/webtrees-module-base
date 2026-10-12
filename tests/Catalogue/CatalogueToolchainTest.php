@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Catalogue;
 
+use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueBlockParser;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueLayoutException;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueNotMergedException;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueToolchain;
@@ -62,6 +63,7 @@ use function symlink;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(CatalogueToolchain::class)]
+#[UsesClass(CatalogueBlockParser::class)]
 #[UsesClass(PrintableText::class)]
 #[UsesClass(PunctuationResolver::class)]
 #[UsesClass(ParsedEntry::class)]

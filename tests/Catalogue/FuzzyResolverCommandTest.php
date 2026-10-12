@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Catalogue;
 
 use Closure;
+use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueBlockParser;
+use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueFile;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueLayoutException;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueToolchain;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueToolException;
@@ -61,6 +63,8 @@ use function symlink;
  */
 #[CoversClass(FuzzyResolverCommand::class)]
 #[UsesClass(PunctuationResolver::class)]
+#[UsesClass(CatalogueBlockParser::class)]
+#[UsesClass(CatalogueFile::class)]
 #[UsesClass(CatalogueLayoutException::class)]
 #[UsesClass(ParsedEntry::class)]
 #[UsesClass(ResolvedEntry::class)]
