@@ -26,9 +26,10 @@ final readonly class Resolution
      * @param string       $selection  The resolved entries alone, without the header and the comments in front of it,
      *                                 which the tools use to pick the entries to touch
      * @param int          $resolved   The number of entries the overlay holds
-     * @param list<string> $unresolved The source texts of the fuzzy entries that stay fuzzy, as written in the catalogue
+     * @param list<string> $unresolved The source texts of the fuzzy entries that stay fuzzy, as written in the catalogue,
+     *                                 each with its context and a bar in front when the entry has one
      * @param list<string> $rewritten  The source texts of the resolved entries whose translation was changed, as written in
-     *                                 the catalogue
+     *                                 the catalogue, each with its context and a bar in front when the entry has one
      * @param list<string> $live       The identity of every entry that is not obsolete and not the header, made of its
      *                                 context and its source texts, as written in the catalogue
      */

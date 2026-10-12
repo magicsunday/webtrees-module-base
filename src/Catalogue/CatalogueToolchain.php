@@ -20,11 +20,15 @@ use function copy;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function filegroup;
+use function fileowner;
 use function fileperms;
 use function implode;
 use function is_dir;
 use function is_file;
 use function is_resource;
+use function lchgrp;
+use function lchown;
 use function mkdir;
 use function preg_match;
 use function preg_replace_callback;
@@ -232,8 +236,8 @@ final readonly class CatalogueToolchain
      * Reads a catalogue in the canonical layout of gettext.
      *
      * Every layout gettext reads comes out the same: the flags of an entry on one line, one keyword per line without
-     * indentation, a literal on one line, and one blank line between the entries. What reads the text afterwards
-     * has to know that one layout only.
+     * indentation, a literal that is not wrapped by width (it still starts a new line after an embedded line feed),
+     * and one blank line between the entries. What reads the text afterwards has to know that one layout only.
      *
      * @param string $catalogue The path of the messages.po to read
      *
@@ -331,12 +335,33 @@ final readonly class CatalogueToolchain
         // chosen cannot make the copy write through it.
         $staging = dirname($target) . '/.' . basename($target) . '.' . bin2hex(random_bytes(6)) . '.resolving';
 
-        $mode = $this->silently(static fn (): int|false => fileperms($target));
+        $mode  = $this->silently(static fn (): int|false => fileperms($target));
+        $owner = $this->silently(static fn (): int|false => fileowner($target));
+        $group = $this->silently(static fn (): int|false => filegroup($target));
 
         $written = $this->silently(
-            static fn (): bool => copy($source, $staging)
-                && (($mode === false) || chmod($staging, $mode & 0777))
-                && rename($staging, $target)
+            static function () use ($source, $staging, $target, $mode, $owner, $group): bool {
+                if (
+                    !copy($source, $staging)
+                    || (($mode !== false) && !chmod($staging, $mode & 0777))
+                ) {
+                    return false;
+                }
+
+                // The copy belongs to the process that runs this, which is root in a container, so the owner and the
+                // group of the catalogue are put back. Where the process may not set them, the copy keeps its own, so
+                // the result of both calls is not checked. The calls do not follow a link, because someone who can
+                // write the directory may swap the copy for a link between the copy and these calls.
+                if ($owner !== false) {
+                    lchown($staging, $owner);
+                }
+
+                if ($group !== false) {
+                    lchgrp($staging, $group);
+                }
+
+                return rename($staging, $target);
+            }
         );
 
         if (!$written) {

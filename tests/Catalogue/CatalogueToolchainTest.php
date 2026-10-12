@@ -32,18 +32,24 @@ use PHPUnit\Framework\TestCase;
 use function array_diff;
 use function array_values;
 use function chdir;
+use function chgrp;
 use function chmod;
+use function chown;
 use function clearstatcache;
 use function copy;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function filegroup;
+use function fileowner;
 use function fileperms;
+use function function_exists;
 use function getcwd;
 use function getenv;
 use function is_link;
 use function is_writable;
 use function mkdir;
+use function posix_geteuid;
 use function preg_match_all;
 use function putenv;
 use function restore_error_handler;
@@ -902,6 +908,36 @@ final class CatalogueToolchainTest extends TestCase
 
         self::assertSame([], $warnings);
         self::assertSame([], array_values(array_diff($this->entriesOf($directory), ['messages.po'])));
+    }
+
+    /**
+     * A rewritten catalogue keeps its owner and group, so a run as root in a container does not leave a root-owned file
+     * behind. Changing the owner of a file is only possible as root, so the test is skipped for any other user.
+     *
+     * @throws CatalogueToolException
+     * @throws CatalogueLayoutException
+     */
+    #[Test]
+    public function keepsTheOwnerAndTheGroupOfTheCatalogue(): void
+    {
+        $this->requireTools();
+
+        if (
+            !function_exists('posix_geteuid')
+            || (posix_geteuid() !== 0)
+        ) {
+            self::markTestSkipped('Changing the owner of a file needs root.');
+        }
+
+        chown($this->workspace->catalogue, 4242);
+        chgrp($this->workspace->catalogue, 4343);
+
+        $this->apply();
+
+        clearstatcache();
+
+        self::assertSame(4242, fileowner($this->workspace->catalogue));
+        self::assertSame(4343, filegroup($this->workspace->catalogue));
     }
 
     /**

@@ -235,7 +235,8 @@ final readonly class FuzzyResolverCommand
     /**
      * Lists source texts a person has to look at, up to a limit per catalogue.
      *
-     * @param list<string>         $sources The source texts as written in the catalogue
+     * @param list<string>         $sources The source texts as written in the catalogue, each with its context and a
+     *                                      bar in front when the entry has one
      * @param string               $prefix  The marker and label in front of every listed text
      * @param Closure(string):void $write   Receives every line of the report
      */
