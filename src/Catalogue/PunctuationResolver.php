@@ -27,7 +27,10 @@ use function preg_replace;
 use function sort;
 use function str_contains;
 use function str_replace;
+use function substr;
 use function trim;
+
+use const PREG_OFFSET_CAPTURE;
 
 /**
  * Finds the fuzzy catalogue entries whose source text changed in punctuation or spacing only.
@@ -415,12 +418,35 @@ final readonly class PunctuationResolver
         // so the translation is not made to follow a change of the space at that edge of the source text.
         if (
             (($previousLeading !== $currentLeading) && (preg_match('/\A\s*(?:\\\\[tnrfv]|(?!\x{20})\s)/u', $translation) === 1))
-            || (($previousTrailing !== $currentTrailing) && (preg_match('/(?:(?<!\\\\)(?:\\\\\\\\)*+\\\\[tnrfv]|(?!\x{20})\s)\s*\z/u', $translation) === 1))
+            || (($previousTrailing !== $currentTrailing) && $this->endsInOddSpace($translation))
         ) {
             return null;
         }
 
         return $leading . (preg_replace('/\A\s+|\s+\z/', '', $translation) ?? $translation) . $trailing;
+    }
+
+    /**
+     * Tells whether a text ends in an escaped tab or line feed, or in a space that is no plain one.
+     *
+     * The run of space at the end starts behind a character that is no space, so a long run is read once. A pattern
+     * that may start anywhere inside a run reads the rest of it again for every start.
+     *
+     * @param string $text The text to check
+     *
+     * @return bool True when the end of the text is such an escape or space, followed by nothing but space
+     */
+    private function endsInOddSpace(string $text): bool
+    {
+        if (preg_match('/(?<!\s)\s*+\z/u', $text, $run, PREG_OFFSET_CAPTURE) !== 1) {
+            return false;
+        }
+
+        if (preg_match('/(?!\x{20})\s/u', $run[0][0]) === 1) {
+            return true;
+        }
+
+        return preg_match('/(?<!\\\\)(?:\\\\\\\\)*+\\\\[tnrfv]\z/', substr($text, 0, $run[0][1])) === 1;
     }
 
     /**
