@@ -47,6 +47,23 @@ guzzle CVEs still surface in `composer audit`, and this package's own direct
 dependencies stay subject to review as usual. `config` applies only to the root
 package, so consumers are unaffected.
 
+### Convention for new advisory ignores
+
+Before adding an entry, check three things. Is the package a direct dependency
+(`composer why`)? Does a public fix exist? Does an exact pin of webtrees alone block that
+fix (`composer why-not <package> <fixed version>`)? Update instead of ignoring whenever
+the fix is reachable.
+
+- An advisory that webtrees' exact pin keeps unresolved is ignored by its **advisory ID**
+  under `config.policy.advisories.ignore-id`, so later advisories on the same package
+  keep blocking. The older package-name entries under `ignore` stay as they are until a
+  separate change aligns them.
+- The reason starts with a prefix that says why the entry exists, followed by the CVE and
+  the condition for removing it. `UPSTREAM-PINNED:` marks a fix that exists publicly but
+  is held back by the exact pin of webtrees. `ACCEPTED:` is reserved for a conscious risk
+  acceptance with a low severity and no attack path in this package.
+- Remove the entry once the supported webtrees range no longer pins an affected version.
+
 ## Build & tests
 - **`composer ci:test` MUST run before every commit** — catches phplint, PHPStan (level max), the phpat subject-liveness check, Rector, PHPUnit, PHP-CS-Fixer, the coding-standard template lockstep and Deptrac issues before they reach GitHub CI.
 - Individual checks: `composer ci:test:php:phpstan`, `composer ci:test:php:unit`, `composer ci:test:php:cgl`, `composer ci:test:php:rector`, `composer ci:test:php:lint`, `composer ci:test:php:psr4`, `composer ci:test:php:phpat-subjects`, `composer ci:test:php:templates`, `composer ci:test:php:deptrac`.
