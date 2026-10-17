@@ -19,49 +19,18 @@ Substitute `composer install`, `composer update` or `composer ci:cgl` for the la
 command as needed. CI does not use Docker at all — the workflow installs PHP
 directly via setup-php.
 
-### Why `config.policy.advisories.ignore` lists `guzzlehttp/guzzle`
+### Why the advisories of the webtrees pins are ignored
 
-`composer.json` carries no comments, so the rationale lives here — and the entry
-mirrors the identical one in the chart modules and webtrees-statistics.
+This package requires `fisharebest/webtrees` for its API, to develop and test against and at runtime to drive on the host install (for example `Module/VersionInformation`'s release-version check runs on webtrees' bundled `guzzlehttp/guzzle`). It is a **library consumed into** an administrator's own webtrees install, and the release artifact ships this package's `src/` alone, so it neither vendors nor distributes webtrees' transitive dependencies. They are exact-pinned by each webtrees release, not chosen by us, not patchable by us, and upgraded by the administrator's webtrees, not by this package.
 
-This package requires `fisharebest/webtrees` for its API — to develop and test
-against, and at runtime to drive on the host install (for example
-`Module/VersionInformation`'s release-version check runs on webtrees' bundled
-`guzzlehttp/guzzle`). It is a **library consumed into** an administrator's own
-webtrees install, and the release artifact ships this package's `src/` alone, so
-it neither vendors nor distributes webtrees' transitive dependencies.
-`guzzlehttp/guzzle` is one of those: exact-pinned by each webtrees release, not
-chosen by us, not patchable by us, and upgraded by the administrator's webtrees —
-not by this package. This package declares no direct `guzzle` constraint, so the
-host webtrees governs its version even though this package now drives it at
-runtime.
-
-Composer's advisory policy blocks *resolution*, not merely the `composer audit`
-report (`--no-audit` / `COMPOSER_NO_AUDIT` suppress only the report). So whenever
-a pinned guzzle picks up an advisory, every install and CI run of this package
-reds for a vulnerability that cannot reach anyone through us.
-
-The ignore is deliberately **scoped to that one package** rather than disabling
-the policy wholesale: advisories on any other package still block resolution,
-guzzle CVEs still surface in `composer audit`, and this package's own direct
-dependencies stay subject to review as usual. `config` applies only to the root
-package, so consumers are unaffected.
+Composer's advisory policy blocks *resolution*, not merely the `composer audit` report (`--no-audit` / `COMPOSER_NO_AUDIT` suppress only the report). So whenever a pinned dependency picks up an advisory, every install and CI run of this package fails for a vulnerability that cannot reach anyone through us. That concerns the resolution on the developer side only. Whether a host is exposed at runtime, as with Guzzle on the update-check path, depends on the host's webtrees install and is not decided by these entries. `config` applies only to the root package, so consumers are unaffected.
 
 ### Convention for new advisory ignores
 
-Before adding an entry, check three things. Is the package a direct dependency
-(`composer why`)? Does a public fix exist? Does an exact pin of webtrees alone block that
-fix (`composer why-not <package> <fixed version>`)? Update instead of ignoring whenever
-the fix is reachable.
+Before adding an entry, check the following. Is the package a direct dependency (`composer why`)? Does a public fix exist? Does an exact pin of webtrees alone block that fix (`composer why-not <package> <fixed version>`)? Update instead of ignoring whenever the fix is reachable.
 
-- An advisory that webtrees' exact pin keeps unresolved is ignored by its **advisory ID**
-  under `config.policy.advisories.ignore-id`, so later advisories on the same package
-  keep blocking. The older package-name entries under `ignore` stay as they are until a
-  separate change aligns them.
-- The reason starts with a prefix that says why the entry exists, followed by the CVE and
-  the condition for removing it. `UPSTREAM-PINNED:` marks a fix that exists publicly but
-  is held back by the exact pin of webtrees. `ACCEPTED:` is reserved for a conscious risk
-  acceptance with a low severity and no attack path in this package.
+- An advisory that webtrees' exact pin keeps unresolved is ignored by its **advisory ID** under `config.policy.advisories.ignore-id`, so later advisories on the same package keep blocking. Never ignore by package name under `ignore`, because that also hides every later advisory of the package.
+- The reason starts with a prefix that says why the entry exists, followed by the CVE and the condition for removing it. `UPSTREAM-PINNED:` marks a fix that exists publicly but is held back by the exact pin of webtrees. `ACCEPTED:` is reserved for a conscious risk acceptance with a low severity and no attack path in this package.
 - Remove the entry once the supported webtrees range no longer pins an affected version.
 
 ## Build & tests
