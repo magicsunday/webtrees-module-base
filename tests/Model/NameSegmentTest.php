@@ -67,8 +67,8 @@ final class NameSegmentTest extends TestCase
     /**
      * The label is kept as given and the kind is written as its backing value.
      *
-     * @param NameSegment $segment
-     * @param string      $expected
+     * @param NameSegment $segment  The segment to serialise
+     * @param string      $expected The expected JSON
      *
      * @return void
      */

@@ -381,10 +381,9 @@ final class NameProcessor
      * Returns the name of the individual as an ordered list of drawable segments.
      *
      * The list follows the display order. The given-name tokens come first, in the
-     * order of the formatted name and including the particles webtrees renders in
-     * the given-name area. The quoted nickname follows the last given name, or the
-     * surnames when the name has no given name, exactly where
-     * {@see getFullNameWithNickname()} puts it. The surname tokens follow, and the
+     * order of the formatted name and including the particles that sit in the
+     * given-name area. The quoted nickname follows the last given name, or the
+     * surnames when the name has no given name. The surname tokens follow, and the
      * bracketed married surname closes the list.
      *
      * @param bool            $withNickname       TRUE to include the GEDCOM nickname
