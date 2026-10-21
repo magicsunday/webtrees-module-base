@@ -25,8 +25,8 @@ use JsonSerializable;
 final readonly class NameSegment implements JsonSerializable
 {
     /**
-     * @param string          $label       The text to draw, a single name token (a nickname carries its quotes,
-     *                                     a married surname its brackets)
+     * @param string          $label       The text to draw, a name token or the whole nickname (a nickname
+     *                                     carries its quotes, a married surname its brackets)
      * @param NameSegmentKind $kind        The role of the segment inside the name
      * @param bool            $isPreferred TRUE if webtrees marks the token as the preferred given name
      */

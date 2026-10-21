@@ -26,7 +26,7 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * Pins the serialised shape of {@see NodeData}. The JSON contract to the
- * front end is part of the public surface: the chart modules read these keys
+ * front end is part of the public surface. The chart modules read these keys
  * in this order, so a change here is a deliberate contract change.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>

@@ -647,6 +647,26 @@ final class NameProcessorTest extends TestCase
                 '',
                 [['Madonna', 'given', false]],
             ],
+            'a suffix after the surname is a surname segment' => [
+                '<span class="NAME" dir="auto" translate="no">Anna <span class="SURN">Schmidt</span> Jr.</span>',
+                '',
+                [['Anna', 'given', false], ['Schmidt', 'surname', false], ['Jr.', 'surname', false]],
+            ],
+            'every token of a starred name is preferred' => [
+                '<span class="NAME" dir="auto" translate="no"><span class="starredname">Anna Maria</span> Eva <span class="SURN">Schmidt</span></span>',
+                '',
+                [
+                    ['Anna', 'given', true],
+                    ['Maria', 'given', true],
+                    ['Eva', 'given', false],
+                    ['Schmidt', 'surname', false],
+                ],
+            ],
+            'a nickname without any name part stands alone' => [
+                '<span class="NAME" dir="auto" translate="no"></span>',
+                'Jonny',
+                [['"Jonny"', 'nickname', false]],
+            ],
             'korean name' => [
                 '<span class="NAME" dir="auto" translate="no">성욱 <span class="SURN">박</span></span>',
                 '',
