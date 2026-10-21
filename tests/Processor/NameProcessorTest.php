@@ -14,10 +14,13 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Individual;
 use Illuminate\Support\Collection;
+use MagicSunday\Webtrees\ModuleBase\Model\NameSegment;
+use MagicSunday\Webtrees\ModuleBase\Model\NameSegmentKind;
 use MagicSunday\Webtrees\ModuleBase\Processor\NameProcessor;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_map;
@@ -30,6 +33,8 @@ use function array_map;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(NameProcessor::class)]
+#[UsesClass(NameSegment::class)]
+#[UsesClass(NameSegmentKind::class)]
 final class NameProcessorTest extends TestCase
 {
     /**
@@ -597,5 +602,296 @@ final class NameProcessorTest extends TestCase
         );
 
         self::assertSame('Jonny', (new NameProcessor($individual))->getNickname());
+    }
+
+    /**
+     * @return array<string, array{string, string, list<array{string, string, bool}>}>
+     */
+    public static function nameSegmentDataProvider(): array
+    {
+        // [ formatted name, GEDCOM nickname, expected => [ label, kind, preferred ] ]
+        return [
+            'given name and surname' => [
+                '<span class="NAME" dir="auto" translate="no">Jörg <span class="SURN">Müller</span></span>',
+                '',
+                [['Jörg', 'given', false], ['Müller', 'surname', false]],
+            ],
+            'starred name marks only its own token' => [
+                '<span class="NAME" dir="auto" translate="no">José <span class="starredname">Antonio</span> Carlo <span class="SURN">Gómez</span> <span class="SURN">Iglesias</span></span>',
+                '',
+                [
+                    ['José', 'given', false],
+                    ['Antonio', 'given', true],
+                    ['Carlo', 'given', false],
+                    ['Gómez', 'surname', false],
+                    ['Iglesias', 'surname', false],
+                ],
+            ],
+            'surname particle stays in the given-name area' => [
+                '<span class="NAME" dir="auto" translate="no">Friedrich von <span class="SURN">Berg</span></span>',
+                '',
+                [['Friedrich', 'given', false], ['von', 'given', false], ['Berg', 'surname', false]],
+            ],
+            'a repeated token keeps its own role and preferred mark' => [
+                '<span class="NAME" dir="auto" translate="no">Max <span class="starredname">Max</span> <span class="SURN">Max</span></span>',
+                '',
+                [['Max', 'given', false], ['Max', 'given', true], ['Max', 'surname', false]],
+            ],
+            'surname only' => [
+                '<span class="NAME" dir="auto" translate="no"><span class="SURN">Anonymous</span></span>',
+                '',
+                [['Anonymous', 'surname', false]],
+            ],
+            'mononym has no surname segment' => [
+                '<span class="NAME" dir="auto" translate="no">Madonna</span>',
+                '',
+                [['Madonna', 'given', false]],
+            ],
+            'korean name' => [
+                '<span class="NAME" dir="auto" translate="no">성욱 <span class="SURN">박</span></span>',
+                '',
+                [['성욱', 'given', false], ['박', 'surname', false]],
+            ],
+            'nickname follows the last given name' => [
+                '<span class="NAME" dir="auto" translate="no">Friedrich Wilhelm von <span class="SURN">Berg</span></span>',
+                'Fritz',
+                [
+                    ['Friedrich', 'given', false],
+                    ['Wilhelm', 'given', false],
+                    ['von', 'given', false],
+                    ['"Fritz"', 'nickname', false],
+                    ['Berg', 'surname', false],
+                ],
+            ],
+            'nickname follows the surnames when there is no given name' => [
+                '<span class="NAME" dir="auto" translate="no"><span class="SURN">Anonymous</span></span>',
+                'Jonny',
+                [['Anonymous', 'surname', false], ['"Jonny"', 'nickname', false]],
+            ],
+            'an inline nickname element is not read as a given name' => [
+                '<span class="NAME" dir="auto" translate="no">Max <q class="wt-nickname">Mäxchen</q> <span class="starredname">Peter</span> <span class="SURN">Mustermann</span></span>',
+                '',
+                [['Max', 'given', false], ['Peter', 'given', true], ['Mustermann', 'surname', false]],
+            ],
+        ];
+    }
+
+    /**
+     * Tests that the segments follow the display order and carry their role.
+     *
+     * @param string                            $fullNameHtml
+     * @param string                            $nick
+     * @param list<array{string, string, bool}> $expected
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('nameSegmentDataProvider')]
+    public function reportsTheNameAsOrderedSegments(string $fullNameHtml, string $nick, array $expected): void
+    {
+        $segments = $this->nameProcessorWithNickname($fullNameHtml, $fullNameHtml, $nick)
+            ->getNameSegments($nick !== '');
+
+        self::assertSame(
+            $expected,
+            array_map(
+                static fn (NameSegment $segment): array => [$segment->label, $segment->kind->value, $segment->isPreferred],
+                $segments
+            )
+        );
+    }
+
+    /**
+     * Without the nickname option the GEDCOM nickname stays out of the list.
+     *
+     * @return void
+     */
+    #[Test]
+    public function leavesTheNicknameOutUnlessAskedFor(): void
+    {
+        $processor = $this->nameProcessorWithNickname(
+            '<span class="NAME" dir="auto" translate="no">John <span class="SURN">Doe</span></span>',
+            'John Doe',
+            'Jonny'
+        );
+
+        self::assertSame(
+            ['John', 'Doe'],
+            array_map(static fn (NameSegment $segment): string => $segment->label, $processor->getNameSegments())
+        );
+    }
+
+    /**
+     * The married surname closes the list as one bracketed segment, after the
+     * nickname position, and only when a married name record exists.
+     *
+     * @return void
+     */
+    #[Test]
+    public function appendsTheMarriedSurnameInBrackets(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getAllNames')->willReturn([
+            [
+                'full'   => '<span class="NAME" dir="auto" translate="no">Anna <span class="SURN">Schmidt</span></span>',
+                'fullNN' => 'Anna Schmidt',
+                'type'   => 'BIRT',
+                'surn'   => 'Schmidt',
+                'givn'   => 'Anna',
+                'sort'   => '',
+            ],
+            [
+                'full'   => '',
+                'fullNN' => '',
+                'type'   => '_MARNM',
+                'surn'   => 'Müller Meier',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+        ]);
+        $individual->method('getPrimaryName')->willReturn(0);
+
+        $processor = new NameProcessor($individual);
+        $married   = $processor->getNameSegments(false, true);
+
+        self::assertSame(
+            ['Anna', 'Schmidt', '(Müller Meier)'],
+            array_map(static fn (NameSegment $segment): string => $segment->label, $married)
+        );
+        self::assertSame(NameSegmentKind::Married, $married[2]->kind);
+        self::assertSame(
+            ['Anna', 'Schmidt'],
+            array_map(static fn (NameSegment $segment): string => $segment->label, $processor->getNameSegments())
+        );
+    }
+
+    /**
+     * A name without a married name record gets no married segment, even when asked for.
+     *
+     * @return void
+     */
+    #[Test]
+    public function omitsTheMarriedSegmentWithoutAMarriedNameRecord(): void
+    {
+        $segments = $this->nameProcessorFor(
+            '<span class="NAME" dir="auto" translate="no">Anna <span class="SURN">Schmidt</span></span>'
+        )->getNameSegments(false, true);
+
+        self::assertSame(
+            ['Anna', 'Schmidt'],
+            array_map(static fn (NameSegment $segment): string => $segment->label, $segments),
+            'given name and surname only, no married segment'
+        );
+    }
+
+    /**
+     * Builds a processor for a woman with a birth name and two married names, so the spouse
+     * decides which married surname the segment list closes with.
+     *
+     * @return NameProcessor
+     */
+    private function nameProcessorWithTwoMarriedNames(): NameProcessor
+    {
+        $individual = self::createStub(Individual::class);
+        $nameFact   = self::createStub(Fact::class);
+        $nameFact->method('attribute')->willReturnMap([
+            ['TYPE', ''],
+            ['NICK', 'Annie'],
+        ]);
+        $individual->method('facts')->willReturn(new Collection([$nameFact]));
+        $individual->method('getAllNames')->willReturn([
+            [
+                'full'   => '<span class="NAME" dir="auto" translate="no">Anna <span class="SURN">Schmidt</span></span>',
+                'fullNN' => 'Anna Schmidt',
+                'type'   => 'BIRT',
+                'surn'   => 'Schmidt',
+                'givn'   => 'Anna',
+                'sort'   => '',
+            ],
+            [
+                'full'   => '',
+                'fullNN' => '',
+                'type'   => '_MARNM',
+                'surn'   => 'Erster',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+            [
+                'full'   => '',
+                'fullNN' => '',
+                'type'   => '_MARNM',
+                'surn'   => 'Zweiter',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+        ]);
+        $individual->method('getPrimaryName')->willReturn(0);
+
+        return new NameProcessor($individual);
+    }
+
+    /**
+     * The spouse selects the married name the segment list closes with, the same way
+     * getMarriedSurnames() selects it.
+     *
+     * @return void
+     */
+    #[Test]
+    public function closesTheListWithTheMarriedSurnameOfTheGivenSpouse(): void
+    {
+        $spouse = self::createStub(Individual::class);
+        $spouse->method('getAllNames')->willReturn([
+            ['type' => 'NAME', 'surn' => 'Zweiter'],
+        ]);
+
+        $segments = $this->nameProcessorWithTwoMarriedNames()->getNameSegments(false, true, $spouse);
+
+        self::assertSame('(Zweiter)', $segments[2]->label);
+    }
+
+    /**
+     * A spouse whose surname matches no married name record leaves the list without a
+     * married segment.
+     *
+     * @return void
+     */
+    #[Test]
+    public function leavesOutTheMarriedSurnameWhenNoRecordMatchesTheSpouse(): void
+    {
+        $spouse = self::createStub(Individual::class);
+        $spouse->method('getAllNames')->willReturn([
+            ['type' => 'NAME', 'surn' => 'Dritter'],
+        ]);
+
+        $segments = $this->nameProcessorWithTwoMarriedNames()->getNameSegments(false, true, $spouse);
+
+        self::assertSame(
+            ['Anna', 'Schmidt'],
+            array_map(static fn (NameSegment $segment): string => $segment->label, $segments)
+        );
+    }
+
+    /**
+     * With both options the list reads given name, nickname, surname, married surname.
+     *
+     * @return void
+     */
+    #[Test]
+    public function keepsTheNicknameBeforeTheSurnameWhenTheMarriedSurnameIsAdded(): void
+    {
+        $segments = $this->nameProcessorWithTwoMarriedNames()->getNameSegments(true, true);
+
+        self::assertSame(
+            [
+                ['Anna', NameSegmentKind::Given],
+                ['"Annie"', NameSegmentKind::Nickname],
+                ['Schmidt', NameSegmentKind::Surname],
+                ['(Erster)', NameSegmentKind::Married],
+            ],
+            array_map(
+                static fn (NameSegment $segment): array => [$segment->label, $segment->kind],
+                $segments
+            )
+        );
     }
 }

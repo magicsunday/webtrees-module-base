@@ -12,9 +12,12 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use DOMDocument;
+use DOMElement;
 use DOMNode;
 use DOMXPath;
 use Fisharebest\Webtrees\Individual;
+use MagicSunday\Webtrees\ModuleBase\Model\NameSegment;
+use MagicSunday\Webtrees\ModuleBase\Model\NameSegmentKind;
 
 /**
  * Class NameProcessor.
@@ -372,6 +375,105 @@ final class NameProcessor
     public function getLastNames(): array
     {
         return $this->getNamesByIdentifier(self::XPATH_LAST_NAMES);
+    }
+
+    /**
+     * Returns the name of the individual as an ordered list of drawable segments.
+     *
+     * The list follows the display order. The given-name tokens come first, in the
+     * order of the formatted name and including the particles webtrees renders in
+     * the given-name area. The quoted nickname follows the last given name, or the
+     * surnames when the name has no given name, exactly where
+     * {@see getFullNameWithNickname()} puts it. The surname tokens follow, and the
+     * bracketed married surname closes the list.
+     *
+     * @param bool            $withNickname       TRUE to include the GEDCOM nickname
+     * @param bool            $withMarriedSurname TRUE to append the married surname in brackets
+     * @param Individual|null $spouse             The spouse whose surname selects the married name
+     *
+     * @return list<NameSegment>
+     */
+    public function getNameSegments(
+        bool $withNickname = false,
+        bool $withMarriedSurname = false,
+        ?Individual $spouse = null,
+    ): array {
+        $given   = $this->getSegmentsByIdentifier(self::XPATH_FIRST_NAMES, NameSegmentKind::Given);
+        $surname = $this->getSegmentsByIdentifier(self::XPATH_LAST_NAMES, NameSegmentKind::Surname);
+
+        $nickname = $withNickname ? $this->getNickname() : '';
+
+        if ($nickname !== '') {
+            $nicknameSegment = new NameSegment('"' . $nickname . '"', NameSegmentKind::Nickname);
+
+            if ($given === []) {
+                $surname[] = $nicknameSegment;
+            } else {
+                $given[] = $nicknameSegment;
+            }
+        }
+
+        $segments = [...$given, ...$surname];
+
+        if ($withMarriedSurname) {
+            $marriedSurnames = $this->getMarriedSurnames($spouse);
+
+            if ($marriedSurnames !== []) {
+                $segments[] = new NameSegment(
+                    '(' . implode(' ', $marriedSurnames) . ')',
+                    NameSegmentKind::Married
+                );
+            }
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Returns one segment per name token found by the given XPath expression. A
+     * given-name token is marked as preferred when webtrees wraps it in the starred
+     * name element.
+     *
+     * @param string          $expression The XPath expression to execute
+     * @param NameSegmentKind $kind       The kind of the segments to create
+     *
+     * @return list<NameSegment>
+     */
+    private function getSegmentsByIdentifier(string $expression, NameSegmentKind $kind): array
+    {
+        $nodeList = $this->xPath->query($expression);
+
+        if ($nodeList === false) {
+            return [];
+        }
+
+        $segments = [];
+
+        /** @var DOMNode $node */
+        foreach ($nodeList as $node) {
+            $isPreferred = ($kind === NameSegmentKind::Given) && $this->isStarredName($node);
+
+            foreach ($this->splitAndCleanName([trim($node->nodeValue ?? '')]) as $token) {
+                $segments[] = new NameSegment($token, $kind, $isPreferred);
+            }
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Returns TRUE if the given text node sits directly in the starred name element.
+     *
+     * @param DOMNode $node The text node to check
+     *
+     * @return bool
+     */
+    private function isStarredName(DOMNode $node): bool
+    {
+        $parent = $node->parentNode;
+
+        return ($parent instanceof DOMElement)
+            && ($parent->getAttribute('class') === 'starredname');
     }
 
     /**
