@@ -113,7 +113,9 @@ final class NodeData implements JsonSerializable
     private ?Individual $individual = null;
 
     /**
-     * @param int $id
+     * Sets the unique ID of the individual.
+     *
+     * @param int $id The unique ID
      *
      * @return NodeData
      */
@@ -125,7 +127,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $xref
+     * Sets the XREF of the individual.
+     *
+     * @param string $xref The XREF
      *
      * @return NodeData
      */
@@ -137,7 +141,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $url
+     * Sets the URL to the individual in webtrees.
+     *
+     * @param string $url The URL
      *
      * @return NodeData
      */
@@ -149,7 +155,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $updateUrl
+     * Sets the URL that updates the clicked entry in the tree with this individual.
+     *
+     * @param string $updateUrl The update URL
      *
      * @return NodeData
      */
@@ -161,7 +169,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param int $generation
+     * Sets the generation the individual belongs to.
+     *
+     * @param int $generation The generation
      *
      * @return NodeData
      */
@@ -173,7 +183,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $name
+     * Sets the full name of the individual.
+     *
+     * @param string $name The full name
      *
      * @return NodeData
      */
@@ -185,7 +197,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param bool $isNameRtl
+     * Sets whether the name is written right to left.
+     *
+     * @param bool $isNameRtl TRUE if the name is written right to left
      *
      * @return NodeData
      */
@@ -197,7 +211,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param list<NameSegment> $nameSegments
+     * Sets the name as ordered segments, in display order.
+     *
+     * @param list<NameSegment> $nameSegments The name segments
      *
      * @return NodeData
      */
@@ -209,7 +225,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $alternativeName
+     * Sets the alternative name.
+     *
+     * @param string $alternativeName The alternative name
      *
      * @return NodeData
      */
@@ -221,7 +239,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param bool $isAltRtl
+     * Sets whether the alternative name is written right to left.
+     *
+     * @param bool $isAltRtl TRUE if the alternative name is written right to left
      *
      * @return NodeData
      */
@@ -233,7 +253,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $thumbnail
+     * Sets the URL of the highlight image of the individual.
+     *
+     * @param string $thumbnail The URL of the highlight image
      *
      * @return NodeData
      */
@@ -245,7 +267,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $silhouette
+     * Sets the URL of the sex-specific silhouette image.
+     *
+     * @param string $silhouette The URL of the silhouette image
      *
      * @return NodeData
      */
@@ -257,7 +281,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $sex
+     * Sets the sex of the individual.
+     *
+     * @param string $sex The sex
      *
      * @return NodeData
      */
@@ -269,7 +295,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $birth
+     * Sets the formatted birth date without HTML tags.
+     *
+     * @param string $birth The formatted birth date
      *
      * @return NodeData
      */
@@ -281,7 +309,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $death
+     * Sets the formatted death date without HTML tags.
+     *
+     * @param string $death The formatted death date
      *
      * @return NodeData
      */
@@ -293,7 +323,9 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * @param string $timespan
+     * Sets the timespan label.
+     *
+     * @param string $timespan The timespan label
      *
      * @return NodeData
      */
@@ -304,13 +336,19 @@ final class NodeData implements JsonSerializable
         return $this;
     }
 
+    /**
+     * Returns the individual the node was built from. It is held for the facade and
+     * stays out of the serialised form.
+     */
     public function getIndividual(): ?Individual
     {
         return $this->individual;
     }
 
     /**
-     * @param Individual|null $individual
+     * Sets the individual the node was built from.
+     *
+     * @param Individual|null $individual The individual
      *
      * @return NodeData
      */
