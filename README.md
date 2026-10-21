@@ -49,7 +49,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 
 ### `src/Processor/`
 - **`DateProcessor`** — generation-aware date formatting (compact `getFormatted*` / `get*Full` API for tight chart labels; locale-aware legacy `getBirth*` / `getDeath*` / `getLifetimeDescription` API for everything else; marriage dates only via the compact API — `getFormattedMarriageDate()`, `getFormattedMarriageDateOfParents()`, `getMarriageDateFull()`)
-- **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names)
+- **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names). `getNameSegments()` returns the name as ordered, drawable `NameSegment` objects
 - **`ImageProcessor`** — highlight image + silhouette URL resolution
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
 
@@ -59,6 +59,8 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`PlaceStyle`** — enum for the way a place name is shortened (`Full`, `Levels`, `CityCountry`, `CityIso2`, `CityIso3`)
 - **`PlaceFormatSpec`** — `final readonly` value object holding a fully resolved place-formatting instruction (style, level count, from-which-end)
 - **`PlaceFormatChoice`** — backed enum for the place-detail options a module offers in its configuration; label-free, so the consuming module supplies its own translations
+- **`NodeData`** — the person DTO of the linked tree charts (pedigree and descendants), serialised to JSON for the front end
+- **`NameSegment`** / **`NameSegmentKind`** — `final readonly` value object and backed enum for one drawable part of a name (given, surname, nickname, married)
 
 ### `src/Support/`
 - **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API
