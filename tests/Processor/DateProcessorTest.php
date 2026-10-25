@@ -18,9 +18,11 @@ use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
+use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function strip_tags;
@@ -33,6 +35,7 @@ use function strip_tags;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(DateProcessor::class)]
+#[UsesClass(PlainText::class)]
 final class DateProcessorTest extends TestCase
 {
     /**
