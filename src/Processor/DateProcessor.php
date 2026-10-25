@@ -375,6 +375,45 @@ final readonly class DateProcessor
         return (string) $calendarDate->year();
     }
 
+    /**
+     * Returns the text of the date of a fact. A complete date, with day, month and year and
+     * no qualifier, is formatted in the given compact format. A partial, qualified or ranged
+     * date keeps the webtrees wording as plain text, so "ABT 12 MAY 1832" stays "about 12
+     * May 1832" instead of collapsing to a date that drops the qualifier. Static so callers
+     * can format the dates of arbitrary facts without instantiating a DateProcessor.
+     *
+     * @param Date   $date          The date of the fact
+     * @param string $compactFormat The webtrees calendar format string for a complete date, defaults to
+     *                              CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
+     *
+     * @return string Plain text with single spaces, empty when the date is not a valid date
+     */
+    public static function formatFactDate(Date $date, string $compactFormat = CompactDateFormat::FALLBACK): string
+    {
+        if (!$date->isOK()) {
+            return '';
+        }
+
+        $calendarDate = $date->minimumDate();
+
+        // A known day implies a known month and year, so the day decides whether the date is complete.
+        if (
+            ($calendarDate->day() > 0)
+            && ($date->qual1 === '')
+            && ($date->qual2 === '')
+        ) {
+            $markup = $calendarDate->format($compactFormat);
+        } else {
+            $markup = $date->display();
+        }
+
+        // The calendar formats carry entities such as a non-breaking space, and a partial
+        // date can leave a doubled space where the day is missing.
+        $text = PlainText::fromMarkup($markup);
+
+        return trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $text) ?? $text);
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------

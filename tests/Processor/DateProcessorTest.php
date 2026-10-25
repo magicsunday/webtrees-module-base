@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
 use Fisharebest\Webtrees\Date;
+use Fisharebest\Webtrees\Date\AbstractCalendarDate;
 use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
@@ -75,6 +76,92 @@ final class DateProcessorTest extends TestCase
                 1700,
             ],
         ];
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function factDateDataProvider(): array
+    {
+        // [ GEDCOM date, compact format, expected text ]
+        return [
+            'an empty date gives nothing'               => ['', '%d.%m.%Y', ''],
+            'an unparseable date gives nothing'         => ['not a date', '%d.%m.%Y', ''],
+            'a complete date uses the compact format'   => ['12 MAY 1832', '%d.%m.%Y', '12.05.1832'],
+            'a complete date follows the given pattern' => ['12 MAY 1832', '%Y/%m/%d', '1832/05/12'],
+            'a complete julian date keeps its calendar' => ['@#DJULIAN@ 01 MAR 1700', '%Y-%m-%d', '1700 CE-03-01'],
+            'a date without a day keeps its wording'    => ['MAY 1832', '%d.%m.%Y', 'May 1832'],
+            'a year only keeps its wording'             => ['1832', '%d.%m.%Y', '1832'],
+            'a qualified date keeps its qualifier'      => ['ABT 12 MAY 1832', '%d.%m.%Y', 'about May 12, 1832'],
+            'a range keeps both ends'                   => ['BET 1800 AND 1810', '%d.%m.%Y', 'between 1800 and 1810'],
+        ];
+    }
+
+    /**
+     * A fact date is compact for a complete date and keeps the webtrees wording for a
+     * partial, qualified or ranged one, so "ABT 1832" never collapses to a bare year.
+     *
+     * @param string $input         The GEDCOM date
+     * @param string $compactFormat The compact format pattern
+     * @param string $expected      The expected text
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('factDateDataProvider')]
+    public function formatsAFactDateInTheCompactFormatOrKeepsItsWording(
+        string $input,
+        string $compactFormat,
+        string $expected,
+    ): void {
+        I18N::init('en-US', true);
+
+        self::assertSame($expected, DateProcessor::formatFactDate(new Date($input), $compactFormat));
+    }
+
+    /**
+     * The answer for a date that is not valid is empty by contract, whatever text the date would display.
+     *
+     * @return void
+     */
+    #[Test]
+    public function givesNothingForAnInvalidFactDateWhateverItDisplays(): void
+    {
+        $date = self::createStub(Date::class);
+        $date->method('isOK')->willReturn(false);
+        $date->method('display')->willReturn('<span class="date">junk</span>');
+
+        self::assertSame('', DateProcessor::formatFactDate($date, '%d.%m.%Y'));
+    }
+
+    /**
+     * The text of a date that keeps its wording is trimmed and every run of spaces, including a
+     * non-breaking one, becomes a single space.
+     *
+     * @return void
+     */
+    #[Test]
+    public function trimsAndCollapsesTheWhitespaceOfAFactDateText(): void
+    {
+        $date = self::createStub(Date::class);
+        $date->method('isOK')->willReturn(true);
+        $date->method('minimumDate')->willReturn(self::createStub(AbstractCalendarDate::class));
+        $date->method('display')->willReturn("<span class=\"date\"> about\u{00A0}\u{00A0} 1832 </span>");
+
+        self::assertSame('about 1832', DateProcessor::formatFactDate($date, '%d.%m.%Y'));
+    }
+
+    /**
+     * Without a pattern the locale neutral ISO format is used, like for the other compact dates.
+     *
+     * @return void
+     */
+    #[Test]
+    public function formatsACompleteFactDateInTheFallbackFormatByDefault(): void
+    {
+        I18N::init('en-US', true);
+
+        self::assertSame('1832-05-12', DateProcessor::formatFactDate(new Date('12 MAY 1832')));
     }
 
     /**
