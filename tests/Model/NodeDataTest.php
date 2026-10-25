@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Model;
 
 use Fisharebest\Webtrees\Individual;
+use MagicSunday\Webtrees\ModuleBase\Model\FactView;
 use MagicSunday\Webtrees\ModuleBase\Model\NameSegment;
 use MagicSunday\Webtrees\ModuleBase\Model\NameSegmentKind;
 use MagicSunday\Webtrees\ModuleBase\Model\NodeData;
@@ -21,6 +22,7 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function json_encode;
+use function substr;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -34,6 +36,7 @@ use const JSON_THROW_ON_ERROR;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(NodeData::class)]
+#[UsesClass(FactView::class)]
 #[UsesClass(NameSegment::class)]
 #[UsesClass(NameSegmentKind::class)]
 final class NodeDataTest extends TestCase
@@ -112,5 +115,65 @@ final class NodeDataTest extends TestCase
         $nodeData = (new NodeData())->setIndividual(self::createStub(Individual::class));
 
         self::assertSame(self::EMPTY_JSON, json_encode($nodeData, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * The facts of a node are appended as the last key, and a missing slot stays a null entry, so
+     * a front end that reserves one row per slot keeps its alignment.
+     *
+     * @return void
+     */
+    #[Test]
+    public function appendsTheFactsAsTheLastKeyWhenTheyAreSet(): void
+    {
+        $nodeData = (new NodeData())->setFacts([
+            new FactView(
+                tag: 'BIRT',
+                label: 'Birth',
+                date: '12.05.1832',
+                place: 'Berlin',
+                placeFull: 'Berlin, Germany',
+                value: '',
+            ),
+            null,
+        ]);
+
+        $json = json_encode($nodeData, JSON_THROW_ON_ERROR);
+
+        self::assertSame(
+            substr(self::EMPTY_JSON, 0, -1)
+            . ',"facts":[{"tag":"BIRT","label":"Birth","date":"12.05.1832","place":"Berlin",'
+            . '"placeFull":"Berlin, Germany","value":""},null]}',
+            $json
+        );
+    }
+
+    /**
+     * A list of slots that are all empty is still a deliberate answer and is serialised, while a node
+     * whose facts were never set or were set to an empty list keeps its payload unchanged.
+     *
+     * @return void
+     */
+    #[Test]
+    public function serialisesAListOfEmptySlotsButOmitsAnEmptyList(): void
+    {
+        self::assertSame(
+            substr(self::EMPTY_JSON, 0, -1) . ',"facts":[null,null]}',
+            json_encode((new NodeData())->setFacts([null, null]), JSON_THROW_ON_ERROR)
+        );
+
+        self::assertSame(self::EMPTY_JSON, json_encode((new NodeData())->setFacts([]), JSON_THROW_ON_ERROR));
+        self::assertSame(self::EMPTY_JSON, json_encode(new NodeData(), JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * A node without facts reports an empty list.
+     *
+     * @return void
+     */
+    #[Test]
+    public function reportsNoFactsByDefault(): void
+    {
+        self::assertSame([], (new NodeData())->getFacts());
     }
 }
