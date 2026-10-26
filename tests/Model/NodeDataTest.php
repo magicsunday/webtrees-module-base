@@ -143,7 +143,7 @@ final class NodeDataTest extends TestCase
         self::assertSame(
             substr(self::EMPTY_JSON, 0, -1)
             . ',"facts":[{"tag":"BIRT","label":"Birth","date":"12.05.1832","place":"Berlin",'
-            . '"placeFull":"Berlin, Germany","value":""},null]}',
+            . '"placeFull":"Berlin, Germany","value":"","partner":""},null]}',
             $json
         );
     }

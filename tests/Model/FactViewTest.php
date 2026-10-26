@@ -44,17 +44,31 @@ final class FactViewTest extends TestCase
             place: 'Berlin, Germany',
             placeFull: 'Charlottenburg, Berlin, Brandenburg, Germany',
             value: 'Parish register',
+            partner: 'Anna Schmidt',
         );
 
         self::assertSame(
-            ['tag', 'label', 'date', 'place', 'placeFull', 'value'],
+            ['tag', 'label', 'date', 'place', 'placeFull', 'value', 'partner'],
             array_keys($fact->jsonSerialize())
         );
 
         self::assertSame(
             '{"tag":"CHR","label":"Christening","date":"12.05.1832","place":"Berlin, Germany",'
-            . '"placeFull":"Charlottenburg, Berlin, Brandenburg, Germany","value":"Parish register"}',
+            . '"placeFull":"Charlottenburg, Berlin, Brandenburg, Germany","value":"Parish register",'
+            . '"partner":"Anna Schmidt"}',
             json_encode($fact, JSON_THROW_ON_ERROR)
         );
+    }
+
+    /**
+     * A fact without a partner carries an empty partner, so the key is always there.
+     */
+    #[Test]
+    public function carriesAnEmptyPartnerByDefault(): void
+    {
+        $fact = new FactView(tag: 'BIRT', label: 'Birth', date: '', place: '', placeFull: '', value: '');
+
+        self::assertSame('', $fact->partner);
+        self::assertSame('', $fact->jsonSerialize()['partner']);
     }
 }

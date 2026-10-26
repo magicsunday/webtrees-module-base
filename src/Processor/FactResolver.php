@@ -35,6 +35,12 @@ use function strtoupper;
  * follow, one slot each. A slot is null when the person has no visible fact for it, so every
  * box of a chart keeps the same rows.
  *
+ * A marriage or a divorce is a fact of the family and not of the person. For a tag of that kind
+ * the families of the person as spouse are read, and every family with the fact gives one entry
+ * that names the other spouse, so a person with several marriages gets several entries. A person
+ * without such a fact keeps one null entry, so the number of entries is never below the number
+ * of tags.
+ *
  * The optional slots follow the death slot, so the first two rows keep their meaning for every
  * person and a chart can reserve them as a fixed block. None of the birth and death equivalents
  * is optional, because they have their own slots, and the tags of the preference are upper-cased
@@ -120,11 +126,51 @@ final readonly class FactResolver
 
         if ($showAdditional) {
             foreach ($this->optionalTags() as $tag) {
-                $views[] = $this->viewOfTag($individual, $tag, $places);
+                foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
+                    $views[] = $view;
+                }
             }
         }
 
         return $views;
+    }
+
+    /**
+     * Returns the entries of one optional tag. A tag of the person gives one entry, a tag of a family
+     * gives one entry per family of the person as spouse that has the fact.
+     *
+     * @param Individual     $individual The individual to describe
+     * @param string         $tag        The GEDCOM tag to look for
+     * @param PlaceProcessor $places     The place formatter of the individual
+     *
+     * @return non-empty-list<FactView|null> Null for a tag without any visible fact
+     */
+    private function viewsOfTag(Individual $individual, string $tag, PlaceProcessor $places): array
+    {
+        if (!in_array($tag, [...Gedcom::MARRIAGE_EVENTS, ...Gedcom::DIVORCE_EVENTS], true)) {
+            return [$this->viewOfTag($individual, $tag, $places)];
+        }
+
+        $views = [];
+
+        foreach ($individual->spouseFamilies() as $family) {
+            $fact = $family->facts([$tag])->first();
+
+            if (!$fact instanceof Fact) {
+                continue;
+            }
+
+            $spouse = $family->spouse($individual);
+
+            $views[] = $this->viewOfFact(
+                $tag,
+                $fact,
+                $places,
+                $spouse instanceof Individual ? PlainText::fromMarkup($spouse->fullName()) : ''
+            );
+        }
+
+        return $views === [] ? [null] : $views;
     }
 
     /**
@@ -164,6 +210,19 @@ final readonly class FactResolver
             return null;
         }
 
+        return $this->viewOfFact($tag, $fact, $places);
+    }
+
+    /**
+     * Returns the view of a fact.
+     *
+     * @param string         $tag     The GEDCOM tag to report
+     * @param Fact           $fact    The visible fact
+     * @param PlaceProcessor $places  The place formatter of the individual
+     * @param string         $partner The name of the other spouse for an event of a family
+     */
+    private function viewOfFact(string $tag, Fact $fact, PlaceProcessor $places, string $partner = ''): FactView
+    {
         return new FactView(
             tag: $tag,
             label: PlainText::fromMarkup($fact->label()),
@@ -171,6 +230,7 @@ final readonly class FactResolver
             place: $places->shortPlaceName($fact->place()),
             placeFull: $fact->place()->gedcomName(),
             value: $fact->value(),
+            partner: $partner,
         );
     }
 }

@@ -52,7 +52,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names). `getNameSegments()` returns the name as ordered, drawable `NameSegment` objects
 - **`ImageProcessor`** — highlight image + silhouette URL resolution
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
-- **`FactResolver`**: resolves the facts a chart box shows, one slot per row: the first existing birth equivalent, the first existing death equivalent, then the optional tags of the tree preference "Other facts to show in charts". Returns `FactView` objects, `null` for a missing fact. The value of a tag with free text, such as `NOTE`, is kept in full, so a chart that lists such a tag has to shorten the row itself
+- **`FactResolver`**: resolves the facts a chart box shows, one slot per row: the first existing birth equivalent, the first existing death equivalent, then the optional tags of the tree preference "Other facts to show in charts". Returns `FactView` objects, `null` for a missing fact. A marriage or divorce tag (`MARR`, `_NMR`, `DIV`, `ANUL`, `_SEPR`) is read from the families of the person as spouse and gives one entry per family with the fact, naming the other spouse in `partner`. The value of a tag with free text, such as `NOTE`, is kept in full, so a chart that lists such a tag has to shorten the row itself
 
 ### `src/Model/`
 - **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel)
@@ -61,7 +61,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`PlaceFormatSpec`** — `final readonly` value object holding a fully resolved place-formatting instruction (style, level count, from-which-end)
 - **`PlaceFormatChoice`** — backed enum for the place-detail options a module offers in its configuration; label-free, so the consuming module supplies its own translations
 - **`NodeData`** — the person DTO of the linked tree charts (pedigree and descendants), serialised to JSON for the front end. An optional `facts` list, one `FactView` or `null` per row, is appended to the payload only when it is not empty
-- **`FactView`**: `final readonly` value object for one fact of a chart box (tag, label, date, place, full place, value). Label and date are plain text, the others are not reduced
+- **`FactView`**: `final readonly` value object for one fact of a chart box (tag, label, date, place, full place, value, partner). Label and date are plain text, the others are not reduced
 - **`NameSegment`** / **`NameSegmentKind`** — `final readonly` value object and backed enum for one drawable part of a name (given, surname, nickname, married)
 
 ### `src/Support/`

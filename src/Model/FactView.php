@@ -15,7 +15,7 @@ use JsonSerializable;
 
 /**
  * One fact of a person as a chart box shows it: the event label, its date, its place and
- * its value. The label and the date are reduced to plain text. The place is formatted by the
+ * its value, and for an event of a family the name of the other spouse. The label and the date are reduced to plain text. The place is formatted by the
  * configured place style, the full place is the place name of webtrees and the value is the
  * canonical value of the fact, none of them reduced to plain text. A character such as "<"
  * or "&" may appear in any of them, so a consumer that writes them into an HTML context has to
@@ -36,6 +36,8 @@ final readonly class FactView implements JsonSerializable
      * @param string $place     The place formatted by the configured place style
      * @param string $placeFull The full GEDCOM place name, meant for a tooltip
      * @param string $value     The canonical value of the fact
+     * @param string $partner   The name of the other spouse for an event of a family such as a marriage,
+     *                          empty for an event of the person and for a family without a visible partner
      */
     public function __construct(
         public string $tag,
@@ -44,13 +46,14 @@ final readonly class FactView implements JsonSerializable
         public string $place,
         public string $placeFull,
         public string $value,
+        public string $partner = '',
     ) {
     }
 
     /**
      * Returns the fact as an array.
      *
-     * @return array{tag: string, label: string, date: string, place: string, placeFull: string, value: string}
+     * @return array{tag: string, label: string, date: string, place: string, placeFull: string, value: string, partner: string}
      */
     public function jsonSerialize(): array
     {
@@ -61,6 +64,7 @@ final readonly class FactView implements JsonSerializable
             'place'     => $this->place,
             'placeFull' => $this->placeFull,
             'value'     => $this->value,
+            'partner'   => $this->partner,
         ];
     }
 }

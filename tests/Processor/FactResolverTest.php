@@ -14,6 +14,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
+use Fisharebest\Webtrees\Family;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
@@ -133,14 +134,17 @@ final class FactResolverTest extends TestCase
      * of facts() and the first fact is the first one in record order, so the double fails when a caller
      * passes an access level of its own or asks for the facts sorted.
      *
-     * @param array<string, Fact|list<Fact>> $factsByTag The visible facts per tag in record order, a missing
-     *                                                   tag has no visible fact
+     * @param array<string, Fact|list<Fact>> $factsByTag     The visible facts per tag in record order, a missing
+     *                                                       tag has no visible fact
+     * @param list<Family>                   $spouseFamilies The families of the individual as spouse that the
+     *                                                       viewer may see
      *
      * @return Individual
      */
-    private function individualWith(array $factsByTag): Individual
+    private function individualWith(array $factsByTag, array $spouseFamilies = []): Individual
     {
         $individual = self::createStub(Individual::class);
+        $individual->method('spouseFamilies')->willReturn(new Collection($spouseFamilies));
         $individual->method('facts')->willReturnCallback(
             static function (array $filter = [], ...$rest) use ($factsByTag): Collection {
                 self::assertFalse($rest[0] ?? false, 'facts() must keep the record order');
@@ -166,6 +170,47 @@ final class FactResolverTest extends TestCase
         );
 
         return $individual;
+    }
+
+    /**
+     * Builds a family of the individual with the given visible facts and spouse. The family hands out its
+     * facts under the same conditions as the individual, so the double fails when a caller changes them.
+     *
+     * @param array<string, Fact> $factsByTag The visible facts of the family per tag
+     * @param string|null         $spouseName The name markup of the other spouse, null for a family without one
+     *
+     * @return Family
+     */
+    private function familyWith(array $factsByTag, ?string $spouseName): Family
+    {
+        $family = self::createStub(Family::class);
+        $family->method('facts')->willReturnCallback(
+            static function (array $filter = [], ...$rest) use ($factsByTag): Collection {
+                self::assertFalse($rest[0] ?? false, 'facts() must keep the record order');
+                self::assertNull($rest[1] ?? null, 'facts() must keep the access level of the viewer');
+
+                $found = [];
+
+                foreach ($filter as $tag) {
+                    if (is_string($tag) && isset($factsByTag[$tag])) {
+                        $found[] = $factsByTag[$tag];
+                    }
+                }
+
+                return new Collection($found);
+            }
+        );
+
+        $spouse = null;
+
+        if ($spouseName !== null) {
+            $spouse = self::createStub(Individual::class);
+            $spouse->method('fullName')->willReturn($spouseName);
+        }
+
+        $family->method('spouse')->willReturn($spouse);
+
+        return $family;
     }
 
     /**
@@ -482,5 +527,126 @@ final class FactResolverTest extends TestCase
         self::assertInstanceOf(FactView::class, $birth);
         self::assertSame('Charlottenburg', $birth->place);
         self::assertSame('Charlottenburg, Berlin, Germany', $birth->placeFull);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function familyTagProvider(): array
+    {
+        return [
+            'marriage'            => ['MARR'],
+            'marriage, no record' => ['_NMR'],
+            'divorce'             => ['DIV'],
+            'annulment'           => ['ANUL'],
+            'separation'          => ['_SEPR'],
+        ];
+    }
+
+    /**
+     * A marriage or divorce belongs to the family, so every family of the person as spouse gives one entry
+     * with the name of the other spouse, in the order of the families.
+     *
+     * @param string $tag The family tag in the preference
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('familyTagProvider')]
+    public function factsForGivesOneEntryPerFamilyForAFamilyTag(string $tag): void
+    {
+        $resolver   = $this->resolverWithTags($tag);
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->familyWith([$tag => $this->factStub('Event', '1 MAY 1900', 'Berlin, Germany')], '<span>Anna Schmidt</span>'),
+                $this->familyWith([$tag => $this->factStub('Event', '2 JUN 1920', 'Paris, France')], '<span>Marie Curie</span>'),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(4, $facts);
+        self::assertEquals(
+            [
+                new FactView(
+                    tag: $tag,
+                    label: 'Event',
+                    date: '01.05.1900',
+                    place: 'Berlin, Germany',
+                    placeFull: 'Berlin, Germany',
+                    value: '',
+                    partner: 'Anna Schmidt',
+                ),
+                new FactView(
+                    tag: $tag,
+                    label: 'Event',
+                    date: '02.06.1920',
+                    place: 'Paris, France',
+                    placeFull: 'Paris, France',
+                    value: '',
+                    partner: 'Marie Curie',
+                ),
+            ],
+            [$facts[2], $facts[3]]
+        );
+    }
+
+    /**
+     * A family without the fact adds no entry, and a person without any such fact keeps one empty
+     * entry, so the number of entries never falls below the number of tags.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForKeepsOneNullEntryWhenNoFamilyHasTheFact(): void
+    {
+        $resolver = $this->resolverWithTags('MARR');
+
+        $withoutFamily = $this->individualWith([]);
+        $withEmptyOne  = $this->individualWith([], [$this->familyWith([], 'Anna Schmidt')]);
+
+        self::assertSame([null, null, null], $resolver->factsFor($withoutFamily, true));
+        self::assertSame([null, null, null], $resolver->factsFor($withEmptyOne, true));
+    }
+
+    /**
+     * Only the families of the person count. A fact of the person with the same tag is not read as a
+     * marriage, and a family without a visible partner gives an empty partner.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForReadsAFamilyTagFromTheFamiliesOnly(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR');
+        $individual = $this->individualWith(
+            ['MARR' => $this->factStub('Marriage', '1 JAN 1800', 'Nowhere')],
+            [$this->familyWith(['MARR' => $this->factStub('Marriage', '5 MAY 1950', 'Wurzen, Germany')], null)]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(3, $facts);
+        self::assertInstanceOf(FactView::class, $facts[2]);
+        self::assertSame('05.05.1950', $facts[2]->date);
+        self::assertSame('', $facts[2]->partner);
+    }
+
+    /**
+     * An optional tag of the person is still one entry and carries no partner.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForGivesAnOptionalFactOfThePersonNoPartner(): void
+    {
+        $resolver   = $this->resolverWithTags('OCCU');
+        $individual = $this->individualWith(['OCCU' => $this->factStub('Occupation', '', '', 'Smith')]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertInstanceOf(FactView::class, $facts[2]);
+        self::assertSame('', $facts[2]->partner);
     }
 }
