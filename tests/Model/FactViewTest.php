@@ -45,19 +45,32 @@ final class FactViewTest extends TestCase
             placeFull: 'Charlottenburg, Berlin, Brandenburg, Germany',
             value: 'Parish register',
             partner: 'Anna Schmidt',
+            sortDay: 2390316,
         );
 
         self::assertSame(
-            ['tag', 'label', 'date', 'place', 'placeFull', 'value', 'partner'],
+            ['tag', 'label', 'date', 'place', 'placeFull', 'value', 'partner', 'sortDay'],
             array_keys($fact->jsonSerialize())
         );
 
         self::assertSame(
             '{"tag":"CHR","label":"Christening","date":"12.05.1832","place":"Berlin, Germany",'
             . '"placeFull":"Charlottenburg, Berlin, Brandenburg, Germany","value":"Parish register",'
-            . '"partner":"Anna Schmidt"}',
+            . '"partner":"Anna Schmidt","sortDay":2390316}',
             json_encode($fact, JSON_THROW_ON_ERROR)
         );
+    }
+
+    /**
+     * A fact without a usable date carries the sort day zero, so the key is always there.
+     */
+    #[Test]
+    public function carriesTheSortDayZeroByDefault(): void
+    {
+        $fact = new FactView(tag: 'BIRT', label: 'Birth', date: '', place: '', placeFull: '', value: '');
+
+        self::assertSame(0, $fact->sortDay);
+        self::assertSame(0, $fact->jsonSerialize()['sortDay']);
     }
 
     /**

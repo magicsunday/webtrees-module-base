@@ -38,6 +38,8 @@ final readonly class FactView implements JsonSerializable
      * @param string $value     The canonical value of the fact
      * @param string $partner   The name of the other spouse for an event of a family such as a marriage,
      *                          empty for an event of the person and for a family without a visible partner
+     * @param int    $sortDay   The Julian day number of the earliest day the date can mean, for sorting facts
+     *                          by time, zero for a fact without a usable date
      */
     public function __construct(
         public string $tag,
@@ -47,13 +49,14 @@ final readonly class FactView implements JsonSerializable
         public string $placeFull,
         public string $value,
         public string $partner = '',
+        public int $sortDay = 0,
     ) {
     }
 
     /**
      * Returns the fact as an array.
      *
-     * @return array{tag: string, label: string, date: string, place: string, placeFull: string, value: string, partner: string}
+     * @return array{tag: string, label: string, date: string, place: string, placeFull: string, value: string, partner: string, sortDay: int}
      */
     public function jsonSerialize(): array
     {
@@ -65,6 +68,7 @@ final readonly class FactView implements JsonSerializable
             'placeFull' => $this->placeFull,
             'value'     => $this->value,
             'partner'   => $this->partner,
+            'sortDay'   => $this->sortDay,
         ];
     }
 }

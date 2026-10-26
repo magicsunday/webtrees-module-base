@@ -61,7 +61,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`PlaceFormatSpec`** — `final readonly` value object holding a fully resolved place-formatting instruction (style, level count, from-which-end)
 - **`PlaceFormatChoice`** — backed enum for the place-detail options a module offers in its configuration; label-free, so the consuming module supplies its own translations
 - **`NodeData`** — the person DTO of the linked tree charts (pedigree and descendants), serialised to JSON for the front end. An optional `facts` list of `FactView` or `null` entries, as the `FactResolver` returns it, is appended to the payload only when it is not empty
-- **`FactView`**: `final readonly` value object for one fact of a chart box (tag, label, date, place, full place, value, partner). Label and date are plain text, the others are not reduced
+- **`FactView`**: `final readonly` value object for one fact of a chart box (tag, label, date, place, full place, value, partner, sort day). The sort day is the Julian day number of the earliest day the date can mean, zero without a usable date, so a consumer can order facts by time. Label and date are plain text, the others are not reduced
 - **`NameSegment`** / **`NameSegmentKind`** — `final readonly` value object and backed enum for one drawable part of a name (given, surname, nickname, married)
 
 ### `src/Support/`

@@ -287,6 +287,7 @@ final class FactResolverTest extends TestCase
                     place: 'Berlin, Germany',
                     placeFull: 'Berlin, Germany',
                     value: '',
+                    sortDay: 2390316,
                 ),
                 new FactView(
                     tag: 'DEAT',
@@ -295,6 +296,7 @@ final class FactResolverTest extends TestCase
                     place: 'Paris, France',
                     placeFull: 'Paris, France',
                     value: '',
+                    sortDay: 2411369,
                 ),
                 new FactView(
                     tag: 'OCCU',
@@ -577,6 +579,7 @@ final class FactResolverTest extends TestCase
                     placeFull: 'Berlin, Germany',
                     value: '',
                     partner: 'Anna Schmidt',
+                    sortDay: 2415141,
                 ),
                 new FactView(
                     tag: $tag,
@@ -586,6 +589,7 @@ final class FactResolverTest extends TestCase
                     placeFull: 'Paris, France',
                     value: '',
                     partner: 'Marie Curie',
+                    sortDay: 2422478,
                 ),
             ],
             [$facts[2], $facts[3]]

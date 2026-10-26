@@ -233,6 +233,7 @@ final readonly class FactResolver
             placeFull: $fact->place()->gedcomName(),
             value: $fact->value(),
             partner: $partner,
+            sortDay: $fact->date()->isOK() ? $fact->date()->minimumJulianDay() : 0,
         );
     }
 }
