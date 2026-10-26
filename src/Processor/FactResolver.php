@@ -76,7 +76,7 @@ final readonly class FactResolver
      * rows a chart has to reserve for each box.
      *
      * @param bool         $showAdditional Whether the chart shows the optional facts
-     * @param list<string> $excludeTags    Tags to leave out of the optional list, for example MARR in an
+     * @param list<string> $excludeTags    Tags to leave out of the optional list, for example RESI in an
      *                                     ancestor chart
      *
      * @return list<string>
