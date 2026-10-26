@@ -118,7 +118,10 @@ final readonly class FactResolver
         foreach ($matches[0] as $match) {
             $tag = strtoupper($match);
 
-            if (!in_array($tag, $skipped, true) && !in_array($tag, $tags, true)) {
+            if (
+                !in_array($tag, $skipped, true)
+                && !in_array($tag, $tags, true)
+            ) {
                 $tags[] = $tag;
             }
         }
