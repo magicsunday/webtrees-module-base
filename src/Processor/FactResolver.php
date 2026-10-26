@@ -30,11 +30,10 @@ use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
  * follow, one slot each. A slot is null when the person has no visible fact for it, so every
  * box of a chart keeps the same rows.
  *
- * The webtrees core chart box leaves the birth and death equivalents out of the optional list
- * as well and prints the optional facts between the birth line and the death line. Here the
- * optional slots follow the death slot instead, so the first two rows keep their meaning for
- * every person and a chart can reserve them as a fixed block. Tags of the preference are
- * also upper-cased and de-duplicated.
+ * The optional slots follow the death slot, so the first two rows keep their meaning for every
+ * person and a chart can reserve them as a fixed block. None of the birth and death equivalents
+ * is optional, because they have their own slots, and the tags of the preference are upper-cased
+ * and de-duplicated.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

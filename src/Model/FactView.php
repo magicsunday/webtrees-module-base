@@ -15,10 +15,9 @@ use JsonSerializable;
 
 /**
  * One fact of a person as a chart box shows it: the event label, its date, its place and
- * its value, all as plain text. The label, the date and the place are reduced to plain text
- * and the value is the GEDCOM value as recorded. A character such as "<" or "&" may
- * appear in any of them, so a consumer that writes them into an HTML context has to escape
- * them there.
+ * its value. The label and the date are reduced to plain text, the place, the full place and
+ * the value are as recorded. A character such as "<" or "&" may appear in any of them, so a
+ * consumer that writes them into an HTML context has to escape them there.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
