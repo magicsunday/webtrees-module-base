@@ -19,6 +19,12 @@ use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
 use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 
+use function min;
+use function preg_replace;
+use function trim;
+
+use const PHP_INT_MAX;
+
 /**
  * Extracts and formats birth, death, and marriage dates from an Individual.
  *

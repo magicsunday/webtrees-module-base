@@ -21,6 +21,11 @@ use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 
+use function array_map;
+use function in_array;
+use function preg_match_all;
+use function strtoupper;
+
 /**
  * Resolves which facts a chart box shows and the text of each one.
  *
