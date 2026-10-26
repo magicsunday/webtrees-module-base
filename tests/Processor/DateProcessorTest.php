@@ -85,10 +85,12 @@ final class DateProcessorTest extends TestCase
     {
         // [ GEDCOM date, compact format, expected text ]
         return [
-            'an empty date gives nothing'                 => ['', '%d.%m.%Y', ''],
-            'an unparseable date gives nothing'           => ['not a date', '%d.%m.%Y', ''],
-            'a complete date uses the compact format'     => ['12 MAY 1832', '%d.%m.%Y', '12.05.1832'],
-            'a complete date follows the given pattern'   => ['12 MAY 1832', '%Y/%m/%d', '1832/05/12'],
+            'an empty date gives nothing'               => ['', '%d.%m.%Y', ''],
+            'an unparseable date gives nothing'         => ['not a date', '%d.%m.%Y', ''],
+            'a complete date uses the compact format'   => ['12 MAY 1832', '%d.%m.%Y', '12.05.1832'],
+            'a complete date follows the given pattern' => ['12 MAY 1832', '%Y/%m/%d', '1832/05/12'],
+            // The era text in the year is how webtrees formats a julian year, the rule under test is only
+            // that a complete date takes the compact branch.
             'a complete julian date uses the julian year' => ['@#DJULIAN@ 01 MAR 1700', '%Y-%m-%d', '1700 CE-03-01'],
             'a date without a day keeps its wording'      => ['MAY 1832', '%d.%m.%Y', 'May 1832'],
             'a year only keeps its wording'               => ['1832', '%d.%m.%Y', '1832'],

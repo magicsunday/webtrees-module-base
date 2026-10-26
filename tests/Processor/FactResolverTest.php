@@ -176,15 +176,15 @@ final class FactResolverTest extends TestCase
     {
         // [ CHART_BOX_TAGS value, caller exclusions, expected optional tags ]
         return [
-            'comma separated list'                 => ['OCCU,RESI,MARR', [], ['OCCU', 'RESI', 'MARR']],
-            'whitespace and mixed separators'      => [" OCCU , RESI\nMARR ", [], ['OCCU', 'RESI', 'MARR']],
+            'comma separated list'                 => ['OCCU,RESI,EDUC', [], ['OCCU', 'RESI', 'EDUC']],
+            'whitespace and mixed separators'      => [" OCCU , RESI\nEDUC ", [], ['OCCU', 'RESI', 'EDUC']],
             'lower case is normalised'             => ['occu,Resi', [], ['OCCU', 'RESI']],
             'custom underscore tags are kept'      => ['_MILT,OCCU', [], ['_MILT', 'OCCU']],
             'duplicates keep the first occurrence' => ['OCCU,RESI,OCCU', [], ['OCCU', 'RESI']],
             'birth equivalents are dropped'        => ['BIRT,CHR,BAPM,OCCU', [], ['OCCU']],
             'death equivalents are dropped'        => ['DEAT,BURI,CREM,OCCU', [], ['OCCU']],
-            'caller exclusions are dropped'        => ['OCCU,RESI,MARR', ['MARR'], ['OCCU', 'RESI']],
-            'caller exclusions ignore the case'    => ['OCCU,MARR', ['marr'], ['OCCU']],
+            'caller exclusions are dropped'        => ['OCCU,RESI,EDUC', ['EDUC'], ['OCCU', 'RESI']],
+            'caller exclusions ignore the case'    => ['OCCU,EDUC', ['educ'], ['OCCU']],
             'an empty preference gives no tag'     => ['', [], []],
         ];
     }
@@ -344,14 +344,14 @@ final class FactResolverTest extends TestCase
     }
 
     /**
-     * A fact that is absent from the record's answer leaves its slot empty while a visible optional
-     * fact of the same person still shows. The record applies the privacy of the viewer before it
-     * answers, so a hidden fact reaches the resolver as an absent one.
+     * A fact that is absent from the record's answer leaves only its own slot empty while a visible
+     * optional fact of the same person still shows. The privacy of the viewer is pinned by the access
+     * level the double asserts, since the record answers without the facts it hides.
      *
      * @return void
      */
     #[Test]
-    public function factsForKeepsTheSlotOfAHiddenFactEmpty(): void
+    public function factsForKeepsTheSlotOfAnAbsentFactEmpty(): void
     {
         $resolver   = $this->resolverWithTags('OCCU');
         $individual = $this->individualWith([
