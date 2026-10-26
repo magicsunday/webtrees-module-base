@@ -40,6 +40,7 @@ final class PlainTextTest extends TestCase
             'quote entities are decoded'     => ['O&#039;Brien &quot;Bob&quot;', 'O\'Brien "Bob"'],
             'tags and entities together'     => ['<a href="#">A &lt; B</a>', 'A < B'],
             'multibyte characters are kept'  => ['Müller &amp; Söhne', 'Müller & Söhne'],
+            'an escaped tag stays literal'   => ['Research &lt;draft&gt; &amp; development', 'Research <draft> & development'],
             'empty input gives empty output' => ['', ''],
         ];
     }
