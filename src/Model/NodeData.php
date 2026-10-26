@@ -346,16 +346,6 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * Returns the facts of the chart box, one slot per row.
-     *
-     * @return list<FactView|null>
-     */
-    public function getFacts(): array
-    {
-        return $this->facts;
-    }
-
-    /**
      * Sets the facts of the chart box, one slot per row.
      *
      * @param list<FactView|null> $facts The facts, aligned with the rows of the chart

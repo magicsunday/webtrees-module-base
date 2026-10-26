@@ -165,15 +165,4 @@ final class NodeDataTest extends TestCase
         self::assertSame(self::EMPTY_JSON, json_encode((new NodeData())->setFacts([]), JSON_THROW_ON_ERROR));
         self::assertSame(self::EMPTY_JSON, json_encode(new NodeData(), JSON_THROW_ON_ERROR));
     }
-
-    /**
-     * A node without facts reports an empty list.
-     *
-     * @return void
-     */
-    #[Test]
-    public function reportsNoFactsByDefault(): void
-    {
-        self::assertSame([], (new NodeData())->getFacts());
-    }
 }
