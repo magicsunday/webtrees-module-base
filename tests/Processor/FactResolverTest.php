@@ -92,7 +92,9 @@ final class FactResolverTest extends TestCase
     private function resolverWithTags(string $chartBoxTags): FactResolver
     {
         $tree = self::createStub(Tree::class);
-        $tree->method('getPreference')->willReturn($chartBoxTags);
+        $tree->method('getPreference')->willReturnCallback(
+            static fn (string $name): string => $name === 'CHART_BOX_TAGS' ? $chartBoxTags : ''
+        );
 
         return new FactResolver(
             $tree,
@@ -108,7 +110,7 @@ final class FactResolverTest extends TestCase
      * @param string $label The localised label
      * @param string $date  The GEDCOM date
      * @param string $place The full GEDCOM place name
-     * @param string $value The value markup
+     * @param string $value The canonical fact value
      *
      * @return Fact
      */
@@ -129,7 +131,8 @@ final class FactResolverTest extends TestCase
     /**
      * Builds an individual whose facts() answers per requested tag, like the webtrees record does
      * after it has applied the privacy of the viewer. The privacy rests on the default access level
-     * of facts(), so the double fails when a caller passes an access level of its own.
+     * of facts() and the first fact is the first one in record order, so the double fails when a caller
+     * passes an access level of its own or asks for the facts sorted.
      *
      * @param array<string, Fact|list<Fact>> $factsByTag The visible facts per tag in record order, a missing
      *                                                   tag has no visible fact
@@ -141,6 +144,7 @@ final class FactResolverTest extends TestCase
         $individual = self::createStub(Individual::class);
         $individual->method('facts')->willReturnCallback(
             static function (array $filter = [], ...$rest) use ($factsByTag): Collection {
+                self::assertFalse($rest[0] ?? false, 'facts() must keep the record order');
                 self::assertNull($rest[1] ?? null, 'facts() must keep the access level of the viewer');
 
                 $found = [];
