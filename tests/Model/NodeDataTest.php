@@ -165,4 +165,23 @@ final class NodeDataTest extends TestCase
         self::assertSame(self::EMPTY_JSON, json_encode((new NodeData())->setFacts([]), JSON_THROW_ON_ERROR));
         self::assertSame(self::EMPTY_JSON, json_encode(new NodeData(), JSON_THROW_ON_ERROR));
     }
+
+    /**
+     * Setting the facts again replaces the earlier list instead of extending it, and an empty list
+     * clears the facts of a node that had some.
+     *
+     * @return void
+     */
+    #[Test]
+    public function aSecondSetOfFactsReplacesTheFirst(): void
+    {
+        $nodeData = (new NodeData())->setFacts([null, null]);
+
+        self::assertSame(
+            substr(self::EMPTY_JSON, 0, -1) . ',"facts":[null]}',
+            json_encode($nodeData->setFacts([null]), JSON_THROW_ON_ERROR)
+        );
+
+        self::assertSame(self::EMPTY_JSON, json_encode($nodeData->setFacts([]), JSON_THROW_ON_ERROR));
+    }
 }
