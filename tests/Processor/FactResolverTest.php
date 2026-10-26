@@ -85,11 +85,12 @@ final class FactResolverTest extends TestCase
     /**
      * Builds a resolver around a tree that reports the given CHART_BOX_TAGS preference.
      *
-     * @param string $chartBoxTags The value of the tree preference
+     * @param string $chartBoxTags      The value of the tree preference
+     * @param string $compactDateFormat The compact date format the resolver is configured with
      *
      * @return FactResolver
      */
-    private function resolverWithTags(string $chartBoxTags): FactResolver
+    private function resolverWithTags(string $chartBoxTags, string $compactDateFormat = '%d.%m.%Y'): FactResolver
     {
         $tree = self::createStub(Tree::class);
         $tree->method('getPreference')->willReturnCallback(
@@ -100,7 +101,7 @@ final class FactResolverTest extends TestCase
             $tree,
             new PlaceFormatSpec(PlaceStyle::Full),
             new IsoCountryMap('en_US'),
-            '%d.%m.%Y',
+            $compactDateFormat,
         );
     }
 
@@ -178,6 +179,7 @@ final class FactResolverTest extends TestCase
             'comma separated list'                 => ['OCCU,RESI,MARR', [], ['OCCU', 'RESI', 'MARR']],
             'whitespace and mixed separators'      => [" OCCU , RESI\nMARR ", [], ['OCCU', 'RESI', 'MARR']],
             'lower case is normalised'             => ['occu,Resi', [], ['OCCU', 'RESI']],
+            'custom underscore tags are kept'      => ['_MILT,OCCU', [], ['_MILT', 'OCCU']],
             'duplicates keep the first occurrence' => ['OCCU,RESI,OCCU', [], ['OCCU', 'RESI']],
             'birth equivalents are dropped'        => ['BIRT,CHR,BAPM,OCCU', [], ['OCCU']],
             'death equivalents are dropped'        => ['DEAT,BURI,CREM,OCCU', [], ['OCCU']],
@@ -461,6 +463,41 @@ final class FactResolverTest extends TestCase
         ]);
 
         self::assertSame('Research & development', $resolver->factsFor($individual, true)[2]?->label);
+    }
+
+    /**
+     * A complete date follows the compact format the resolver is configured with.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForFormatsTheDateWithTheConfiguredCompactFormat(): void
+    {
+        $resolver   = $this->resolverWithTags('', '%Y/%m/%d');
+        $individual = $this->individualWith([
+            'BIRT' => $this->factStub('Birth', '12 MAY 1832', ''),
+        ]);
+
+        self::assertSame('1832/05/12', $resolver->factsFor($individual, false)[0]?->date);
+    }
+
+    /**
+     * A custom tag of the preference, which starts with an underscore, gets the fact of that tag.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForResolvesTheFactOfACustomTag(): void
+    {
+        $resolver   = $this->resolverWithTags('_MILT');
+        $individual = $this->individualWith([
+            '_MILT' => $this->factStub('Military service', '', '', 'Infantry'),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame('_MILT', $facts[2]?->tag);
+        self::assertSame('Infantry', $facts[2]->value);
     }
 
     /**
