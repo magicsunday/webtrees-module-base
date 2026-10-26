@@ -18,7 +18,7 @@ use const ENT_QUOTES;
 
 /**
  * Reduces markup produced by webtrees, such as the output of a date display or a fact
- * value, to the plain text a chart payload carries.
+ * label, to the plain text a chart payload carries.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

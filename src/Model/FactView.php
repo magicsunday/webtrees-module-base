@@ -15,9 +15,11 @@ use JsonSerializable;
 
 /**
  * One fact of a person as a chart box shows it: the event label, its date, its place and
- * its value. The label and the date are reduced to plain text, the place, the full place and
- * the value are as recorded. A character such as "<" or "&" may appear in any of them, so a
- * consumer that writes them into an HTML context has to escape them there.
+ * its value. The label and the date are reduced to plain text. The place is formatted by the
+ * configured place style, the full place is the place name of webtrees and the value is the
+ * canonical value of the fact, none of the three reduced to plain text. A character such as "<"
+ * or "&" may appear in any of them, so a consumer that writes them into an HTML context has to
+ * escape them there.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -33,7 +35,7 @@ final readonly class FactView implements JsonSerializable
      *                          webtrees display text for a partial, qualified or ranged one
      * @param string $place     The place formatted by the configured place style
      * @param string $placeFull The full GEDCOM place name, meant for a tooltip
-     * @param string $value     The value of the fact as recorded in the GEDCOM data
+     * @param string $value     The canonical value of the fact
      */
     public function __construct(
         public string $tag,
