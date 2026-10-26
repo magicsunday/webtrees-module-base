@@ -597,6 +597,23 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * A date that webtrees does not accept as usable has the sort day zero, even when one end of it is a
+     * real day. The empty date alone cannot tell this apart, as its earliest day is zero anyway.
+     */
+    #[Test]
+    public function factsForGivesTheSortDayZeroForARangeWithAnUnusableEnd(): void
+    {
+        $resolver   = $this->resolverWithTags('OCCU');
+        $individual = $this->individualWith([
+            'OCCU' => $this->factStub('Occupation', 'BET 1900 AND xyz', '', 'Clerk'),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame(0, $facts[2]?->sortDay);
+    }
+
+    /**
      * A family tag followed by a person tag. The entries of the family tag follow each other and the
      * later tag moves on by the number of additional entries, so a consumer finds it by its tag.
      */
