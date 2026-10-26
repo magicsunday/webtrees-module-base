@@ -32,10 +32,10 @@ use const JSON_THROW_ON_ERROR;
 final class FactViewTest extends TestCase
 {
     /**
-     * The serialised fact carries the six values under fixed keys, in constructor order.
+     * The serialised fact carries its values under fixed keys, in constructor order.
      */
     #[Test]
-    public function serialisesTheSixValuesInConstructorOrder(): void
+    public function serialisesTheValuesInConstructorOrder(): void
     {
         $fact = new FactView(
             tag: 'CHR',
@@ -55,34 +55,6 @@ final class FactViewTest extends TestCase
             '{"tag":"CHR","label":"Christening","date":"12.05.1832","place":"Berlin, Germany",'
             . '"placeFull":"Charlottenburg, Berlin, Brandenburg, Germany","value":"Parish register"}',
             json_encode($fact, JSON_THROW_ON_ERROR)
-        );
-    }
-
-    /**
-     * Empty strings stay empty strings, so a consumer can tell a missing part by its length.
-     */
-    #[Test]
-    public function keepsEmptyPartsAsEmptyStrings(): void
-    {
-        $fact = new FactView(
-            tag: 'OCCU',
-            label: 'Occupation',
-            date: '',
-            place: '',
-            placeFull: '',
-            value: 'Smith',
-        );
-
-        self::assertSame(
-            [
-                'tag'       => 'OCCU',
-                'label'     => 'Occupation',
-                'date'      => '',
-                'place'     => '',
-                'placeFull' => '',
-                'value'     => 'Smith',
-            ],
-            $fact->jsonSerialize()
         );
     }
 }

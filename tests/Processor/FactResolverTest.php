@@ -128,9 +128,11 @@ final class FactResolverTest extends TestCase
 
     /**
      * Builds an individual whose facts() answers per requested tag, like the webtrees record does
-     * after it has applied the privacy of the viewer.
+     * after it has applied the privacy of the viewer. The privacy rests on the default access level
+     * of facts(), so the double fails when a caller passes an access level of its own.
      *
-     * @param array<string, Fact> $factsByTag The visible fact per tag, a missing tag has no visible fact
+     * @param array<string, Fact|list<Fact>> $factsByTag The visible facts per tag in record order, a missing
+     *                                                   tag has no visible fact
      *
      * @return Individual
      */
@@ -138,12 +140,20 @@ final class FactResolverTest extends TestCase
     {
         $individual = self::createStub(Individual::class);
         $individual->method('facts')->willReturnCallback(
-            static function (array $filter = []) use ($factsByTag): Collection {
+            static function (array $filter = [], ...$rest) use ($factsByTag): Collection {
+                self::assertNull($rest[1] ?? null, 'facts() must keep the access level of the viewer');
+
                 $found = [];
 
                 foreach ($filter as $tag) {
-                    if (is_string($tag) && isset($factsByTag[$tag])) {
-                        $found[] = $factsByTag[$tag];
+                    if (!is_string($tag) || !isset($factsByTag[$tag])) {
+                        continue;
+                    }
+
+                    $entry = $factsByTag[$tag];
+
+                    foreach (is_array($entry) ? $entry : [$entry] as $fact) {
+                        $found[] = $fact;
                     }
                 }
 
@@ -321,7 +331,7 @@ final class FactResolverTest extends TestCase
 
         $facts = $resolver->factsFor($individual, true);
 
-        self::assertCount(3, $facts);
+        self::assertCount(3, $facts, 'birth slot, death slot and the one optional slot of OCCU');
         self::assertSame('CHR', $facts[0]?->tag);
         self::assertNull($facts[1]);
         self::assertSame('OCCU', $facts[2]?->tag);
@@ -366,8 +376,8 @@ final class FactResolverTest extends TestCase
 
         $facts = $resolver->factsFor($individual, true, ['OCCU']);
 
-        self::assertCount(count($resolver->effectiveTags(true, ['OCCU'])), $facts);
-        self::assertCount(3, $facts);
+        self::assertCount(count($resolver->effectiveTags(true, ['OCCU'])), $facts, 'rows agree with the effective tags');
+        self::assertCount(3, $facts, 'birth slot, death slot and the one remaining optional slot');
         self::assertSame('RESI', $facts[2]?->tag);
     }
 
@@ -392,6 +402,45 @@ final class FactResolverTest extends TestCase
 
         self::assertSame('BIRT', $birth?->tag);
         self::assertSame('DEAT', $death?->tag);
+    }
+
+    /**
+     * When a person has several facts of one tag, the first one in record order is shown.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForShowsTheFirstFactOfATagInRecordOrder(): void
+    {
+        $resolver   = $this->resolverWithTags('OCCU');
+        $individual = $this->individualWith([
+            'OCCU' => [
+                $this->factStub('Occupation', '', '', 'Smith'),
+                $this->factStub('Occupation', '', '', 'Baker'),
+            ],
+        ]);
+
+        self::assertSame('Smith', $resolver->factsFor($individual, true)[2]?->value);
+    }
+
+    /**
+     * A baptism alone fills the birth slot and a cremation alone fills the death slot.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForFallsBackToBaptismAndCremation(): void
+    {
+        $resolver   = $this->resolverWithTags('');
+        $individual = $this->individualWith([
+            'BAPM' => $this->factStub('Baptism', '2 JAN 1900', ''),
+            'CREM' => $this->factStub('Cremation', '4 FEB 1970', ''),
+        ]);
+
+        [$birth, $death] = $resolver->factsFor($individual, false);
+
+        self::assertSame('BAPM', $birth?->tag);
+        self::assertSame('CREM', $death?->tag);
     }
 
     /**
