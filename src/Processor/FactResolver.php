@@ -47,16 +47,6 @@ use function strtoupper;
 final readonly class FactResolver
 {
     /**
-     * Placeholder tag of the birth slot, whatever birth equivalent a person has.
-     */
-    private const string BIRTH_SLOT = 'BIRT';
-
-    /**
-     * Placeholder tag of the death slot, whatever death equivalent a person has.
-     */
-    private const string DEATH_SLOT = 'DEAT';
-
-    /**
      * Name of the tree preference that holds the list of optional tags.
      */
     private const string PREFERENCE_CHART_BOX_TAGS = 'CHART_BOX_TAGS';
@@ -77,37 +67,12 @@ final readonly class FactResolver
     }
 
     /**
-     * Returns the tag of every slot of a chart box, in order. The count of the list is the number of
-     * rows a chart has to reserve for each box.
-     *
-     * @param bool         $showAdditional Whether the chart shows the optional facts
-     * @param list<string> $excludeTags    Tags to leave out of the optional list, for example RESI in an
-     *                                     ancestor chart
-     *
-     * @return list<string>
-     */
-    public function effectiveTags(bool $showAdditional, array $excludeTags = []): array
-    {
-        $tags = [self::BIRTH_SLOT, self::DEATH_SLOT];
-
-        if ($showAdditional) {
-            foreach ($this->optionalTags($excludeTags) as $tag) {
-                $tags[] = $tag;
-            }
-        }
-
-        return $tags;
-    }
-
-    /**
      * Returns the optional tags of the tree preference in their order, upper case and without
      * duplicates. The birth and death equivalents are left out because they have their own slots.
      *
-     * @param list<string> $excludeTags Tags to leave out as well
-     *
      * @return list<string>
      */
-    public function optionalTags(array $excludeTags = []): array
+    public function optionalTags(): array
     {
         if (preg_match_all('/\w+/', $this->tree->getPreference(self::PREFERENCE_CHART_BOX_TAGS), $matches) === false) {
             return [];
@@ -115,7 +80,7 @@ final readonly class FactResolver
 
         $skipped = array_map(
             strtoupper(...),
-            [...Gedcom::BIRTH_EVENTS, ...Gedcom::DEATH_EVENTS, ...$excludeTags]
+            [...Gedcom::BIRTH_EVENTS, ...Gedcom::DEATH_EVENTS]
         );
 
         $tags = [];
@@ -135,15 +100,16 @@ final readonly class FactResolver
     }
 
     /**
-     * Returns the facts of one individual, aligned with {@see self::effectiveTags()}.
+     * Returns the facts of one individual, one slot per row of a chart box. The first slot is the
+     * birth, the second the death and every further slot one optional tag in the order of
+     * {@see self::optionalTags()}.
      *
-     * @param Individual   $individual     The individual to describe
-     * @param bool         $showAdditional Whether the chart shows the optional facts
-     * @param list<string> $excludeTags    Tags to leave out of the optional list
+     * @param Individual $individual     The individual to describe
+     * @param bool       $showAdditional Whether the chart shows the optional facts
      *
      * @return list<FactView|null> One entry per slot, null where the individual has no visible fact
      */
-    public function factsFor(Individual $individual, bool $showAdditional, array $excludeTags = []): array
+    public function factsFor(Individual $individual, bool $showAdditional): array
     {
         $places = new PlaceProcessor($individual, $this->placeFormat, $this->countryMap);
 
@@ -153,7 +119,7 @@ final readonly class FactResolver
         ];
 
         if ($showAdditional) {
-            foreach ($this->optionalTags($excludeTags) as $tag) {
+            foreach ($this->optionalTags() as $tag) {
                 $views[] = $this->viewOfTag($individual, $tag, $places);
             }
         }

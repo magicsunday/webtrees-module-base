@@ -35,8 +35,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
-use function count;
-
 /**
  * Locks the {@see FactResolver} contract: which tags a chart box reserves rows for, which fact
  * each row shows and how its date, place and value are rendered.
@@ -171,22 +169,20 @@ final class FactResolverTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, list<string>, list<string>}>
+     * @return array<string, array{string, list<string>}>
      */
     public static function optionalTagsProvider(): array
     {
-        // [ CHART_BOX_TAGS value, caller exclusions, expected optional tags ]
+        // [ CHART_BOX_TAGS value, expected optional tags ]
         return [
-            'comma separated list'                 => ['OCCU,RESI,EDUC', [], ['OCCU', 'RESI', 'EDUC']],
-            'whitespace and mixed separators'      => [" OCCU , RESI\nEDUC ", [], ['OCCU', 'RESI', 'EDUC']],
-            'lower case is normalised'             => ['occu,Resi', [], ['OCCU', 'RESI']],
-            'custom underscore tags are kept'      => ['_MILT,OCCU', [], ['_MILT', 'OCCU']],
-            'duplicates keep the first occurrence' => ['OCCU,RESI,OCCU', [], ['OCCU', 'RESI']],
-            'birth equivalents are dropped'        => ['BIRT,CHR,BAPM,OCCU', [], ['OCCU']],
-            'death equivalents are dropped'        => ['DEAT,BURI,CREM,OCCU', [], ['OCCU']],
-            'caller exclusions are dropped'        => ['OCCU,RESI,EDUC', ['EDUC'], ['OCCU', 'RESI']],
-            'caller exclusions ignore the case'    => ['OCCU,EDUC', ['educ'], ['OCCU']],
-            'an empty preference gives no tag'     => ['', [], []],
+            'comma separated list'                 => ['OCCU,RESI,EDUC', ['OCCU', 'RESI', 'EDUC']],
+            'whitespace and mixed separators'      => [" OCCU , RESI\nEDUC ", ['OCCU', 'RESI', 'EDUC']],
+            'lower case is normalised'             => ['occu,Resi', ['OCCU', 'RESI']],
+            'custom underscore tags are kept'      => ['_MILT,OCCU', ['_MILT', 'OCCU']],
+            'duplicates keep the first occurrence' => ['OCCU,RESI,OCCU', ['OCCU', 'RESI']],
+            'birth equivalents are dropped'        => ['BIRT,CHR,BAPM,OCCU', ['OCCU']],
+            'death equivalents are dropped'        => ['DEAT,BURI,CREM,OCCU', ['OCCU']],
+            'an empty preference gives no tag'     => ['', []],
         ];
     }
 
@@ -194,41 +190,15 @@ final class FactResolverTest extends TestCase
      * The optional tags come from the tree preference, without the events that always have their own row.
      *
      * @param string       $preference The value of the tree preference
-     * @param list<string> $excluded   The tags the caller excludes
      * @param list<string> $expected   The expected optional tags
      *
      * @return void
      */
     #[Test]
     #[DataProvider('optionalTagsProvider')]
-    public function optionalTagsFollowTheTreePreference(string $preference, array $excluded, array $expected): void
+    public function optionalTagsFollowTheTreePreference(string $preference, array $expected): void
     {
-        self::assertSame($expected, $this->resolverWithTags($preference)->optionalTags($excluded));
-    }
-
-    /**
-     * Birth and death always come first, the optional tags follow when the chart shows them.
-     *
-     * @return void
-     */
-    #[Test]
-    public function effectiveTagsPutBirthAndDeathFirstThenTheOptionalTags(): void
-    {
-        $resolver = $this->resolverWithTags('OCCU,RESI');
-
-        self::assertSame(['BIRT', 'DEAT', 'OCCU', 'RESI'], $resolver->effectiveTags(true));
-        self::assertSame(['BIRT', 'DEAT', 'OCCU'], $resolver->effectiveTags(true, ['RESI']));
-    }
-
-    /**
-     * Without the additional facts only the birth and the death row remain.
-     *
-     * @return void
-     */
-    #[Test]
-    public function effectiveTagsOmitTheOptionalTagsWhenTheChartHidesThem(): void
-    {
-        self::assertSame(['BIRT', 'DEAT'], $this->resolverWithTags('OCCU,RESI')->effectiveTags(false));
+        self::assertSame($expected, $this->resolverWithTags($preference)->optionalTags());
     }
 
     /**
@@ -237,7 +207,7 @@ final class FactResolverTest extends TestCase
      * @return void
      */
     #[Test]
-    public function factsForAlignsTheSlotsWithTheEffectiveTagsAndLeavesMissingFactsNull(): void
+    public function factsForKeepsOneNullSlotPerRowForAPersonWithoutFacts(): void
     {
         $resolver   = $this->resolverWithTags('OCCU,RESI');
         $individual = $this->individualWith([]);
@@ -364,28 +334,6 @@ final class FactResolverTest extends TestCase
         self::assertNull($facts[0]);
         self::assertNull($facts[1]);
         self::assertSame('Smith', $facts[2]?->value);
-    }
-
-    /**
-     * A tag the caller excludes gets no slot, so the rows of a person agree with the effective tags
-     * the chart reserves for the same exclusion list.
-     *
-     * @return void
-     */
-    #[Test]
-    public function factsForLeavesOutTheTagsTheCallerExcludes(): void
-    {
-        $resolver   = $this->resolverWithTags('OCCU,RESI');
-        $individual = $this->individualWith([
-            'OCCU' => $this->factStub('Occupation', '', '', 'Smith'),
-            'RESI' => $this->factStub('Residence', '', 'Berlin'),
-        ]);
-
-        $facts = $resolver->factsFor($individual, true, ['OCCU']);
-
-        self::assertCount(count($resolver->effectiveTags(true, ['OCCU'])), $facts, 'rows agree with the effective tags');
-        self::assertCount(3, $facts, 'birth slot, death slot and the one remaining optional slot');
-        self::assertSame('RESI', $facts[2]?->tag);
     }
 
     /**
