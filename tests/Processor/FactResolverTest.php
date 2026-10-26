@@ -15,6 +15,7 @@ use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\Family;
+use Fisharebest\Webtrees\GedcomRecord;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Place;
@@ -107,14 +108,15 @@ final class FactResolverTest extends TestCase
     /**
      * Builds a fact the way webtrees hands it to a chart: with a label, a date, a place and a value.
      *
-     * @param string $label The localised label
-     * @param string $date  The GEDCOM date
-     * @param string $place The full GEDCOM place name
-     * @param string $value The canonical fact value
+     * @param string            $label  The localised label
+     * @param string            $date   The GEDCOM date
+     * @param string            $place  The full GEDCOM place name
+     * @param string            $value  The canonical fact value
+     * @param GedcomRecord|null $target The record the fact links to, null for a fact without a link
      *
      * @return Fact
      */
-    private function factStub(string $label, string $date, string $place, string $value = ''): Fact
+    private function factStub(string $label, string $date, string $place, string $value = '', ?GedcomRecord $target = null): Fact
     {
         $placeStub = self::createStub(Place::class);
         $placeStub->method('gedcomName')->willReturn($place);
@@ -124,6 +126,7 @@ final class FactResolverTest extends TestCase
         $fact->method('date')->willReturn(new Date($date));
         $fact->method('place')->willReturn($placeStub);
         $fact->method('value')->willReturn($value);
+        $fact->method('target')->willReturn($target);
 
         return $fact;
     }
@@ -494,6 +497,70 @@ final class FactResolverTest extends TestCase
 
         self::assertSame('_MILT', $facts[2]?->tag);
         self::assertSame('Infantry', $facts[2]->value);
+    }
+
+    /**
+     * A fact such as a shared note stores a pointer to a record as its value. The pointer is no text for a
+     * reader, so the fact shows the plain-text name of the record it links to.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForShowsTheNameOfTheRecordAPointerValueLinksTo(): void
+    {
+        $note = self::createStub(GedcomRecord::class);
+        $note->method('fullName')->willReturn('<span class="NAME">Shared &amp; note</span>');
+
+        $resolver   = $this->resolverWithTags('SNOTE');
+        $individual = $this->individualWith([
+            'SNOTE' => $this->factStub('Shared note', '', '', '@N3@', $note),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame('SNOTE', $facts[2]?->tag);
+        self::assertSame('Shared & note', $facts[2]->value);
+    }
+
+    /**
+     * A pointer to a record that the viewer cannot get gives no value, so the raw pointer never reaches
+     * the chart.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForGivesNoValueForAPointerWithoutAVisibleRecord(): void
+    {
+        $resolver   = $this->resolverWithTags('SNOTE');
+        $individual = $this->individualWith([
+            'SNOTE' => $this->factStub('Shared note', '', '', '@N3@'),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame('', $facts[2]?->value);
+    }
+
+    /**
+     * Only a value that is a pointer as a whole is resolved. A text that contains an at sign stays as
+     * it is, and so does a value of a fact that has a link target but no pointer value.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForKeepsATextValueThatContainsAnAtSign(): void
+    {
+        $record = self::createStub(GedcomRecord::class);
+        $record->method('fullName')->willReturn('Must not be used');
+
+        $resolver   = $this->resolverWithTags('_MILT');
+        $individual = $this->individualWith([
+            '_MILT' => $this->factStub('Military service', '', '', 'Lives @N3@ here', $record),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame('Lives @N3@ here', $facts[2]?->value);
     }
 
     /**

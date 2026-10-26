@@ -13,6 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Gedcom;
+use Fisharebest\Webtrees\GedcomRecord;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Model\FactView;
@@ -23,6 +24,7 @@ use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 
 use function array_map;
 use function in_array;
+use function preg_match;
 use function preg_match_all;
 use function strtoupper;
 
@@ -216,6 +218,29 @@ final readonly class FactResolver
     }
 
     /**
+     * Returns the value of a fact as text for a reader. A fact such as a shared note stores a pointer to
+     * a record as its value, which says nothing to a reader, so the value is the plain-text name of the
+     * record that the pointer names. A pointer to a record that the viewer cannot get gives an empty
+     * value, so the raw pointer never reaches a chart.
+     *
+     * @param Fact $fact The visible fact
+     *
+     * @return string
+     */
+    private function valueOfFact(Fact $fact): string
+    {
+        $value = $fact->value();
+
+        if (preg_match('/^@' . Gedcom::REGEX_XREF . '@$/', $value) !== 1) {
+            return $value;
+        }
+
+        $target = $fact->target();
+
+        return ($target instanceof GedcomRecord) ? PlainText::fromMarkup($target->fullName()) : '';
+    }
+
+    /**
      * Returns the view of a fact.
      *
      * @param string         $tag     The GEDCOM tag to report
@@ -231,7 +256,7 @@ final readonly class FactResolver
             date: DateProcessor::formatFactDate($fact->date(), $this->compactDateFormat),
             place: $places->shortPlaceName($fact->place()),
             placeFull: $fact->place()->gedcomName(),
-            value: $fact->value(),
+            value: $this->valueOfFact($fact),
             partner: $partner,
             sortDay: $fact->date()->isOK() ? $fact->date()->minimumJulianDay() : 0,
         );
