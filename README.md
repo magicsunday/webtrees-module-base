@@ -52,7 +52,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names). `getNameSegments()` returns the name as ordered, drawable `NameSegment` objects
 - **`ImageProcessor`** — highlight image + silhouette URL resolution
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
-- **`FactResolver`**: resolves the facts a chart box shows, one slot per row: the first existing birth equivalent, the first existing death equivalent, then the optional tags of the tree preference "Other facts to show in charts". Returns `FactView` objects, `null` for a missing fact
+- **`FactResolver`**: resolves the facts a chart box shows, one slot per row: the first existing birth equivalent, the first existing death equivalent, then the optional tags of the tree preference "Other facts to show in charts". Returns `FactView` objects, `null` for a missing fact. The value of a tag with free text, such as `NOTE`, is kept in full, so a chart that lists such a tag has to shorten the row itself
 
 ### `src/Model/`
 - **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel)

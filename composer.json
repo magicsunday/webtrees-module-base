@@ -1,6 +1,6 @@
 {
     "name": "magicsunday/webtrees-module-base",
-    "description": "Shared PHP base classes (date, name, image, place processors plus module helpers) for the magicsunday/webtrees-* chart modules.",
+    "description": "Shared PHP base classes (date, name, image, place and fact processors plus module helpers) for the magicsunday/webtrees-* chart modules.",
     "license": "GPL-3.0-or-later",
     "type": "library",
     "keywords": [

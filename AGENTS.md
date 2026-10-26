@@ -40,7 +40,7 @@ Before adding an entry, check the following. Is the package a direct dependency 
 - A fresh checkout needs `npm ci` once before `composer ci:test`, because the copy-paste step runs the installed `node_modules/.bin/jscpd`.
 - Auto-fix: `composer ci:cgl` (PHP-CS-Fixer), `composer ci:rector` (Rector).
 - Some tests of the resolver and the writer run the gettext tools (`msgcat`, `msgattrib`, `msgmerge`, `msgfmt`) and skip themselves where one of them is missing. They are the ones that call `GettextWorkspace::toolsAvailable()`. A green run without the tools therefore did not run them. The CI workflow installs the tools in a step of its own before the PHPUnit step.
-- No Makefile. This library has no JS build, no translation catalogue of its own (the fixture catalogues under `tests/` are compiled by hand with `msgfmt`) and no release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules`, followed by `npm ci`.
+- No Makefile. This library has no JS build, no translation catalogue of its own (the fixture catalogues under `tests/` are compiled by hand with `msgfmt`) and no build step that produces a release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules`, followed by `npm ci`.
 
 ## Architecture
 
