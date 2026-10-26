@@ -593,6 +593,33 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * A family tag followed by a person tag. The entries of the family tag follow each other and the
+     * later tag moves on by the number of additional entries, so a consumer finds it by its tag.
+     */
+    #[Test]
+    public function factsForKeepsTheEntryOfALaterTagBehindSeveralFamilyEntries(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR,OCCU');
+        $individual = $this->individualWith(
+            ['OCCU' => $this->factStub('Occupation', '', '', 'Clerk')],
+            [
+                $this->familyWith(['MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany')], 'Anna Schmidt'),
+                $this->familyWith(['MARR' => $this->factStub('Marriage', '2 JUN 1920', 'Paris, France')], 'Marie Curie'),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(5, $facts, 'birth, death, two marriages and the occupation');
+        self::assertSame(
+            ['MARR', 'MARR', 'OCCU'],
+            [$facts[2]?->tag, $facts[3]?->tag, $facts[4]?->tag]
+        );
+        self::assertSame('Marie Curie', $facts[3]?->partner);
+        self::assertSame('Clerk', $facts[4]?->value);
+    }
+
+    /**
      * A family without the fact adds no entry, and a person without any such fact keeps one empty
      * entry, so the number of entries never falls below the number of tags.
      *
