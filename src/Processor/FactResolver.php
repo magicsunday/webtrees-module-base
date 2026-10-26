@@ -32,8 +32,8 @@ use function strtoupper;
  * A chart box has fixed rows, so the answer is a list of slots. Slot 0 is the first existing
  * birth equivalent (BIRT, CHR, BAPM) and slot 1 the first existing death equivalent (DEAT,
  * BURI, CREM). The optional tags of the tree preference "Other facts to show in charts"
- * follow, one slot each. A slot is null when the person has no visible fact for it, so every
- * box of a chart keeps the same rows.
+ * follow, one slot each. A slot is null when the person has no visible fact for it, so the
+ * rows of a box stay the same, except for the marriage and divorce tags described below.
  *
  * A marriage or a divorce is a fact of the family and not of the person. For a tag of that kind
  * the families of the person as spouse are read, and every family with the fact gives one entry
@@ -108,12 +108,14 @@ final readonly class FactResolver
     /**
      * Returns the facts of one individual, one slot per row of a chart box. The first slot is the
      * birth, the second the death and every further slot one optional tag in the order of
-     * {@see self::optionalTags()}.
+     * {@see self::optionalTags()}. A marriage or divorce tag gives one entry per family with the
+     * fact instead of one slot, so the entries of that tag follow each other and the later tags
+     * move on by the number of additional entries.
      *
      * @param Individual $individual     The individual to describe
      * @param bool       $showAdditional Whether the chart shows the optional facts
      *
-     * @return list<FactView|null> One entry per slot, null where the individual has no visible fact
+     * @return list<FactView|null> At least one entry per slot, null where the individual has no visible fact
      */
     public function factsFor(Individual $individual, bool $showAdditional): array
     {

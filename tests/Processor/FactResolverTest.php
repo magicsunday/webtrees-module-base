@@ -566,7 +566,7 @@ final class FactResolverTest extends TestCase
 
         $facts = $resolver->factsFor($individual, true);
 
-        self::assertCount(4, $facts);
+        self::assertCount(4, $facts, 'birth, death and one entry per family');
         self::assertEquals(
             [
                 new FactView(
@@ -627,7 +627,7 @@ final class FactResolverTest extends TestCase
 
         $facts = $resolver->factsFor($individual, true);
 
-        self::assertCount(3, $facts);
+        self::assertCount(3, $facts, 'birth, death and the one entry of the family tag');
         self::assertInstanceOf(FactView::class, $facts[2]);
         self::assertSame('05.05.1950', $facts[2]->date);
         self::assertSame('', $facts[2]->partner);
