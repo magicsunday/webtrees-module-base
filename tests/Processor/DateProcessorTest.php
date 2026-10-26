@@ -13,13 +13,13 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Date\AbstractCalendarDate;
-use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\InMemoryCacheFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -48,7 +48,7 @@ final class DateProcessorTest extends TestCase
     {
         parent::setUp();
 
-        Registry::cache(new CacheFactory());
+        Registry::cache(new InMemoryCacheFactory());
         Registry::calendarDateFactory(new CalendarDateFactory());
     }
 

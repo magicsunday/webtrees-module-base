@@ -13,7 +13,6 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Fact;
-use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
@@ -29,6 +28,7 @@ use MagicSunday\Webtrees\ModuleBase\Processor\FactResolver;
 use MagicSunday\Webtrees\ModuleBase\Processor\PlaceProcessor;
 use MagicSunday\Webtrees\ModuleBase\Support\Locale\IsoCountryMap;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\InMemoryCacheFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,7 +64,7 @@ final class FactResolverTest extends TestCase
     {
         parent::setUp();
 
-        Registry::cache(new CacheFactory());
+        Registry::cache(new InMemoryCacheFactory());
         Registry::calendarDateFactory(new CalendarDateFactory());
         I18N::init('en-US', true);
         IsoCountryMap::clearCache();
@@ -147,6 +147,7 @@ final class FactResolverTest extends TestCase
             static function (array $filter = [], ...$rest) use ($factsByTag): Collection {
                 self::assertFalse($rest[0] ?? false, 'facts() must keep the record order');
                 self::assertNull($rest[1] ?? null, 'facts() must keep the access level of the viewer');
+                self::assertFalse($rest[2] ?? false, 'facts() must keep the deleted facts of the record');
 
                 $found = [];
 
