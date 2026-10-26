@@ -85,15 +85,15 @@ final class DateProcessorTest extends TestCase
     {
         // [ GEDCOM date, compact format, expected text ]
         return [
-            'an empty date gives nothing'               => ['', '%d.%m.%Y', ''],
-            'an unparseable date gives nothing'         => ['not a date', '%d.%m.%Y', ''],
-            'a complete date uses the compact format'   => ['12 MAY 1832', '%d.%m.%Y', '12.05.1832'],
-            'a complete date follows the given pattern' => ['12 MAY 1832', '%Y/%m/%d', '1832/05/12'],
-            'a complete julian date keeps its calendar' => ['@#DJULIAN@ 01 MAR 1700', '%Y-%m-%d', '1700 CE-03-01'],
-            'a date without a day keeps its wording'    => ['MAY 1832', '%d.%m.%Y', 'May 1832'],
-            'a year only keeps its wording'             => ['1832', '%d.%m.%Y', '1832'],
-            'a qualified date keeps its qualifier'      => ['ABT 12 MAY 1832', '%d.%m.%Y', 'about May 12, 1832'],
-            'a range keeps both ends'                   => ['BET 1800 AND 1810', '%d.%m.%Y', 'between 1800 and 1810'],
+            'an empty date gives nothing'                 => ['', '%d.%m.%Y', ''],
+            'an unparseable date gives nothing'           => ['not a date', '%d.%m.%Y', ''],
+            'a complete date uses the compact format'     => ['12 MAY 1832', '%d.%m.%Y', '12.05.1832'],
+            'a complete date follows the given pattern'   => ['12 MAY 1832', '%Y/%m/%d', '1832/05/12'],
+            'a complete julian date uses the julian year' => ['@#DJULIAN@ 01 MAR 1700', '%Y-%m-%d', '1700 CE-03-01'],
+            'a date without a day keeps its wording'      => ['MAY 1832', '%d.%m.%Y', 'May 1832'],
+            'a year only keeps its wording'               => ['1832', '%d.%m.%Y', '1832'],
+            'a qualified date keeps its qualifier'        => ['ABT 12 MAY 1832', '%d.%m.%Y', 'about May 12, 1832'],
+            'a range keeps both ends'                     => ['BET 1800 AND 1810', '%d.%m.%Y', 'between 1800 and 1810'],
         ];
     }
 
