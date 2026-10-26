@@ -56,7 +56,7 @@ src/
   Model/          — value objects, enums and the person DTO (Symbols, NameAbbreviation, PlaceStyle, PlaceFormatSpec, PlaceFormatChoice, NameSegment, NameSegmentKind, FactView, NodeData)
   Module/         — module-level helpers (VersionInformation)
   Processor/      — DateProcessor, NameProcessor, ImageProcessor, PlaceProcessor, FactResolver
-  Support/        — locale-independent helpers (CompactDateFormat, TextDirection, PlainText)
+  Support/        — plain helpers (CompactDateFormat, TextDirection, PlainText)
   Support/Locale/ — locale-aware helpers (IsoCountryMap)
   Testing/        — reusable PHPUnit test cases the consuming modules extend (AbstractCatalogueStructureTestCase)
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules

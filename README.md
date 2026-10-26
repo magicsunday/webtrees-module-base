@@ -18,7 +18,7 @@ This package ships no UI of its own — it is consumed as a Composer dependency 
 ## Requirements
 
 - PHP 8.3 - 8.5 with extensions `dom`, `intl` and `mbstring`
-- [webtrees](https://www.webtrees.net/) `~2.2`
+- [webtrees](https://www.webtrees.net/) `~2.2.0`
 
 ## Installation
 
