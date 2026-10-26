@@ -17,7 +17,7 @@ use JsonSerializable;
  * One fact of a person as a chart box shows it: the event label, its date, its place and
  * its value. The label and the date are reduced to plain text. The place is formatted by the
  * configured place style, the full place is the place name of webtrees and the value is the
- * canonical value of the fact, none of the three reduced to plain text. A character such as "<"
+ * canonical value of the fact, none of them reduced to plain text. A character such as "<"
  * or "&" may appear in any of them, so a consumer that writes them into an HTML context has to
  * escape them there.
  *
