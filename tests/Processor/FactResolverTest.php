@@ -842,6 +842,38 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * A tag that the preference names is skipped alone. The other tag of the pair is still added, so
+     * a family with a marriage and a divorce shows both when only the marriage is named.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForStillAddsTheDivorceWhenThePreferenceNamesTheMarriage(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR');
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->familyWith(
+                    [
+                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+                    ],
+                    'Anna Schmidt'
+                ),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(4, $facts, 'birth, death, the added divorce and the marriage of the preference');
+        self::assertSame(
+            ['DIV', 'MARR'],
+            [$facts[2]?->tag, $facts[3]?->tag]
+        );
+    }
+
+    /**
      * A family without the fact adds no entry, and a person without any such fact keeps one empty
      * entry, so the number of entries never falls below the number of tags.
      *
