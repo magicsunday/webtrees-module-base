@@ -176,6 +176,22 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * Builds the family of the person with a marriage and a divorce, the other spouse is Anna Schmidt.
+     *
+     * @return Family
+     */
+    private function marriedAndDivorcedFamily(): Family
+    {
+        return $this->familyWith(
+            [
+                'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+            ],
+            'Anna Schmidt'
+        );
+    }
+
+    /**
      * Builds a family of the individual with the given visible facts and spouse. The family hands out its
      * facts under the same conditions as the individual, so the double fails when a caller changes them.
      *
@@ -764,13 +780,7 @@ final class FactResolverTest extends TestCase
         $individual = $this->individualWith(
             ['OCCU' => $this->factStub('Occupation', '', '', 'Clerk')],
             [
-                $this->familyWith(
-                    [
-                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
-                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
-                    ],
-                    'Anna Schmidt'
-                ),
+                $this->marriedAndDivorcedFamily(),
             ]
         );
 
@@ -854,13 +864,7 @@ final class FactResolverTest extends TestCase
         $individual = $this->individualWith(
             [],
             [
-                $this->familyWith(
-                    [
-                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
-                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
-                    ],
-                    'Anna Schmidt'
-                ),
+                $this->marriedAndDivorcedFamily(),
             ]
         );
 
@@ -887,13 +891,7 @@ final class FactResolverTest extends TestCase
         $individual = $this->individualWith(
             [],
             [
-                $this->familyWith(
-                    [
-                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
-                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
-                    ],
-                    'Anna Schmidt'
-                ),
+                $this->marriedAndDivorcedFamily(),
             ]
         );
 
@@ -904,6 +902,86 @@ final class FactResolverTest extends TestCase
             ['MARR', 'DIV'],
             [$facts[2]?->tag, $facts[3]?->tag]
         );
+    }
+
+    /**
+     * With several families the marriages come first and the divorces follow, because each added tag
+     * gives its entries for all families before the next tag. A family without the fact adds nothing.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForListsAllMarriagesBeforeTheDivorcesOfSeveralFamilies(): void
+    {
+        $resolver   = $this->resolverWithTags('');
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->marriedAndDivorcedFamily(),
+                $this->familyWith(
+                    ['MARR' => $this->factStub('Marriage', '3 JUL 1920', 'Rome, Italy')],
+                    'Marie Curie'
+                ),
+                $this->familyWith([], 'Eva Braun'),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(5, $facts, 'birth, death, two marriages and one divorce');
+        self::assertSame(
+            ['MARR', 'MARR', 'DIV'],
+            [$facts[2]?->tag, $facts[3]?->tag, $facts[4]?->tag]
+        );
+        self::assertSame(
+            ['Anna Schmidt', 'Marie Curie', 'Anna Schmidt'],
+            [$facts[2]?->partner, $facts[3]?->partner, $facts[4]?->partner]
+        );
+    }
+
+    /**
+     * An added divorce sits directly behind the marriage of the preference and ahead of the tags that
+     * the preference lists after it.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForPlacesTheAddedDivorceAheadOfTheTagsBehindTheMarriage(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR,OCCU');
+        $individual = $this->individualWith(
+            ['OCCU' => $this->factStub('Occupation', '', '', 'Clerk')],
+            [
+                $this->marriedAndDivorcedFamily(),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(5, $facts, 'birth, death, marriage, the added divorce and the occupation');
+        self::assertSame(
+            ['MARR', 'DIV', 'OCCU'],
+            [$facts[2]?->tag, $facts[3]?->tag, $facts[4]?->tag]
+        );
+    }
+
+    /**
+     * A preference that names the marriage keeps the null entry of that tag for a person without a
+     * marriage, and the divorce that is added behind it gives no entry of its own.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForKeepsTheNullEntryOfANamedMarriageWithoutAnyMarriage(): void
+    {
+        $resolver = $this->resolverWithTags('MARR');
+
+        $facts = $resolver->factsFor(
+            $this->individualWith([], [$this->familyWith([], 'Anna Schmidt')]),
+            true
+        );
+
+        self::assertSame([null, null, null], $facts, 'birth, death and the null entry of the named marriage');
     }
 
     /**
@@ -919,13 +997,7 @@ final class FactResolverTest extends TestCase
         $individual = $this->individualWith(
             [],
             [
-                $this->familyWith(
-                    [
-                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
-                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
-                    ],
-                    'Anna Schmidt'
-                ),
+                $this->marriedAndDivorcedFamily(),
             ]
         );
 
@@ -951,13 +1023,7 @@ final class FactResolverTest extends TestCase
         $individual = $this->individualWith(
             [],
             [
-                $this->familyWith(
-                    [
-                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
-                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
-                    ],
-                    'Anna Schmidt'
-                ),
+                $this->marriedAndDivorcedFamily(),
             ]
         );
 
