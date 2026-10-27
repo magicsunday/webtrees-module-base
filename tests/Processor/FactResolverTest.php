@@ -510,6 +510,7 @@ final class FactResolverTest extends TestCase
     {
         $note = self::createStub(GedcomRecord::class);
         $note->method('fullName')->willReturn('<span class="NAME">Shared &amp; note</span>');
+        $note->method('canShowName')->willReturn(true);
 
         $resolver   = $this->resolverWithTags('SNOTE');
         $individual = $this->individualWith([
@@ -543,24 +544,64 @@ final class FactResolverTest extends TestCase
 
     /**
      * Only a value that is a pointer as a whole is resolved. A text that contains an at sign stays as
-     * it is, and so does a value of a fact that has a link target but no pointer value.
+     * it is, whether the pointer sits in the middle, at the start or at the end of it, and so does a
+     * value of a fact that has a link target but no pointer value.
+     *
+     * @param string $text The value of the fact
      *
      * @return void
      */
     #[Test]
-    public function factsForKeepsATextValueThatContainsAnAtSign(): void
+    #[DataProvider('textWithAnAtSignProvider')]
+    public function factsForKeepsATextValueThatContainsAnAtSign(string $text): void
     {
         $record = self::createStub(GedcomRecord::class);
         $record->method('fullName')->willReturn('Must not be used');
+        $record->method('canShowName')->willReturn(true);
 
         $resolver   = $this->resolverWithTags('_MILT');
         $individual = $this->individualWith([
-            '_MILT' => $this->factStub('Military service', '', '', 'Lives @N3@ here', $record),
+            '_MILT' => $this->factStub('Military service', '', '', $text, $record),
         ]);
 
         $facts = $resolver->factsFor($individual, true);
 
-        self::assertSame('Lives @N3@ here', $facts[2]?->value);
+        self::assertSame($text, $facts[2]?->value);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function textWithAnAtSignProvider(): array
+    {
+        return [
+            'pointer in the middle of a text' => ['Lives @N3@ here'],
+            'text after a pointer'            => ['@N3@ trailing'],
+            'text before a pointer'           => ['leading @N3@'],
+        ];
+    }
+
+    /**
+     * A pointer to a record that exists but that the viewer may not see gives no value either, so the
+     * placeholder name of a private record never reaches the chart.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForGivesNoValueForAPointerToARecordTheViewerMayNotSee(): void
+    {
+        $record = self::createStub(GedcomRecord::class);
+        $record->method('fullName')->willReturn('Private');
+        $record->method('canShowName')->willReturn(false);
+
+        $resolver   = $this->resolverWithTags('SNOTE');
+        $individual = $this->individualWith([
+            'SNOTE' => $this->factStub('Shared note', '', '', '@N3@', $record),
+        ]);
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertSame('', $facts[2]?->value);
     }
 
     /**

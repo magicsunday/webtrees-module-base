@@ -237,7 +237,9 @@ final readonly class FactResolver
 
         $target = $fact->target();
 
-        return ($target instanceof GedcomRecord) ? PlainText::fromMarkup($target->fullName()) : '';
+        return (($target instanceof GedcomRecord) && $target->canShowName())
+            ? PlainText::fromMarkup($target->fullName())
+            : '';
     }
 
     /**
