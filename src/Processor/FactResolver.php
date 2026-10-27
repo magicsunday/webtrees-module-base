@@ -280,8 +280,9 @@ final readonly class FactResolver
      * Returns the value of a fact as text for a reader. A fact such as a shared note stores a pointer to
      * a record as its value, which says nothing to a reader, so the value is the plain-text name of the
      * record that the pointer names. A pointer to a record that the viewer cannot get gives an empty
-     * value, so the raw pointer never reaches a chart. A text never has the form of a pointer as a
-     * whole, because GEDCOM writes an at sign of a text twice.
+     * value, so the raw pointer never reaches a chart. A text that equals a pointer as a whole is read
+     * as a pointer too, because the file import of webtrees stores the doubled at sign of a text as a
+     * single one, so nothing tells the two apart and such a text is rare.
      *
      * @param Fact $fact The visible fact
      *

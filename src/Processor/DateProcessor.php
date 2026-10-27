@@ -392,7 +392,8 @@ final readonly class DateProcessor
      * @param string $compactFormat The webtrees calendar format string for a complete date, defaults to
      *                              CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
      *
-     * @return string Plain text with single spaces, empty when the date is not a valid date
+     * @return string Plain text with single spaces, empty when the date is not a valid date, which
+     *                includes a date without a year because webtrees cannot place it on a calendar
      */
     public static function formatFactDate(Date $date, string $compactFormat = CompactDateFormat::FALLBACK): string
     {
