@@ -570,6 +570,8 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * Texts with a pointer-shaped token that has text around it, which must stay as they are.
+     *
      * @return array<string, array{string}>
      */
     public static function textWithAnAtSignProvider(): array
