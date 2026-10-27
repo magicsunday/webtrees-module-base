@@ -40,11 +40,15 @@ use function strtoupper;
  * A marriage or a divorce is a fact of the family and not of the person. For a tag of that kind
  * the families of the person as spouse are read, and every family with the fact gives one entry
  * that names the other spouse, so a person with several marriages gets several entries. A person
- * without such a fact keeps one null entry, so the number of entries is never below the number
- * of tags.
+ * without such a fact keeps one null entry for a tag that the preference names, so the number of
+ * entries is never below the number of tags of the preference.
  *
- * The optional slots follow the death slot, so the first two rows keep their meaning for every
- * person and a chart can reserve them as a fixed block. None of the birth and death equivalents
+ * The administration offers only facts of a person for that preference, so the marriage and the
+ * divorce are added on top. They follow the death slot with one entry per family that has the fact
+ * and no null entry otherwise, and a tag that the preference names keeps its own place.
+ *
+ * The added entries and the optional slots follow the death slot, so the first two rows keep their
+ * meaning for every person and a chart can reserve them as a fixed block. None of the birth and death equivalents
  * is optional, because they have their own slots, and the tags of the preference are upper-cased
  * and de-duplicated.
  *
@@ -179,7 +183,7 @@ final readonly class FactResolver
      * @param string         $tag        The GEDCOM tag to look for
      * @param PlaceProcessor $places     The place formatter of the individual
      *
-     * @return list<FactView>
+     * @return list<FactView> The entries with a visible fact, empty when the individual has none
      */
     private function presentViewsOfTag(Individual $individual, string $tag, PlaceProcessor $places): array
     {
