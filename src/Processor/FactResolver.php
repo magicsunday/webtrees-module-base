@@ -60,6 +60,16 @@ final readonly class FactResolver
     private const string PREFERENCE_CHART_BOX_TAGS = 'CHART_BOX_TAGS';
 
     /**
+     * Tag of the marriage, which every panel shows without a listing in the tree preference.
+     */
+    private const string TAG_MARRIAGE = 'MARR';
+
+    /**
+     * Tag of the divorce, which every panel shows without a listing in the tree preference.
+     */
+    private const string TAG_DIVORCE = 'DIV';
+
+    /**
      * @param Tree            $tree              The tree whose preference lists the optional tags
      * @param PlaceFormatSpec $placeFormat       How the place of a fact is shortened
      * @param IsoCountryMap   $countryMap        Resolver for the place styles that resolve a country segment
@@ -109,8 +119,10 @@ final readonly class FactResolver
 
     /**
      * Returns the facts of one individual, one slot per row of a chart box. The first slot is the
-     * birth, the second the death and every further slot one optional tag in the order of
-     * {@see self::optionalTags()}. A marriage or divorce tag gives one entry per family with the
+     * birth, the second the death. The marriage and the divorce follow with one entry per family that
+     * has the fact, and none when no family has it, because the tree preference lists only facts of a
+     * person and so cannot name them. Every further slot is one optional tag in the order of
+     * {@see self::optionalTags()}, and a marriage or divorce tag named there keeps its slot. A marriage or divorce tag gives one entry per family with the
      * fact instead of one slot, so the entries of that tag follow each other and the later tags
      * move on by the number of additional entries.
      *
@@ -129,7 +141,21 @@ final readonly class FactResolver
         ];
 
         if ($showAdditional) {
-            foreach ($this->optionalTags() as $tag) {
+            $optionalTags = $this->optionalTags();
+
+            foreach ([self::TAG_MARRIAGE, self::TAG_DIVORCE] as $tag) {
+                if (in_array($tag, $optionalTags, true)) {
+                    continue;
+                }
+
+                foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
+                    if ($view instanceof FactView) {
+                        $views[] = $view;
+                    }
+                }
+            }
+
+            foreach ($optionalTags as $tag) {
                 foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
                     $views[] = $view;
                 }

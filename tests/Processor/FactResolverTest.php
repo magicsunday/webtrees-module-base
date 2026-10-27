@@ -751,6 +751,97 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * The tree preference lists only facts of a person, so it can never name the marriage or the
+     * divorce. They still follow the death, one entry per family with the partner, ahead of the
+     * optional tags.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForShowsMarriageAndDivorceWithoutAListingInThePreference(): void
+    {
+        $resolver   = $this->resolverWithTags('OCCU');
+        $individual = $this->individualWith(
+            ['OCCU' => $this->factStub('Occupation', '', '', 'Clerk')],
+            [
+                $this->familyWith(
+                    [
+                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+                    ],
+                    'Anna Schmidt'
+                ),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(5, $facts, 'birth, death, marriage, divorce and the occupation');
+        self::assertSame(
+            ['MARR', 'DIV', 'OCCU'],
+            [$facts[2]?->tag, $facts[3]?->tag, $facts[4]?->tag]
+        );
+        self::assertSame('Anna Schmidt', $facts[2]?->partner);
+        self::assertSame('Anna Schmidt', $facts[3]?->partner);
+    }
+
+    /**
+     * A person without a marriage or divorce gets no placeholder for them, so the slots of the
+     * optional tags stay where the preference puts them.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForAddsNoEntryForAMarriageOrDivorceThatNoFamilyHas(): void
+    {
+        $resolver = $this->resolverWithTags('OCCU');
+
+        $facts = $resolver->factsFor(
+            $this->individualWith([], [$this->familyWith([], 'Anna Schmidt')]),
+            true
+        );
+
+        self::assertSame([null, null, null], $facts, 'birth, death and the occupation only');
+    }
+
+    /**
+     * Without the optional facts the panel shows only birth and death, as before.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForLeavesMarriageAndDivorceOutWithoutTheOptionalFacts(): void
+    {
+        $resolver   = $this->resolverWithTags('');
+        $individual = $this->individualWith(
+            [],
+            [$this->familyWith(['MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany')], 'Anna Schmidt')]
+        );
+
+        self::assertCount(2, $resolver->factsFor($individual, false));
+    }
+
+    /**
+     * A tag that the preference names keeps its own slot, so the marriage is not shown twice.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForDoesNotRepeatAMarriageThatThePreferenceNames(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR');
+        $individual = $this->individualWith(
+            [],
+            [$this->familyWith(['MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany')], 'Anna Schmidt')]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(3, $facts);
+        self::assertSame('MARR', $facts[2]?->tag);
+    }
+
+    /**
      * A family without the fact adds no entry, and a person without any such fact keeps one empty
      * entry, so the number of entries never falls below the number of tags.
      *
