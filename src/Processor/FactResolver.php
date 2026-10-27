@@ -124,7 +124,8 @@ final readonly class FactResolver
      * the administration offers only facts of a person. Every further slot is one optional tag in
      * the order of {@see self::optionalTags()}. A marriage or divorce tag named there keeps its own
      * place and gives one entry per family with the fact instead of one slot, so the later tags
-     * move on by the number of additional entries. A divorce is always listed behind the marriage.
+     * move on by the number of additional entries. A divorce that is added on top is listed behind the
+     * marriage, and when the preference names both tags it keeps its own order for them.
      *
      * @param Individual $individual     The individual to describe
      * @param bool       $showAdditional Whether the chart shows the optional facts

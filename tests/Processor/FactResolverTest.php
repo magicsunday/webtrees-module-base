@@ -907,6 +907,38 @@ final class FactResolverTest extends TestCase
     }
 
     /**
+     * A preference that names both tags keeps its own order for them, also when it lists the divorce
+     * first, because only a divorce that the method adds on top is placed behind the marriage.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForKeepsThePreferenceOrderWhenItNamesTheDivorceBeforeTheMarriage(): void
+    {
+        $resolver   = $this->resolverWithTags('DIV,MARR');
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->familyWith(
+                    [
+                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+                    ],
+                    'Anna Schmidt'
+                ),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(4, $facts, 'birth, death and the two facts of the preference');
+        self::assertSame(
+            ['DIV', 'MARR'],
+            [$facts[2]?->tag, $facts[3]?->tag]
+        );
+    }
+
+    /**
      * A divorce that the preference names is skipped alone as well. The marriage is still added, and
      * it comes before the divorce.
      *
