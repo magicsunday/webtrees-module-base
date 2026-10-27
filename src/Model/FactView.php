@@ -39,8 +39,10 @@ final readonly class FactView implements JsonSerializable
      * @param string $placeFull The full GEDCOM place name, meant for a tooltip
      * @param string $value     The canonical value of the fact, or the name of the linked record for a
      *                          fact whose value is a pointer
-     * @param string $partner   The name of the other spouse for an event of a family such as a marriage,
-     *                          empty for an event of the person and for a family without a visible partner
+     * @param string $partner   The name of the other spouse as webtrees shows it to the viewer, for an event
+     *                          of a family such as a marriage. For a private spouse it is a placeholder when
+     *                          the tree shows private relationships and empty when it does not, and it is
+     *                          empty for an event of the person and for a family without a spouse
      * @param int    $sortDay   The Julian day number of the first day of the date as written, without regard to a
      *                          qualifier such as "after" or "before", for sorting facts by time, zero for a
      *                          fact without a usable date

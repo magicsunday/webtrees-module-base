@@ -32,25 +32,24 @@ use function strtoupper;
  * Resolves which facts a chart box shows and the text of each one.
  *
  * A chart box has fixed rows, so the answer is a list of slots. Slot 0 is the first existing
- * birth equivalent (BIRT, CHR, BAPM) and slot 1 the first existing death equivalent (DEAT,
- * BURI, CREM). The optional tags of the tree preference "Other facts to show in charts"
- * follow, one slot each. A slot is null when the person has no visible fact for it, so the
- * rows of a box stay the same, except for the marriage and divorce tags described below.
+ * birth equivalent (BIRT, CHR, BAPM) and slot 1 the first existing death equivalent (DEAT, BURI,
+ * CREM), each null when the person has no visible fact for it. When the caller asks for the optional
+ * facts, the optional tags of the tree preference "Other facts to show in charts" follow, so the
+ * first two rows keep their meaning for every person and a chart can reserve them as a fixed block.
+ * The tags of the preference are upper-cased and de-duplicated, and the birth and death
+ * equivalents are left out of them.
  *
- * A marriage or a divorce is a fact of the family and not of the person. For a tag of that kind
- * the families of the person as spouse are read, and every family with the fact gives one entry
- * that names the other spouse, so a person with several marriages gets several entries. A person
- * without such a fact keeps one null entry for a tag that the preference names, so the number of
- * entries is never below the number of tags of the preference.
+ * A marriage or a divorce is a fact of the family and not of the person. For a tag of that kind the
+ * families of the person as spouse are read, and every family with the fact gives one entry that
+ * names the other spouse, so a person with several marriages gets several entries.
  *
- * The administration offers only facts of a person for that preference, so the marriage and the
- * divorce are added on top. They follow the death slot with one entry per family that has the fact
- * and no null entry otherwise, and a tag that the preference names keeps its own place.
- *
- * The added entries and the optional slots follow the death slot, so the first two rows keep their
- * meaning for every person and a chart can reserve them as a fixed block. None of the birth and
- * death equivalents is optional, because they have their own slots, and the tags of the preference
- * are upper-cased and de-duplicated.
+ * The administration offers only facts of a person for the preference. When the caller asks for the
+ * optional facts, the marriage and the divorce are therefore added unless the preference names the
+ * tag itself. The added marriage follows the death slot and the added divorce follows the marriage,
+ * wherever the marriage stands. Each gives one entry per family that has the fact and no null entry
+ * otherwise. A tag of that kind that the preference names keeps its own place and gives a single
+ * null entry when no family has the fact, and a preference that names both tags keeps its own order
+ * for them.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -64,12 +63,14 @@ final readonly class FactResolver
     private const string PREFERENCE_CHART_BOX_TAGS = 'CHART_BOX_TAGS';
 
     /**
-     * Tag of the marriage, which every panel shows without a listing in the tree preference.
+     * Tag of the marriage, which is added to the optional facts without a listing in the tree
+     * preference.
      */
     private const string TAG_MARRIAGE = 'MARR';
 
     /**
-     * Tag of the divorce, which every panel shows without a listing in the tree preference.
+     * Tag of the divorce, which is added to the optional facts without a listing in the tree
+     * preference.
      */
     private const string TAG_DIVORCE = 'DIV';
 
@@ -96,9 +97,7 @@ final readonly class FactResolver
      */
     public function optionalTags(): array
     {
-        if (preg_match_all('/\w+/', $this->tree->getPreference(self::PREFERENCE_CHART_BOX_TAGS), $matches) === false) {
-            return [];
-        }
+        preg_match_all('/\w+/', $this->tree->getPreference(self::PREFERENCE_CHART_BOX_TAGS), $matches);
 
         $skipped = array_map(
             strtoupper(...),
@@ -123,13 +122,11 @@ final readonly class FactResolver
 
     /**
      * Returns the facts of one individual, one slot per row of a chart box. The first slot is the
-     * birth, the second the death. The marriage and the divorce follow with one entry per family that
-     * has the fact, and none when no family has it, because the choice for the tree preference in
-     * the administration offers only facts of a person. Every further slot is one optional tag in
-     * the order of {@see self::optionalTags()}. A marriage or divorce tag named there keeps its own
-     * place and gives one entry per family with the fact instead of one slot, so the later tags
-     * move on by the number of additional entries. A divorce that is added on top is listed behind the
-     * marriage, and when the preference names both tags it keeps its own order for them.
+     * birth, the second the death. With the optional facts, the added marriage and divorce and the
+     * optional tags in the order of {@see self::optionalTags()} follow. A marriage or divorce tag
+     * gives one entry per family with the fact, so the later tags move on by the number of additional
+     * entries. The class docblock holds the rules for a preference that names the marriage or the
+     * divorce itself.
      *
      * @param Individual $individual     The individual to describe
      * @param bool       $showAdditional Whether the chart shows the optional facts
