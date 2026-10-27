@@ -48,9 +48,9 @@ use function strtoupper;
  * and no null entry otherwise, and a tag that the preference names keeps its own place.
  *
  * The added entries and the optional slots follow the death slot, so the first two rows keep their
- * meaning for every person and a chart can reserve them as a fixed block. None of the birth and death equivalents
- * is optional, because they have their own slots, and the tags of the preference are upper-cased
- * and de-duplicated.
+ * meaning for every person and a chart can reserve them as a fixed block. None of the birth and
+ * death equivalents is optional, because they have their own slots, and the tags of the preference
+ * are upper-cased and de-duplicated.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
