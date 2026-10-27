@@ -41,8 +41,9 @@ final readonly class FactView implements JsonSerializable
      *                          fact whose value is a pointer
      * @param string $partner   The name of the other spouse for an event of a family such as a marriage,
      *                          empty for an event of the person and for a family without a visible partner
-     * @param int    $sortDay   The Julian day number of the earliest day the date can mean, for sorting facts
-     *                          by time, zero for a fact without a usable date
+     * @param int    $sortDay   The Julian day number of the first day of the date as written, without regard to a
+     *                          qualifier such as "after" or "before", for sorting facts by time, zero for a
+     *                          fact without a usable date
      */
     public function __construct(
         public string $tag,
