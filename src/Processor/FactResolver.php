@@ -120,16 +120,17 @@ final readonly class FactResolver
     /**
      * Returns the facts of one individual, one slot per row of a chart box. The first slot is the
      * birth, the second the death. The marriage and the divorce follow with one entry per family that
-     * has the fact, and none when no family has it, because the tree preference lists only facts of a
-     * person and so cannot name them. Every further slot is one optional tag in the order of
-     * {@see self::optionalTags()}, and a marriage or divorce tag named there keeps its slot. A marriage or divorce tag gives one entry per family with the
-     * fact instead of one slot, so the entries of that tag follow each other and the later tags
-     * move on by the number of additional entries.
+     * has the fact, and none when no family has it, because the choice for the tree preference in
+     * the administration offers only facts of a person. Every further slot is one optional tag in
+     * the order of {@see self::optionalTags()}. A marriage or divorce tag named there keeps its own
+     * place and gives one entry per family with the fact instead of one slot, so the later tags
+     * move on by the number of additional entries. A divorce is always listed behind the marriage.
      *
      * @param Individual $individual     The individual to describe
      * @param bool       $showAdditional Whether the chart shows the optional facts
      *
-     * @return list<FactView|null> At least one entry per slot, null where the individual has no visible fact
+     * @return list<FactView|null> Null where the individual has no visible fact for a slot, the added
+     *                             marriage and divorce give no null entry
      */
     public function factsFor(Individual $individual, bool $showAdditional): array
     {
@@ -144,21 +145,48 @@ final readonly class FactResolver
             $optionalTags = $this->optionalTags();
 
             foreach ([self::TAG_MARRIAGE, self::TAG_DIVORCE] as $tag) {
-                if (in_array($tag, $optionalTags, true)) {
+                // A divorce that follows a marriage of the preference is added behind that marriage below.
+                if (
+                    in_array($tag, $optionalTags, true)
+                    || (($tag === self::TAG_DIVORCE) && in_array(self::TAG_MARRIAGE, $optionalTags, true))
+                ) {
                     continue;
                 }
 
-                foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
-                    if ($view instanceof FactView) {
-                        $views[] = $view;
-                    }
-                }
+                $views = [...$views, ...$this->presentViewsOfTag($individual, $tag, $places)];
             }
 
             foreach ($optionalTags as $tag) {
-                foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
-                    $views[] = $view;
+                $views = [...$views, ...$this->viewsOfTag($individual, $tag, $places)];
+
+                if (
+                    ($tag === self::TAG_MARRIAGE)
+                    && !in_array(self::TAG_DIVORCE, $optionalTags, true)
+                ) {
+                    $views = [...$views, ...$this->presentViewsOfTag($individual, self::TAG_DIVORCE, $places)];
                 }
+            }
+        }
+
+        return $views;
+    }
+
+    /**
+     * Returns the entries of a tag that the individual has a visible fact for, and none otherwise.
+     *
+     * @param Individual     $individual The individual to describe
+     * @param string         $tag        The GEDCOM tag to look for
+     * @param PlaceProcessor $places     The place formatter of the individual
+     *
+     * @return list<FactView>
+     */
+    private function presentViewsOfTag(Individual $individual, string $tag, PlaceProcessor $places): array
+    {
+        $views = [];
+
+        foreach ($this->viewsOfTag($individual, $tag, $places) as $view) {
+            if ($view instanceof FactView) {
+                $views[] = $view;
             }
         }
 

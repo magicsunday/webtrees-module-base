@@ -866,10 +866,76 @@ final class FactResolverTest extends TestCase
 
         $facts = $resolver->factsFor($individual, true);
 
-        self::assertCount(4, $facts, 'birth, death, the added divorce and the marriage of the preference');
+        self::assertCount(4, $facts, 'birth, death, the marriage of the preference and the added divorce');
         self::assertSame(
-            ['DIV', 'MARR'],
+            ['MARR', 'DIV'],
+            [$facts[2]?->tag, $facts[3]?->tag],
+            'the divorce follows the marriage'
+        );
+    }
+
+    /**
+     * When the preference names both tags nothing is added, so neither fact shows twice and each keeps
+     * the place that the preference gives it.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForAddsNothingWhenThePreferenceNamesMarriageAndDivorce(): void
+    {
+        $resolver   = $this->resolverWithTags('MARR,DIV');
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->familyWith(
+                    [
+                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+                    ],
+                    'Anna Schmidt'
+                ),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(4, $facts, 'birth, death, the marriage and the divorce of the preference');
+        self::assertSame(
+            ['MARR', 'DIV'],
             [$facts[2]?->tag, $facts[3]?->tag]
+        );
+    }
+
+    /**
+     * A divorce that the preference names is skipped alone as well. The marriage is still added, and
+     * it comes before the divorce.
+     *
+     * @return void
+     */
+    #[Test]
+    public function factsForStillAddsTheMarriageWhenThePreferenceNamesTheDivorce(): void
+    {
+        $resolver   = $this->resolverWithTags('DIV');
+        $individual = $this->individualWith(
+            [],
+            [
+                $this->familyWith(
+                    [
+                        'MARR' => $this->factStub('Marriage', '1 MAY 1900', 'Berlin, Germany'),
+                        'DIV'  => $this->factStub('Divorce', '2 JUN 1910', 'Paris, France'),
+                    ],
+                    'Anna Schmidt'
+                ),
+            ]
+        );
+
+        $facts = $resolver->factsFor($individual, true);
+
+        self::assertCount(4, $facts, 'birth, death, the added marriage and the divorce of the preference');
+        self::assertSame(
+            ['MARR', 'DIV'],
+            [$facts[2]?->tag, $facts[3]?->tag],
+            'the marriage comes before the divorce'
         );
     }
 
