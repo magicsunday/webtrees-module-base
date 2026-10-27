@@ -108,6 +108,17 @@ final class NodeData implements JsonSerializable
     private string $timespan = '';
 
     /**
+     * The facts of the chart box as the fact resolver returns them. Slot 0 is the birth row and
+     * slot 1 the death row, the optional facts follow. An entry is null when the individual has no
+     * visible fact for it. A marriage or divorce tag can give several entries, so the list is not
+     * aligned with the tag list, as the fact resolver documents. The list stays empty when a
+     * chart shows no facts.
+     *
+     * @var list<FactView|null>
+     */
+    private array $facts = [];
+
+    /**
      * The underlying individual instance. Only used internally.
      */
     private ?Individual $individual = null;
@@ -337,6 +348,20 @@ final class NodeData implements JsonSerializable
     }
 
     /**
+     * Sets the facts of the chart box as the fact resolver returns them.
+     *
+     * @param list<FactView|null> $facts The facts in the order the fact resolver returns them
+     *
+     * @return NodeData
+     */
+    public function setFacts(array $facts): NodeData
+    {
+        $this->facts = $facts;
+
+        return $this;
+    }
+
+    /**
      * Returns the individual the node was built from. It is held for the facade and
      * stays out of the serialised form.
      */
@@ -360,13 +385,14 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * Returns the relevant data as an array.
+     * Returns the relevant data as an array. The facts are appended as the last key and only when
+     * the list is not empty, so a consumer that never sets facts keeps its payload unchanged.
      *
-     * @return array<string, int|bool|string|list<NameSegment>>
+     * @return array<string, int|bool|string|list<NameSegment>|list<FactView|null>>
      */
     public function jsonSerialize(): array
     {
-        return [
+        $data = [
             'id'              => $this->id,
             'xref'            => $this->xref,
             'url'             => $this->url,
@@ -384,5 +410,11 @@ final class NodeData implements JsonSerializable
             'death'           => $this->death,
             'timespan'        => $this->timespan,
         ];
+
+        if ($this->facts !== []) {
+            $data['facts'] = $this->facts;
+        }
+
+        return $data;
     }
 }

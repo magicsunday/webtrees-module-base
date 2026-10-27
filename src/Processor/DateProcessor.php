@@ -17,6 +17,13 @@ use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
 use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
+use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
+
+use function min;
+use function preg_replace;
+use function trim;
+
+use const PHP_INT_MAX;
 
 /**
  * Extracts and formats birth, death, and marriage dates from an Individual.
@@ -97,7 +104,7 @@ final readonly class DateProcessor
     /**
      * Returns the formatted birth date from webtrees' locale-aware display.
      *
-     * The value is plain text: {@see self::decodeValue()} strips the markup
+     * The value is plain text: {@see PlainText::fromMarkup()} strips the markup
      * webtrees wraps the date in and decodes its HTML entities. It is meant for
      * a text sink (an SVG `<text>` node, a JavaScript string) — a consumer that
      * renders it into HTML MUST escape it at that sink, because the decoding
@@ -107,13 +114,13 @@ final readonly class DateProcessor
      */
     public function getBirthDate(): string
     {
-        return $this->decodeValue($this->birthDate->display());
+        return PlainText::fromMarkup($this->birthDate->display());
     }
 
     /**
      * Returns the formatted death date from webtrees' locale-aware display.
      *
-     * The value is plain text: {@see self::decodeValue()} strips the markup
+     * The value is plain text: {@see PlainText::fromMarkup()} strips the markup
      * webtrees wraps the date in and decodes its HTML entities. It is meant for
      * a text sink (an SVG `<text>` node, a JavaScript string) — a consumer that
      * renders it into HTML MUST escape it at that sink, because the decoding
@@ -123,7 +130,7 @@ final readonly class DateProcessor
      */
     public function getDeathDate(): string
     {
-        return $this->decodeValue($this->deathDate->display());
+        return PlainText::fromMarkup($this->deathDate->display());
     }
 
     /**
@@ -374,25 +381,49 @@ final readonly class DateProcessor
         return (string) $calendarDate->year();
     }
 
+    /**
+     * Returns the text of the date of a fact. A complete date, with day, month and year and
+     * no qualifier, is formatted in the given compact format. A partial, qualified or ranged
+     * date keeps the webtrees wording as plain text, so "ABT 12 MAY 1832" stays "about 12
+     * May 1832" instead of collapsing to a date that drops the qualifier. Static so callers
+     * can format the dates of arbitrary facts without instantiating a DateProcessor.
+     *
+     * @param Date   $date          The date of the fact
+     * @param string $compactFormat The webtrees calendar format string for a complete date, defaults to
+     *                              CompactDateFormat::FALLBACK (locale-neutral ISO 8601)
+     *
+     * @return string Plain text with single spaces, empty when the date is not a valid date, which
+     *                includes a date without a year because webtrees cannot place it on a calendar
+     */
+    public static function formatFactDate(Date $date, string $compactFormat = CompactDateFormat::FALLBACK): string
+    {
+        if (!$date->isOK()) {
+            return '';
+        }
+
+        $calendarDate = $date->minimumDate();
+
+        // A known day implies a known month and year, so the day decides whether the date is complete.
+        if (
+            ($calendarDate->day() > 0)
+            && ($date->qual1 === '')
+            && ($date->qual2 === '')
+        ) {
+            $markup = $calendarDate->format($compactFormat);
+        } else {
+            $markup = $date->display();
+        }
+
+        // The calendar formats carry entities such as a non-breaking space, and a partial
+        // date can leave a doubled space where the day is missing.
+        $text = PlainText::fromMarkup($markup);
+
+        return trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $text) ?? $text);
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
-
-    /**
-     * Removes HTML tags and converts/decodes HTML entities to their
-     * corresponding characters, yielding plain text for a text sink. The
-     * decode step means the result may contain characters that are unsafe in an
-     * HTML context (`<`, `&`, `"`), so a caller rendering it into HTML must
-     * escape it there — see the note on {@see self::getBirthDate()}.
-     *
-     * @param string $value The webtrees display() markup to reduce to plain text
-     *
-     * @return string The plain-text value, to be escaped by the caller at any HTML sink
-     */
-    private function decodeValue(string $value): string
-    {
-        return html_entity_decode(strip_tags($value), ENT_QUOTES, 'UTF-8');
-    }
 
     /**
      * Formats a Date in the configured compact format using its minimum date.

@@ -13,12 +13,12 @@ This package ships no UI of its own — it is consumed as a Composer dependency 
 - [webtrees-descendants-chart](https://github.com/magicsunday/webtrees-descendants-chart) — SVG descendants chart
 - [webtrees-statistics](https://github.com/magicsunday/webtrees-statistics) — genealogy statistics dashboard (consumes only the shared core plus `IsoCountryMap`)
 
-> **Scope note:** not every base component is consumed by every module yet. The place-name subsystem (`PlaceProcessor`, its `PlaceFormat*` / `PlaceStyle` models) and the compact, generation-aware date API (`DateProcessor`'s `getFormatted*` / `get*Full` methods, `CompactDateFormat` and the `Symbols` enum) are currently used only by the fan chart; the pedigree and descendants charts consume just the shared core (name/image processing and `DateProcessor`'s legacy locale-aware methods). `IsoCountryMap` is shared by the fan chart and the statistics module. These still-fan-only pieces live in the base as deliberate pre-investment, so a second consumer can adopt them without a namespace move — as the statistics module already did for `IsoCountryMap`.
+> **Scope note:** not every base component is consumed by every module. The statistics module uses only the shared core plus `IsoCountryMap`, and the chart modules adopt the place, compact date and fact components as they need them. A component can live in the base before its second consumer exists, so that the consumer can adopt it without a namespace move. To see which module uses a class, search the sibling checkouts, for example `grep -rl 'ModuleBase.Processor.PlaceProcessor' ../webtrees-*/src | grep -v '^../webtrees-module-base/'`.
 
 ## Requirements
 
 - PHP 8.3 - 8.5 with extensions `dom`, `intl` and `mbstring`
-- [webtrees](https://www.webtrees.net/) `~2.2`
+- [webtrees](https://www.webtrees.net/) `~2.2.0`
 
 ## Installation
 
@@ -48,10 +48,11 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 ## What's inside
 
 ### `src/Processor/`
-- **`DateProcessor`** — generation-aware date formatting (compact `getFormatted*` / `get*Full` API for tight chart labels; locale-aware legacy `getBirth*` / `getDeath*` / `getLifetimeDescription` API for everything else; marriage dates only via the compact API — `getFormattedMarriageDate()`, `getFormattedMarriageDateOfParents()`, `getMarriageDateFull()`)
+- **`DateProcessor`** — generation-aware date formatting (compact `getFormatted*` / `get*Full` API for tight chart labels; locale-aware legacy `getBirth*` / `getDeath*` / `getLifetimeDescription` API for everything else; marriage dates only via the compact API: `getFormattedMarriageDate()`, `getFormattedMarriageDateOfParents()`, `getMarriageDateFull()`). The static `formatFactDate()` gives the text of the date of any fact: compact for a complete date, the webtrees wording for a partial, qualified or ranged one and nothing for a date without a year, which webtrees cannot place on a calendar
 - **`NameProcessor`** — name extraction from webtrees name HTML (DOM/XPath based — splits first/last/preferred, handles starredname, alternative and married names). `getNameSegments()` returns the name as ordered, drawable `NameSegment` objects
 - **`ImageProcessor`** — highlight image + silhouette URL resolution
 - **`PlaceProcessor`** — place name shortening (configurable parts) for chart labels
+- **`FactResolver`**: resolves the facts a chart box shows, one slot per row except for a family tag. Slot 0 is the first existing birth equivalent and slot 1 the first existing death equivalent, then, when the caller asks for the optional facts, the marriage and the divorce of the families of the person unless the preference names them itself, and the optional tags of the tree preference "Other facts to show in charts". Returns `FactView` objects, `null` for a missing fact. A marriage or divorce tag (`MARR`, `_NMR`, `DIV`, `ANUL`, `_SEPR`) is read from the families of the person as spouse and gives one entry per family with the fact, naming the other spouse in `partner`. The class docblock of `FactResolver` holds the rules for a preference that names the marriage or the divorce itself, for the null entries and for the order. The value of a tag with free text, such as `NOTE`, is not shortened, so a chart that lists such a tag has to shorten the row itself
 
 ### `src/Model/`
 - **`Symbols`** — backed enum for genealogical symbols (Birth ★, Death †, en-dash separator, MarriageDateUnknown sentinel)
@@ -59,12 +60,14 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`PlaceStyle`** — enum for the way a place name is shortened (`Full`, `Levels`, `CityCountry`, `CityIso2`, `CityIso3`)
 - **`PlaceFormatSpec`** — `final readonly` value object holding a fully resolved place-formatting instruction (style, level count, from-which-end)
 - **`PlaceFormatChoice`** — backed enum for the place-detail options a module offers in its configuration; label-free, so the consuming module supplies its own translations
-- **`NodeData`** — the person DTO of the linked tree charts (pedigree and descendants), serialised to JSON for the front end
+- **`NodeData`** — the person DTO of the linked tree charts (pedigree and descendants), serialised to JSON for the front end. An optional `facts` list of `FactView` or `null` entries, as the `FactResolver` returns it, is appended to the payload only when it is not empty
+- **`FactView`**: `final readonly` value object for one fact of a chart box (tag, label, date, place, full place, value, partner, sort day). The sort day is the Julian day number of the first day of the date as written, without regard to a qualifier such as "after" or "before", zero without a usable date, so a consumer can order facts by time. Label, date and partner are plain text, and so is the name of a linked record that stands in for a pointer value, the other fields are not reduced
 - **`NameSegment`** / **`NameSegmentKind`** — `final readonly` value object and backed enum for one drawable part of a name (given, surname, nickname, married)
 
 ### `src/Support/`
 - **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API
 - **`TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings
+- **`PlainText`**: reduces webtrees markup to plain text (strips the tags, decodes the entities)
 - **`Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 codes, built on `ext-intl`; used by `PlaceProcessor`'s country-resolving styles
 
 ### `src/Module/`
