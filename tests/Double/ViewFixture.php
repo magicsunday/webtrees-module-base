@@ -32,6 +32,21 @@ use function view;
 final class ViewFixture
 {
     /**
+     * Parameters of a plain render of the detail panel view.
+     *
+     * @var array<string, string>
+     */
+    public const array DETAIL_PANEL_PARAMETERS = [
+        'id'              => 'webtrees-fan-detail-panel',
+        'moduleClass'     => 'webtrees-fan-detail-panel',
+        'closeLabel'      => 'close',
+        'hint'            => 'Select a person',
+        'emptyText'       => 'No details',
+        'individualLabel' => 'Open page',
+        'centerLabel'     => 'Center chart',
+    ];
+
+    /**
      * Static-only helper, never instantiated.
      */
     private function __construct()

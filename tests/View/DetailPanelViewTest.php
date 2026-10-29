@@ -30,21 +30,6 @@ use function explode;
 final class DetailPanelViewTest extends TestCase
 {
     /**
-     * Parameters of a plain render.
-     *
-     * @var array<string, string>
-     */
-    public const array PARAMETERS = [
-        'id'              => 'webtrees-fan-detail-panel',
-        'moduleClass'     => 'webtrees-fan-detail-panel',
-        'closeLabel'      => 'close',
-        'hint'            => 'Select a person',
-        'emptyText'       => 'No details',
-        'individualLabel' => 'Open page',
-        'centerLabel'     => 'Center chart',
-    ];
-
-    /**
      * The panel script of the chart library throws when a part is missing, so each part is there once.
      *
      * @return iterable<string, array{string}>
@@ -63,7 +48,7 @@ final class DetailPanelViewTest extends TestCase
     #[DataProvider('panelParts')]
     public function carriesEveryPartOnce(string $part): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         self::assertCount(
             1,
@@ -78,7 +63,7 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function isAHiddenOffcanvasNamedByItsTitle(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
         $aside = ViewFixture::first($xpath, '//aside[@id="webtrees-fan-detail-panel"]');
 
         self::assertTrue($aside->hasAttribute('hidden'));
@@ -103,7 +88,7 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function startsWithTheHintAndHiddenDetails(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         foreach (['image', 'empty', 'actions'] as $part) {
             self::assertTrue(ViewFixture::first($xpath, '//*[@data-panel="' . $part . '"]')->hasAttribute('hidden'));
@@ -153,7 +138,7 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function keepsTheMarkupThatScriptAndStylesDependOn(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         self::assertSame('offcanvas', ViewFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-close ")]')->getAttribute('data-bs-dismiss'));
         self::assertSame('-1', ViewFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('tabindex'));
@@ -191,7 +176,7 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function keepsTheActionsAndTheClassesOfTheParts(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         foreach (['individual', 'center'] as $action) {
             self::assertCount(1, ViewFixture::elements($xpath, '//*[@data-panel="actions"]//*[@data-panel="' . $action . '"]'));
