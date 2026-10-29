@@ -119,10 +119,10 @@ final class HelpPopoverViewTest extends TestCase
     }
 
     /**
-     * The popover hangs below the button, aligned to its end, and stays above the chart.
+     * The popover hangs below the button, aligned to its end.
      */
     #[Test]
-    public function positionsThePopoverBelowTheButtonAboveTheChart(): void
+    public function positionsThePopoverBelowTheButton(): void
     {
         $xpath   = ViewFixture::xpathOf($this->render());
         $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
@@ -131,24 +131,24 @@ final class HelpPopoverViewTest extends TestCase
         foreach (['position-absolute', 'top-100', 'end-0', 'mt-2'] as $class) {
             self::assertContains($class, $classes);
         }
-
-        self::assertStringContainsString('z-index: 1000', $popover->getAttribute('style'));
     }
 
     /**
-     * A narrow viewport must not push the popover out of the screen, so the width is bound by the
-     * viewport and not a fixed minimum.
+     * The size and the stacking order of the popover come from the rules that the chart library
+     * adds to the page for the class `help-popover`, so the element keeps that class and carries
+     * no inline style, which a stylesheet could only override with an important flag.
      */
     #[Test]
-    public function boundsTheWidthByTheViewport(): void
+    public function leavesTheSizeToTheRulesOfTheChartLibrary(): void
     {
-        $xpath   = ViewFixture::xpathOf($this->render());
+        $html    = $this->render();
+        $xpath   = ViewFixture::xpathOf($html);
         $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
-        $style   = $popover->getAttribute('style');
+        $classes = explode(' ', $popover->getAttribute('class'));
 
-        self::assertStringContainsString('min-width: min(400px, calc(100vw - 2rem))', $style);
-        self::assertStringContainsString('max-width: calc(100vw - 2rem)', $style);
-        self::assertStringNotContainsString('min-width: 400px', $style);
+        self::assertContains('help-popover', $classes);
+        self::assertFalse($popover->hasAttribute('style'));
+        self::assertStringNotContainsString('style=', $html);
     }
 
     /**
