@@ -49,6 +49,7 @@ Before adding an entry, check the following. Is the package a direct dependency 
 bin/
   resolve-fuzzy   — starter for the catalogue resolver, installed by Composer as a binary for the consuming modules
   write-translations — starter for the translations writer, installed the same way
+resources/views/ — shared PHP templates (detail-panel.phtml, help-popover.phtml), rendered by the chart modules through SharedViews
 src/
   Catalogue/      — resolver for the fuzzy entries and writer for the translations of the translation catalogues
   Contract/       — local interfaces required by processors (e.g. ModuleAssetUrlInterface)
@@ -59,6 +60,7 @@ src/
   Support/        — plain helpers (CompactDateFormat, TextDirection, PlainText)
   Support/Locale/ — locale-aware helpers (IsoCountryMap)
   Testing/        — reusable PHPUnit test cases the consuming modules extend (AbstractCatalogueStructureTestCase)
+  View/           — SharedViews, the registration of the view namespace for resources/views/
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules
 tests/
   bootstrap.php   — harness only; belongs to no source class, so it stays at the root
@@ -115,6 +117,9 @@ tests/
 - **`Catalogue/PrintableText`** turns text from a catalogue, a path or a tool into one line before the command reports it. It replaces the control characters of both ranges, the ASCII ones and the eight-bit ones, the characters that set the direction of a text (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069) and the line feed, and it breaks up the `##[` opening that a CI system may read anywhere in a line, so a contributed catalogue cannot recolour a terminal or start a workflow command in a CI log. The tab stays. `Resolution` is the value object the resolver returns and `CatalogueToolException` is what the toolchain raises.
 - The layer is analysed by deptrac as the isolated `Catalogue` layer, which depends on no other `src/` code. `bin/` is outside the PHPStan, Rector and phplint paths, so keep the starter free of logic.
 - `tests/Catalogue/PunctuationResolverTest` pins the decisions on catalogue text. `tests/Catalogue/CatalogueToolchainTest` runs the real tools on a copy of the catalogue under `tests/fixtures/fuzzy/` (`tests/Double/GettextWorkspace` makes the copy). It pins that the result needs no further merge and that `msgfmt --check` accepts it. The fixture is a catalogue that `msgmerge` wrote with its previous-msgid option. To change it, edit an older catalogue and merge it again with that option.
+
+### View
+- **`View/SharedViews`** registers the webtrees view namespace `webtrees-module-base` (`SharedViews::NAMESPACE`) for `resources/views/`. A chart module calls `SharedViews::register()` from its `boot()`. The views take translated texts as parameters, because xgettext in the modules only sees literals in their own sources, and escape every value with `e()`. The `data-panel` parts of `detail-panel.phtml` must stay equal to what the panel script of `webtrees-chart-lib` looks up. `resources/` is not export-ignored, so the views reach the release archive. The layer is analysed by deptrac as the isolated `Views` layer. View tests live in `tests/View/` and render through the real webtrees `View` with `tests/Double/ViewFixture`.
 
 ### Testing
 - **`Testing/AbstractCatalogueStructureTestCase`**, structure checks over the translation catalogues a module ships. A module extends it in its own `tests/` and implements `languageDirectory()` (the directory with one subdirectory per locale holding `messages.po` and `messages.mo`). The class lives under `src/` so a module can inherit it, which means it ships with the production code. It extends `PHPUnit\Framework\TestCase`, so PHPUnit is a dev dependency of the consumer and is never loaded at runtime. It is analysed by deptrac as the isolated `Testing` layer, which depends on no other `src/` code.
