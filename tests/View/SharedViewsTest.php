@@ -17,6 +17,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function view;
+
 /**
  * Registers the views of the package and renders its views through them.
  *
@@ -38,6 +40,21 @@ final class SharedViewsTest extends TestCase
 
         $xpath = ViewFixture::xpathOf(
             ViewFixture::render('detail-panel', DetailPanelViewTest::PARAMETERS)
+        );
+
+        self::assertCount(1, ViewFixture::elements($xpath, '//aside'));
+    }
+
+    /**
+     * A module phtml includes a shared view by the literal namespace named in the documentation.
+     */
+    #[Test]
+    public function resolvesTheDocumentedNamespaceLiterally(): void
+    {
+        SharedViews::register();
+
+        $xpath = ViewFixture::xpathOf(
+            view('webtrees-module-base::detail-panel', DetailPanelViewTest::PARAMETERS)
         );
 
         self::assertCount(1, ViewFixture::elements($xpath, '//aside'));
