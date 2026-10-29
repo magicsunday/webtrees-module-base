@@ -43,6 +43,8 @@ final class DetailPanelViewTest extends TestCase
 
     /**
      * The panel carries every part that the script looks up, once.
+     *
+     * @param string $part The value of the data-panel attribute that the script looks up
      */
     #[Test]
     #[DataProvider('panelParts')]

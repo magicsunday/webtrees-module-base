@@ -57,6 +57,8 @@ final class ViewFixture
      * Renders a shared view with the namespace registered.
      *
      * @param array<string, string|list<array{key: string, text: string, mode?: string}>|null> $data The view parameters
+     *
+     * @return string The rendered markup
      */
     public static function render(string $name, array $data): string
     {
@@ -67,6 +69,8 @@ final class ViewFixture
 
     /**
      * Parses rendered markup into a document that can be queried.
+     *
+     * @return DOMXPath The query handle of the parsed document
      */
     public static function xpathOf(string $markup): DOMXPath
     {
