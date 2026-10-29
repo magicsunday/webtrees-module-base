@@ -146,9 +146,9 @@ final class HelpPopoverViewTest extends TestCase
         $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
         $style   = $popover->getAttribute('style');
 
-        self::assertStringContainsString('min-width: min(350px, calc(100vw - 2rem))', $style);
+        self::assertStringContainsString('min-width: min(400px, calc(100vw - 2rem))', $style);
         self::assertStringContainsString('max-width: calc(100vw - 2rem)', $style);
-        self::assertStringNotContainsString('min-width: 350px', $style);
+        self::assertStringNotContainsString('min-width: 400px', $style);
     }
 
     /**
