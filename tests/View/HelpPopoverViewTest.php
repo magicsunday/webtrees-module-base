@@ -66,6 +66,59 @@ final class HelpPopoverViewTest extends TestCase
     }
 
     /**
+     * The rows keep the order of the list, also within one mode, and the markup keeps the classes
+     * of the button, the icon, the popover and the table.
+     */
+    #[Test]
+    public function keepsTheOrderOfTheRowsAndTheClassesOfTheParts(): void
+    {
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('help-popover', [
+            'id'    => 'my-help',
+            'label' => 'Show help',
+            'rows'  => [
+                ['key' => 'First', 'text' => 'one', 'mode' => 'a'],
+                ['key' => 'Second', 'text' => 'two', 'mode' => 'a'],
+                ['key' => 'Third', 'text' => 'three'],
+            ],
+            'activeMode' => 'a',
+        ]));
+
+        self::assertSame(
+            ['First', 'Second', 'Third'],
+            array_map(
+                static fn (DOMElement $key): string => trim($key->textContent),
+                ViewFixture::elements($xpath, '//tr/td[1]/strong'),
+            ),
+        );
+        self::assertSame(
+            ['one', 'two', 'three'],
+            array_map(
+                static fn (DOMElement $text): string => trim($text->textContent),
+                ViewFixture::elements($xpath, '//tr/td[2]'),
+            ),
+        );
+
+        self::assertSame('btn-primary btn-chart btn-help', ViewFixture::first($xpath, '//button')->getAttribute('class'));
+        self::assertCount(1, ViewFixture::elements($xpath, '//button/span[@class="icon"]/svg'));
+
+        $icon = ViewFixture::first($xpath, '//button/span[@class="icon"]/svg');
+
+        self::assertSame('svg-inline--fa fa-fw', $icon->getAttribute('class'));
+        self::assertSame('0 0 320 512', $icon->getAttribute('viewbox'));
+
+        $path = ViewFixture::first($xpath, '//button//svg/path');
+
+        self::assertSame('currentColor', $path->getAttribute('fill'));
+        self::assertStringStartsWith('M80 160c0-35.3', $path->getAttribute('d'));
+        self::assertSame('position-relative d-inline-block', ViewFixture::first($xpath, '/html/body/div')->getAttribute('class'));
+        self::assertSame(
+            'help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm',
+            ViewFixture::first($xpath, '//div[@id="my-help"]')->getAttribute('class')
+        );
+        self::assertSame('table table-sm table-borderless mb-0', ViewFixture::first($xpath, '//div[@id="my-help"]/table')->getAttribute('class'));
+    }
+
+    /**
      * The popover hangs below the button, aligned to its end, and stays above the chart.
      */
     #[Test]

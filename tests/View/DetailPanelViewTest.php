@@ -183,4 +183,32 @@ final class DetailPanelViewTest extends TestCase
         self::assertSame('div', $header->tagName);
         self::assertSame('div', $body->tagName);
     }
+
+    /**
+     * The actions sit inside their container, the buttons carry their type and classes, and the
+     * title, hint, empty text and facts list keep the classes that the panel styles use.
+     */
+    #[Test]
+    public function keepsTheActionsAndTheClassesOfTheParts(): void
+    {
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+
+        foreach (['individual', 'center'] as $action) {
+            self::assertCount(1, ViewFixture::elements($xpath, '//*[@data-panel="actions"]//*[@data-panel="' . $action . '"]'));
+        }
+
+        self::assertSame('d-grid gap-2 mt-3', ViewFixture::first($xpath, '//*[@data-panel="actions"]')->getAttribute('class'));
+        self::assertSame('offcanvas-title h5', ViewFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('class'));
+        self::assertSame('h2', ViewFixture::first($xpath, '//*[@data-panel="title"]')->tagName);
+        self::assertSame('text-muted', ViewFixture::first($xpath, '//*[@data-panel="hint"]')->getAttribute('class'));
+        self::assertSame('text-muted', ViewFixture::first($xpath, '//*[@data-panel="empty"]')->getAttribute('class'));
+        self::assertSame('detail-facts mb-0', ViewFixture::first($xpath, '//*[@data-panel="facts"]')->getAttribute('class'));
+        self::assertSame('btn-close', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('class'));
+        self::assertSame('button', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('type'));
+        self::assertSame('button', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('type'));
+        self::assertSame('button', ViewFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('type'));
+        self::assertSame('btn btn-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('class'));
+        self::assertSame('btn btn-outline-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('class'));
+        self::assertSame('close', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
+    }
 }
