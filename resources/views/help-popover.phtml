@@ -35,7 +35,7 @@ declare(strict_types=1);
             </svg>
         </span>
     </button>
-    <div id="<?php echo e($id); ?>" role="region" aria-label="<?php echo e($label); ?>" class="help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm" style="min-width: min(350px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); z-index: 1000;">
+    <div id="<?php echo e($id); ?>" role="region" aria-label="<?php echo e($label); ?>" class="help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm" style="min-width: min(400px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); z-index: 1000;">
         <table class="table table-sm table-borderless mb-0">
             <?php foreach ($rows as $row) { ?>
                 <?php $mode = $row['mode'] ?? null; ?>
