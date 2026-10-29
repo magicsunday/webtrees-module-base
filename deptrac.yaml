@@ -64,6 +64,12 @@ deptrac:
                     type: directory
                     value: 'src/Catalogue/.*'
         -
+            name: Views
+            collectors:
+                -
+                    type: directory
+                    value: 'src/View/.*'
+        -
             name: DataFacade
             collectors:
                 -
@@ -123,6 +129,10 @@ deptrac:
         # and the webtrees localization library only, never on the rest of src/.
         Testing:
             - Testing
+
+        # The registration of the shared views only talks to the webtrees view registry.
+        Views:
+            - Views
 
         # The resolver for the fuzzy entries and the writer for the translations of the catalogues. Both
         # read text and run the gettext tools, so the layer depends on no other src/ code.
