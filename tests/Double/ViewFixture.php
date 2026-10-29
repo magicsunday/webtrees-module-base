@@ -32,6 +32,13 @@ use function view;
 final class ViewFixture
 {
     /**
+     * Static-only helper, never instantiated.
+     */
+    private function __construct()
+    {
+    }
+
+    /**
      * Renders a shared view with the namespace registered.
      *
      * @param array<string, string|list<array{key: string, text: string, mode?: string}>|null> $data The view parameters

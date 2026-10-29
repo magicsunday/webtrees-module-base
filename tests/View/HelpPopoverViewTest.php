@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function array_map;
+use function explode;
 use function trim;
 
 /**
@@ -61,6 +62,24 @@ final class HelpPopoverViewTest extends TestCase
         self::assertSame('Show help', $popover->getAttribute('aria-label'));
         self::assertSame('Show help', $button->getAttribute('title'));
         self::assertStringContainsString('d-none', $popover->getAttribute('class'));
+        self::assertSame('button', $button->getAttribute('type'));
+    }
+
+    /**
+     * The popover hangs below the button, aligned to its end, and stays above the chart.
+     */
+    #[Test]
+    public function positionsThePopoverBelowTheButtonAboveTheChart(): void
+    {
+        $xpath   = ViewFixture::xpathOf($this->render());
+        $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
+        $classes = explode(' ', $popover->getAttribute('class'));
+
+        foreach (['position-absolute', 'top-100', 'end-0', 'mt-2'] as $class) {
+            self::assertContains($class, $classes);
+        }
+
+        self::assertStringContainsString('z-index: 1000', $popover->getAttribute('style'));
     }
 
     /**

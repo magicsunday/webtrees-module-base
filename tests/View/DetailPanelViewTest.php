@@ -142,5 +142,45 @@ final class DetailPanelViewTest extends TestCase
         self::assertSame('a"b-title', ViewFixture::first($xpath, '//aside')->getAttribute('aria-labelledby'));
         self::assertStringContainsString('m"c', ViewFixture::first($xpath, '//aside')->getAttribute('class'));
         self::assertSame([], ViewFixture::elements($xpath, '//b'));
+
+        // The heading is found by the escaped id that the aside points to.
+        self::assertSame('title', ViewFixture::first($xpath, "//*[@id='a\"b-title']")->getAttribute('data-panel'));
+    }
+
+    /**
+     * The panel script and the shared panel styles depend on these details of the markup.
+     */
+    #[Test]
+    public function keepsTheMarkupThatScriptAndStylesDependOn(): void
+    {
+        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', self::PARAMETERS));
+
+        self::assertSame('offcanvas', ViewFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-close ")]')->getAttribute('data-bs-dismiss'));
+        self::assertSame('-1', ViewFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('tabindex'));
+
+        $image = ViewFixture::first($xpath, '//*[@data-panel="image"]');
+
+        self::assertSame('img', $image->tagName);
+        self::assertSame('detail-image', $image->getAttribute('class'));
+        self::assertTrue($image->hasAttribute('alt'));
+        self::assertSame('', $image->getAttribute('alt'));
+
+        $facts = ViewFixture::first($xpath, '//*[@data-panel="facts"]');
+
+        self::assertSame('dl', $facts->tagName);
+        self::assertContains('detail-facts', explode(' ', $facts->getAttribute('class')));
+
+        $header = ViewFixture::first($xpath, '//aside/div[@class="offcanvas-header"]');
+        $body   = ViewFixture::first($xpath, '//aside/div[@class="offcanvas-body"]');
+
+        self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-header"]//*[@data-panel="title"]'));
+        self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-header"]//button[@data-bs-dismiss]'));
+
+        foreach (['image', 'hint', 'facts', 'empty', 'actions'] as $part) {
+            self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-body"]//*[@data-panel="' . $part . '"]'));
+        }
+
+        self::assertSame('div', $header->tagName);
+        self::assertSame('div', $body->tagName);
     }
 }
