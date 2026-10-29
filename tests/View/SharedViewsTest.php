@@ -39,7 +39,7 @@ final class SharedViewsTest extends TestCase
         SharedViews::register();
 
         $xpath = ViewFixture::xpathOf(
-            ViewFixture::render('detail-panel', DetailPanelViewTest::PARAMETERS)
+            ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS)
         );
 
         self::assertCount(1, ViewFixture::elements($xpath, '//aside'));
@@ -54,7 +54,7 @@ final class SharedViewsTest extends TestCase
         SharedViews::register();
 
         $xpath = ViewFixture::xpathOf(
-            view('webtrees-module-base::detail-panel', DetailPanelViewTest::PARAMETERS)
+            view('webtrees-module-base::detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS)
         );
 
         self::assertCount(1, ViewFixture::elements($xpath, '//aside'));

@@ -49,7 +49,7 @@ Before adding an entry, check the following. Is the package a direct dependency 
 bin/
   resolve-fuzzy   — starter for the catalogue resolver, installed by Composer as a binary for the consuming modules
   write-translations — starter for the translations writer, installed the same way
-resources/views/ — shared PHP templates (detail-panel.phtml, help-popover.phtml), rendered by the chart modules through SharedViews
+resources/views/ holds the shared PHP templates (detail-panel.phtml, help-popover.phtml), rendered by the chart modules through SharedViews
 src/
   Catalogue/      — resolver for the fuzzy entries and writer for the translations of the translation catalogues
   Contract/       — local interfaces required by processors (e.g. ModuleAssetUrlInterface)
@@ -60,8 +60,8 @@ src/
   Support/        — plain helpers (CompactDateFormat, TextDirection, PlainText)
   Support/Locale/ — locale-aware helpers (IsoCountryMap)
   Testing/        — reusable PHPUnit test cases the consuming modules extend (AbstractCatalogueStructureTestCase)
-  View/           — SharedViews, the registration of the view namespace for resources/views/
   Traits/         — shared ModuleCustomTrait / ModuleChartTrait helpers for consuming modules
+  View/           SharedViews, which registers the view namespace for resources/views/
 tests/
   bootstrap.php   — harness only; belongs to no source class, so it stays at the root
   Architecture/   — phpat rule providers, not PHPUnit tests (see the mirror exception below)
