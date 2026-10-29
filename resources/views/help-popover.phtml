@@ -11,7 +11,8 @@ declare(strict_types=1);
 
 /**
  * The help button of a chart toolbar with its popover. The page script of the chart library
- * toggles the popover and shows the rows of the active mode.
+ * toggles the popover, shows the rows of the active mode and adds the rules for the size and the
+ * stacking order of the popover to the page, so the popover carries no inline style.
  *
  * @var string                                                     $id         The element id of the popover
  * @var string                                                     $label      The translated text for the button title and the popover region
@@ -35,7 +36,7 @@ declare(strict_types=1);
             </svg>
         </span>
     </button>
-    <div id="<?php echo e($id); ?>" role="region" aria-label="<?php echo e($label); ?>" class="help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm" style="min-width: min(400px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); z-index: 1000;">
+    <div id="<?php echo e($id); ?>" role="region" aria-label="<?php echo e($label); ?>" class="help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm">
         <table class="table table-sm table-borderless mb-0">
             <?php foreach ($rows as $row) { ?>
                 <?php $mode = $row['mode'] ?? null; ?>
