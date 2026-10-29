@@ -11,8 +11,9 @@ declare(strict_types=1);
 
 /**
  * The help button of a chart toolbar with its popover. The page script of the chart library
- * toggles the popover, shows the rows of the active mode and adds the rules for the size and the
- * stacking order of the popover to the page, so the popover carries no inline style.
+ * toggles the popover and shows the rows of the active mode. The view writes the rules for the size
+ * and the stacking order of the popover in a style element of its own, so they are in the document
+ * from the first paint and the popover carries no inline style.
  *
  * @var string                                                     $id         The element id of the popover
  * @var string                                                     $label      The translated text for the button title and the popover region
@@ -22,6 +23,13 @@ declare(strict_types=1);
 
 ?>
 
+<style>
+.help-popover {
+    min-width: min(400px, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    z-index: 1000;
+}
+</style>
 <div class="position-relative d-inline-block">
     <button type="button"
             class="btn-primary btn-chart btn-help"

@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function explode;
+use function substr_count;
 
 /**
  * Renders the detail panel view that the three tree charts share.
@@ -197,5 +198,78 @@ final class DetailPanelViewTest extends TestCase
         self::assertSame('btn btn-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('class'));
         self::assertSame('btn btn-outline-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('class'));
         self::assertSame('close', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
+    }
+
+    /**
+     * The shared rules of the panel, keyed by selector, each with its declarations.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function panelRules(): iterable
+    {
+        yield 'image' => [
+            '.webtrees-detail-panel .detail-image',
+            "    display: block;\n"
+            . "    width: 9rem;\n"
+            . "    height: 9rem;\n"
+            . "    margin: 0 auto 1rem;\n"
+            . "    border: 3px solid var(--bs-border-color, #dee2e6);\n"
+            . "    border-radius: 50%;\n"
+            . "    background-color: var(--bs-secondary-bg, #e9ecef);\n"
+            . "    object-fit: contain;\n",
+        ];
+
+        yield 'hidden image' => ['.webtrees-detail-panel .detail-image[hidden]', "    display: none;\n"];
+
+        yield 'fact term' => [
+            '.webtrees-detail-panel .detail-facts dt',
+            "    font-weight: 600;\n    margin-top: 0.75rem;\n",
+        ];
+
+        yield 'fact description' => ['.webtrees-detail-panel .detail-facts dd', "    margin-bottom: 0;\n"];
+        yield 'place' => ['.webtrees-detail-panel .detail-place', "    font-style: italic;\n"];
+        yield 'title focus' => ['.webtrees-detail-panel .offcanvas-title:focus', "    outline: none;\n"];
+        yield 'shadow' => [
+            '.webtrees-detail-panel.offcanvas-end',
+            "    box-shadow: -0.75rem 0 1.5rem rgba(0, 0, 0, 0.25);\n",
+        ];
+        yield 'right to left shadow' => [
+            '[dir="rtl"] .webtrees-detail-panel.offcanvas-end',
+            "    box-shadow: 0.75rem 0 1.5rem rgba(0, 0, 0, 0.25);\n",
+        ];
+    }
+
+    /**
+     * The view writes the shared rules of the panel in one style element, once, and each rule has
+     * the selector and the declarations of the chart library.
+     *
+     * @param string $selector     The selector of the rule
+     * @param string $declarations The declarations of the rule, one per line
+     */
+    #[Test]
+    #[DataProvider('panelRules')]
+    public function carriesTheSharedRulesOfThePanelOnce(string $selector, string $declarations): void
+    {
+        $html  = ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS);
+        $xpath = ViewFixture::xpathOf($html);
+
+        self::assertSame(1, substr_count($html, '<style'));
+        self::assertCount(1, ViewFixture::elements($xpath, '//style'));
+        self::assertSame(1, substr_count(ViewFixture::first($xpath, '//style')->textContent, $selector . " {\n" . $declarations . "}\n"));
+    }
+
+    /**
+     * The two comments of the rules stay with them, and the panel itself carries no inline style.
+     */
+    #[Test]
+    public function keepsTheCommentsAndWritesNoInlineStyle(): void
+    {
+        $html = ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS);
+        $css  = ViewFixture::first(ViewFixture::xpathOf($html), '//style')->textContent;
+
+        self::assertStringContainsString('A round image of fixed size with a ring around it.', $css);
+        self::assertStringContainsString('The panel is an offcanvas that opens on a click on a person.', $css);
+        self::assertStringContainsString('In a right-to-left page the panel sits at the left edge', $css);
+        self::assertStringNotContainsString('style=', $html);
     }
 }

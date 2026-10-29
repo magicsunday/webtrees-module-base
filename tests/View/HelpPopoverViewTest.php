@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
 
 use function array_map;
 use function explode;
+use function ltrim;
+use function substr_count;
 use function trim;
 
 /**
@@ -134,12 +136,12 @@ final class HelpPopoverViewTest extends TestCase
     }
 
     /**
-     * The size and the stacking order of the popover come from the rules that the chart library
-     * adds to the page for the class `help-popover`, so the element keeps that class and carries
-     * no inline style, which a stylesheet could only override with an important flag.
+     * The size and the stacking order of the popover come from one style element of the view for the
+     * class `help-popover`, so the element carries no inline style, which a stylesheet could only
+     * override with an important flag.
      */
     #[Test]
-    public function leavesTheSizeToTheRulesOfTheChartLibrary(): void
+    public function carriesTheRulesOfThePopoverOnce(): void
     {
         $html    = $this->render();
         $xpath   = ViewFixture::xpathOf($html);
@@ -149,6 +151,16 @@ final class HelpPopoverViewTest extends TestCase
         self::assertContains('help-popover', $classes);
         self::assertFalse($popover->hasAttribute('style'));
         self::assertStringNotContainsString('style=', $html);
+        self::assertSame(1, substr_count($html, '<style'));
+        self::assertCount(1, ViewFixture::elements($xpath, '//style'));
+        self::assertSame(
+            ".help-popover {\n"
+            . "    min-width: min(400px, calc(100vw - 2rem));\n"
+            . "    max-width: calc(100vw - 2rem);\n"
+            . "    z-index: 1000;\n"
+            . "}\n",
+            ltrim(ViewFixture::first($xpath, '//style')->textContent, "\n")
+        );
     }
 
     /**
