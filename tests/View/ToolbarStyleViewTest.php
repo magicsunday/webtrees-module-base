@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function count;
 use function explode;
 use function str_ends_with;
 use function str_replace;
@@ -35,21 +36,24 @@ final class ToolbarStyleViewTest extends TestCase
 {
     /**
      * The selectors of the rules, relative to the container class.
+     */
+    private const array SELECTORS = [
+        '.btn-chart',
+        '.btn-chart.btn-primary:hover',
+        '.btn-chart:hover',
+        '.btn-chart:focus-visible',
+        '.btn-chart .icon',
+        '.btn-chart .icon .svg-inline--fa',
+    ];
+
+    /**
+     * The selectors of the rules, relative to the container class.
      *
      * @return iterable<string, array{string}>
      */
     public static function selectors(): iterable
     {
-        foreach (
-            [
-                '.btn-chart',
-                '.btn-chart.btn-primary:hover',
-                '.btn-chart:hover',
-                '.btn-chart:focus-visible',
-                '.btn-chart .icon',
-                '.btn-chart .icon .svg-inline--fa',
-            ] as $selector
-        ) {
+        foreach (self::SELECTORS as $selector) {
             yield $selector => [$selector];
         }
     }
@@ -91,8 +95,8 @@ final class ToolbarStyleViewTest extends TestCase
     {
         $css = $this->styleOf('my-chart');
 
-        self::assertSame(6, substr_count($css, '{'));
-        self::assertSame(6, substr_count($css, '.my-chart .'));
+        self::assertSame(count(self::SELECTORS), substr_count($css, '{'));
+        self::assertSame(count(self::SELECTORS), substr_count($css, '.my-chart .'));
     }
 
     /**
@@ -190,10 +194,11 @@ final class ToolbarStyleViewTest extends TestCase
         yield 'comma list' => ['a, body', 'abody'];
         yield 'dot and space' => ['.a .b', 'ab'];
         yield 'brace only' => ['{}', ''];
+        yield 'mixed case underscore digit hyphen' => ['My_Chart-2', 'My_Chart-2'];
     }
 
     /**
-     * Only letters, digits, underscore and hyphen reach the selector.
+     * Only letters, digits, underscore and hyphen reach the selector, and those pass unchanged.
      *
      * @param string $container The container string handed to the view
      * @param string $expected  The class name that reaches the selector
@@ -212,9 +217,9 @@ final class ToolbarStyleViewTest extends TestCase
 
         $css = $this->styleOf($container);
 
-        self::assertSame(6, substr_count($css, '{'));
-        self::assertSame(6, substr_count($css, '}'));
-        self::assertSame(6, substr_count($css, ".$expected ."));
+        self::assertSame(count(self::SELECTORS), substr_count($css, '{'));
+        self::assertSame(count(self::SELECTORS), substr_count($css, '}'));
+        self::assertSame(count(self::SELECTORS), substr_count($css, ".$expected ."));
         self::assertSame(1, substr_count($html, '<style'));
         self::assertSame(1, substr_count($html, '</style>'));
         self::assertStringNotContainsString('<script', $html);
@@ -241,6 +246,11 @@ final class ToolbarStyleViewTest extends TestCase
 
     /**
      * The selector lines of the stylesheet with the expected class removed, so a test can look for strays.
+     *
+     * @param string $css      The text of the style element
+     * @param string $expected The class name that reaches the selector
+     *
+     * @return string The selector lines without the container class, joined
      */
     private function selectorsOf(string $css, string $expected): string
     {
@@ -257,6 +267,10 @@ final class ToolbarStyleViewTest extends TestCase
 
     /**
      * Renders the view for a container class.
+     *
+     * @param string $container The container string handed to the view
+     *
+     * @return string The rendered HTML
      */
     private function render(string $container): string
     {
@@ -265,6 +279,10 @@ final class ToolbarStyleViewTest extends TestCase
 
     /**
      * Returns the text of the style element for a container class.
+     *
+     * @param string $container The container string handed to the view
+     *
+     * @return string The text of the style element
      */
     private function styleOf(string $container): string
     {

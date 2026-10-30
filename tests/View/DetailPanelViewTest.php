@@ -259,7 +259,7 @@ final class DetailPanelViewTest extends TestCase
     }
 
     /**
-     * The two comments of the rules stay with them, and the panel itself carries no inline style.
+     * The comments of the rules stay with them, and the panel itself carries no inline style.
      */
     #[Test]
     public function keepsTheCommentsAndWritesNoInlineStyle(): void
