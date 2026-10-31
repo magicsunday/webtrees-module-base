@@ -46,6 +46,8 @@ jobs:
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
+                  # The changed-lines mutation step needs the history of the base branch.
+                  fetch-depth: 0
 
             - id: setup_php
               name: Set up PHP version ${{ matrix.php }}
@@ -172,9 +174,21 @@ jobs:
             # the run is cancelled. It additionally requires the unit tests to have
             # passed — infection needs a green suite as its baseline, so running it
             # against failing tests only burns minutes to reach the same red.
+            #
+            # A pull request is gated on the lines it changes, so new code is accountable
+            # without forcing tests for old trivial code. A push to a branch runs the whole
+            # tree and only reports, because the score is a diagnostic and no gate.
+            - id: infection_changed
+              name: Mutation Testing (changed lines)
+              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation && github.event_name == 'pull_request' }}
+              env:
+                  BASE_REF: ${{ github.base_ref }}
+              run: |
+                  composer ci:test:php:infection:changed -- --git-diff-base="origin/${BASE_REF}"
+
             - id: infection
-              name: Mutation Testing
-              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation }}
+              name: Mutation Testing (full run, report only)
+              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation && github.event_name != 'pull_request' }}
               run: |
                   composer ci:test:php:infection
 
