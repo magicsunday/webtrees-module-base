@@ -19,10 +19,10 @@ use function file_put_contents;
 use function implode;
 
 /**
- * The catalogue tests build their templates with the template builder of the workspace double,
- * so a defect there would hide a failure in every one of them. This test pins what the builder
- * keeps and what it leaves out. The double is test code outside `src`, so the class declares
- * that it covers nothing.
+ * The toolchain tests and the fuzzy resolver tests build their templates with the template
+ * builder of the workspace double, so a defect there would hide a failure in them. This test
+ * pins what the builder keeps and what it leaves out. The double is test code outside `src`,
+ * so the class declares that it covers nothing.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0

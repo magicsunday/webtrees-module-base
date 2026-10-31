@@ -611,7 +611,7 @@ final class NameProcessorTest extends TestCase
     {
         // [ canShowName(), index of the secondary name, expected alternate name ]
         return [
-            'a visible individual with a second name reports it'           => [true, 1, '… Smith'],
+            'a visible individual with another secondary name reports it'  => [true, 1, '… Smith'],
             'a hidden individual reports nothing, whatever names it has'   => [false, 1, ''],
             'a name that is primary and secondary at once reports nothing' => [true, 0, ''],
         ];
@@ -621,7 +621,8 @@ final class NameProcessorTest extends TestCase
      * The alternate name is the secondary NAME record with webtrees' "name unknown" placeholders
      * rewritten into an ellipsis. It is reported only when the viewer may see the name at all and
      * when the secondary name is a different record than the primary one, so a privacy-hidden
-     * individual never leaks a second name and a single-name individual has no alternate.
+     * individual never leaks a second name and an individual whose secondary name is its primary
+     * one has no alternate.
      *
      * @param bool   $canShowName    Whether webtrees lets the viewer see the individual's names
      * @param int    $secondaryIndex Index of the secondary name among the individual's names
