@@ -30,8 +30,11 @@ use function strtolower;
 use function token_get_all;
 
 use const DIRECTORY_SEPARATOR;
+use const T_COMMENT;
+use const T_DOC_COMMENT;
 use const T_DOUBLE_COLON;
 use const T_STRING;
+use const T_WHITESPACE;
 
 /**
  * The library carries no translated text. It has no catalogue, and the catalogue pipeline of a
@@ -76,6 +79,10 @@ final class TranslationFreeSourceTest extends TestCase
             'a call on an alias of the class'        => ["<?php Translator::translate('x');", 1],
             'a first class callable'                 => ['<?php $call = I18N::translate(...);', 1],
             'a method name in other letter case'     => ["<?php I18N::TRANSLATE('x');", 1],
+            'a space after the scope operator'       => ["<?php I18N:: translate('x');", 1],
+            'a line break after the scope operator'  => ["<?php I18N::\n    translate('x');", 1],
+            'a comment after the scope operator'     => ["<?php I18N::/* c */translate('x');", 1],
+            'another method after a space'           => ['<?php I18N:: languageTag();', 0],
             'two calls on one line are two findings' => ["<?php I18N::translate('a'); I18N::plural('a', 'b', 1);", 2],
             'a line comment that names a call'       => ['<?php // I18N::translate() is called by the consumer', 0],
             'a docblock that names a call'           => ["<?php /**\n * Uses I18N::translate() at its call site.\n */", 0],
@@ -111,6 +118,7 @@ final class TranslationFreeSourceTest extends TestCase
     {
         $sourceRoot = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'src';
         $findings   = [];
+        $scanned    = [];
 
         /** @var SplFileInfo $file */
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($sourceRoot)) as $file) {
@@ -122,15 +130,17 @@ final class TranslationFreeSourceTest extends TestCase
 
             self::assertIsString($code, 'a source file must be readable');
 
+            $relativePath = str_replace($sourceRoot . DIRECTORY_SEPARATOR, 'src/', $file->getPathname());
+            $scanned[]    = $relativePath;
+
             foreach ($this->translationCallsIn($code) as [$line, $method]) {
-                $findings[] = sprintf(
-                    '%s:%d calls %s',
-                    str_replace($sourceRoot . DIRECTORY_SEPARATOR, 'src/', $file->getPathname()),
-                    $line,
-                    $method,
-                );
+                $findings[] = sprintf('%s:%d calls %s', $relativePath, $line, $method);
             }
         }
+
+        // An empty set of files would pass the guard without looking at anything, so a file that
+        // is known to be there has to be among those scanned.
+        self::assertContains('src/Processor/DateProcessor.php', $scanned, 'the scan must visit the source files');
 
         self::assertSame(
             [],
@@ -156,7 +166,17 @@ final class TranslationFreeSourceTest extends TestCase
                 continue;
             }
 
-            $next = $tokens[$index + 1] ?? null;
+            // PHP allows whitespace and comments between the scope operator and the method name.
+            $position = $index + 1;
+
+            while (
+                is_array($tokens[$position] ?? null)
+                && in_array($tokens[$position][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)
+            ) {
+                ++$position;
+            }
+
+            $next = $tokens[$position] ?? null;
 
             if (
                 is_array($next)
