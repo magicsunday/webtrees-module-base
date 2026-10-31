@@ -46,6 +46,8 @@ jobs:
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
+                  # The changed-lines mutation step needs the history of the base branch.
+                  fetch-depth: 0
 
             - id: setup_php
               name: Set up PHP version ${{ matrix.php }}
@@ -160,21 +162,34 @@ jobs:
                       --fail-on-skipped \
                       --fail-on-empty-test-suite
 
-            # Mutation testing. Deliberately NOT part of the `ci:test` aggregate —
-            # that aggregate is what the pre-commit hook runs over the whole
-            # worktree, and a full mutation run is too slow to pay on every commit —
-            # so this step is the only place it runs. Which leg it runs on is
-            # decided by the `mutation` matrix dimension, not by a literal here.
+            # Mutation testing. Deliberately NOT part of the `ci:test` aggregate,
+            # which is what the pre-commit hook runs over the whole worktree, and a
+            # full mutation run is too slow to pay on every commit, so these steps
+            # are the only place it runs. Which leg they run on is decided by the
+            # `mutation` matrix dimension, not by a literal here.
             #
             # `!cancelled()` rather than `always()`: the other steps use `always()`
-            # so one red check still reports the rest, but this step re-runs the
+            # so one red check still reports the rest, but these steps re-run the
             # suite once per mutant, and `always()` would keep that going even after
-            # the run is cancelled. It additionally requires the unit tests to have
-            # passed — infection needs a green suite as its baseline, so running it
+            # the run is cancelled. They additionally require the unit tests to have
+            # passed, because infection needs a green suite as its baseline, so running it
             # against failing tests only burns minutes to reach the same red.
+            #
+            # A pull request is gated on the covered code of the lines it changes, which
+            # holds the tests of new code to its mutants without forcing tests for old
+            # trivial code. A push to a branch runs the whole tree and only reports,
+            # because the score is a diagnostic and no gate.
+            - id: infection_changed
+              name: Mutation Testing (changed lines)
+              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation && github.event_name == 'pull_request' }}
+              env:
+                  BASE_REF: ${{ github.base_ref }}
+              run: |
+                  composer ci:test:php:infection:changed -- --git-diff-base="origin/${BASE_REF}"
+
             - id: infection
-              name: Mutation Testing
-              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation }}
+              name: Mutation Testing (full run, report only)
+              if: ${{ !cancelled() && steps.install.conclusion == 'success' && steps['php-unit'].conclusion == 'success' && matrix.mutation && github.event_name != 'pull_request' }}
               run: |
                   composer ci:test:php:infection
 
