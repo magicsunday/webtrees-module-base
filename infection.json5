@@ -14,13 +14,11 @@
     // a timeout as a kill, which quietly inflates the score: a mutation that made the
     // suite hang is not a mutation the tests caught, so the score means what it says.
     "timeoutsAsEscaped": true,
-    // No minimum score here on purpose. A fixed floor over the whole tree rewards tests
-    // that only kill a mutant in a getter, a literal, a default or a call order, and
-    // the score is a diagnostic, not a target. The full run therefore only reports. The
-    // gate lives in the pull request step of the workflow, which applies a floor to the
-    // lines that the pull request changes (`composer ci:test:php:infection:changed`).
-    // Deliberately no `maxTimeouts` limit either: the timeout count varies with machine
-    // load, so it would be a flake source and not a signal.
+    // No minimum score here on purpose. The full run only reports, and the gate is the
+    // changed-lines script `composer ci:test:php:infection:changed`. A fixed floor over
+    // the whole tree rewards tests that only kill a mutant in a getter, a literal, a
+    // default or a call order. No `maxTimeouts` limit either, because the timeout count
+    // varies with machine load.
     "mutators": {
         "@default": true
     }

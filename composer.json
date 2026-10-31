@@ -137,7 +137,7 @@
             "XDEBUG_MODE=coverage infection --threads=max --no-progress --no-interaction"
         ],
         "ci:test:php:infection:changed": [
-            "XDEBUG_MODE=coverage infection --threads=max --no-progress --no-interaction --git-diff-lines --git-diff-base=origin/main --min-covered-msi=80 --ignore-msi-with-no-mutations"
+            "XDEBUG_MODE=coverage infection --threads=max --no-progress --no-interaction --git-diff-lines --min-covered-msi=80 --ignore-msi-with-no-mutations"
         ],
         "ci:test": [
             "@ci:test:php:lint",
