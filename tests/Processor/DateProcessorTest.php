@@ -547,7 +547,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
-    public function extractsTheYearFromEveryGedcomBirthDateForm(string $input, int $expected): void
+    public function extractsTheYearFromAPlainBirthDateAndFromARange(string $input, int $expected): void
     {
         self::assertSame($expected, $this->dateProcessorFor($input)->getBirthYear());
     }
@@ -562,7 +562,7 @@ final class DateProcessorTest extends TestCase
      */
     #[Test]
     #[DataProvider('yearDataProvider')]
-    public function extractsTheYearFromEveryGedcomDeathDateForm(string $input, int $expected): void
+    public function extractsTheYearFromAPlainDeathDateAndFromARange(string $input, int $expected): void
     {
         self::assertSame($expected, $this->dateProcessorFor('', $input)->getDeathYear());
     }
