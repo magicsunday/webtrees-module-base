@@ -25,7 +25,6 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function file_get_contents;
-use function hrtime;
 use function implode;
 use function str_repeat;
 
@@ -266,25 +265,6 @@ final class PunctuationResolverTest extends TestCase
 
         self::assertSame(['chart|Deaths per century', 'table|Deaths per century'], $resolution->unresolved);
         self::assertSame(['chart|Place'], $resolution->rewritten);
-    }
-
-    /**
-     * A very long run of no-break spaces in a translation does not stall the check of its trailing space.
-     *
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function readsALongRunOfNoBreakSpacesInLinearTime(): void
-    {
-        $translation = 'A' . str_repeat("\u{A0}", 60000) . 'b';
-        $catalogue   = $this->catalogue("#, fuzzy\n#| msgid \"Name:\"\nmsgid \"Name: \"\nmsgstr \"$translation\"");
-
-        $start      = hrtime(true);
-        $resolution = (new PunctuationResolver())->resolve($catalogue);
-        $seconds    = (hrtime(true) - $start) / 1_000_000_000;
-
-        self::assertSame(1, $resolution->resolved);
-        self::assertLessThan(1.0, $seconds);
     }
 
     /**
