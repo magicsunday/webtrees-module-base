@@ -356,13 +356,13 @@ final class DateProcessorTest extends TestCase
         $individual->method('getBirthDate')->willReturn(new Date(''));
         $individual->method('getDeathDate')->willReturn(new Date(''));
         $individual->method('childFamilies')->willReturn(new Collection([
+            $this->familyWith('', true),
             $this->familyWith('12 FEB 1850', true),
-            $this->familyWith('', false),
         ]));
 
         $processor = new DateProcessor($individual, 1, PHP_INT_MAX, '%d.%m.%Y');
 
-        self::assertSame('12.02.1850', $processor->getFormattedMarriageDateOfParents());
+        self::assertSame('?', $processor->getFormattedMarriageDateOfParents());
     }
 
     /**
