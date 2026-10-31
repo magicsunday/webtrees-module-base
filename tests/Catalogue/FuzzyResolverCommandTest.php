@@ -191,61 +191,53 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * Only the first source texts are listed, longer ones are shortened and the rest is counted.
+     * The number of unresolved entries, and the source text of the first one with the text that the
+     * report lists for it, around the limit of listed source texts.
      *
-     * @throws CatalogueToolException
+     * @return iterable<string, array{int, string, string}>
      */
-    #[Test]
-    public function listsAtMostTenSourceTextsPerCatalogueAndShortensLongOnes(): void
+    public static function unresolvedCounts(): iterable
     {
-        $this->requireTools();
-
-        $this->workspace->write($this->unresolvedCatalogue(12, str_repeat('x', 80)));
-
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
-
-        self::assertSame('  ▸ de        resolved=  0  remaining-fuzzy= 12', $lines[0]);
-        self::assertSame('      - ' . str_repeat('x', 59) . '…', $lines[1]);
-        self::assertSame('      - Text 10', $lines[10]);
-        self::assertSame('      … and 2 more', $lines[11]);
-        self::assertSame('  ✔ resolve-fuzzy: resolved=0, remaining=12', $lines[12]);
+        yield 'exactly the limit' => [10, 'Text 1', 'Text 1'];
+        yield 'one over the limit' => [11, 'Text 1', 'Text 1'];
+        yield 'more over the limit and a long text' => [12, str_repeat('x', 80), str_repeat('x', 59) . '…'];
     }
 
     /**
-     * Exactly as many source texts as the limit are all listed and no more-line follows.
+     * Only the first source texts are listed, longer ones are shortened and the rest is counted. Exactly
+     * as many source texts as the limit are all listed and no more-line follows.
+     *
+     * @param int    $count  The number of unresolved entries
+     * @param string $first  The source text of the first entry
+     * @param string $listed The text that the report lists for the first entry
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function addsNoMoreLineForExactlyTenSourceTexts(): void
+    #[DataProvider('unresolvedCounts')]
+    public function listsAtMostTenSourceTextsPerCatalogueAndShortensLongOnes(int $count, string $first, string $listed): void
     {
         $this->requireTools();
 
-        $this->workspace->write($this->unresolvedCatalogue(10, 'Text 1'));
+        $this->workspace->write($this->unresolvedCatalogue($count, $first));
 
         $lines = [];
 
         $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
 
-        self::assertSame(
-            [
-                '  ▸ de        resolved=  0  remaining-fuzzy= 10',
-                '      - Text 1',
-                '      - Text 2',
-                '      - Text 3',
-                '      - Text 4',
-                '      - Text 5',
-                '      - Text 6',
-                '      - Text 7',
-                '      - Text 8',
-                '      - Text 9',
-                '      - Text 10',
-                '  ✔ resolve-fuzzy: resolved=0, remaining=10',
-            ],
-            $lines,
-        );
+        $expected = ['  ▸ de        resolved=  0  remaining-fuzzy=' . sprintf('%3d', $count)];
+
+        for ($number = 1; $number <= 10; ++$number) {
+            $expected[] = '      - ' . ($number === 1 ? $listed : 'Text ' . $number);
+        }
+
+        if ($count > 10) {
+            $expected[] = sprintf('      … and %d more', $count - 10);
+        }
+
+        $expected[] = sprintf('  ✔ resolve-fuzzy: resolved=0, remaining=%d', $count);
+
+        self::assertSame($expected, $lines);
     }
 
     /**
@@ -285,45 +277,37 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * A missing catalogue after a valid one is named, and the valid one is still processed.
+     * The catalogues of a run in both orders, named as the valid one and the missing one.
      *
-     * @throws CatalogueToolException
+     * @return iterable<string, array{list<string>}>
      */
-    #[Test]
-    public function namesACatalogueThatDoesNotExistAndGoesOn(): void
+    public static function missingAndValidOrders(): iterable
     {
-        $this->requireTools();
-
-        $lines = [];
-
-        $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue, $this->workspace->catalogue . '.missing'],
-            self::collect($lines),
-        );
-
-        self::assertSame(1, $status);
-        self::assertContains('  ✘ ' . $this->workspace->catalogue . '.missing not found', $lines);
-
-        $summary = array_pop($lines);
-
-        self::assertIsString($summary);
-        self::assertMatchesRegularExpression('/^  ✔ resolve-fuzzy: resolved=[1-9]/', $summary);
+        yield 'missing after a valid one' => [['valid', 'missing']];
+        yield 'missing in front of a valid one' => [['missing', 'valid']];
     }
 
     /**
-     * A missing catalogue in front of a valid one is named, and the valid one is still processed.
+     * A missing catalogue is named wherever it stands, and the valid one is still processed.
+     *
+     * @param list<string> $order The kinds of the catalogues in the order they are handed to the command
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function processesTheCataloguesAfterAMissingOne(): void
+    #[DataProvider('missingAndValidOrders')]
+    public function namesACatalogueThatDoesNotExistAndGoesOn(array $order): void
     {
         $this->requireTools();
 
+        $paths = [
+            'valid'   => $this->workspace->catalogue,
+            'missing' => $this->workspace->catalogue . '.missing',
+        ];
         $lines = [];
 
         $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue . '.missing', $this->workspace->catalogue],
+            [$this->workspace->template, $paths[$order[0]], $paths[$order[1]]],
             self::collect($lines),
         );
 
