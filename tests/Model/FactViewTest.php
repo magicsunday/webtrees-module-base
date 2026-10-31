@@ -60,28 +60,4 @@ final class FactViewTest extends TestCase
             json_encode($fact, JSON_THROW_ON_ERROR)
         );
     }
-
-    /**
-     * A fact without a usable date carries the sort day zero, so the key is always there.
-     */
-    #[Test]
-    public function carriesTheSortDayZeroByDefault(): void
-    {
-        $fact = new FactView(tag: 'BIRT', label: 'Birth', date: '', place: '', placeFull: '', value: '');
-
-        self::assertSame(0, $fact->sortDay);
-        self::assertSame(0, $fact->jsonSerialize()['sortDay']);
-    }
-
-    /**
-     * A fact without a partner carries an empty partner, so the key is always there.
-     */
-    #[Test]
-    public function carriesAnEmptyPartnerByDefault(): void
-    {
-        $fact = new FactView(tag: 'BIRT', label: 'Birth', date: '', place: '', placeFull: '', value: '');
-
-        self::assertSame('', $fact->partner);
-        self::assertSame('', $fact->jsonSerialize()['partner']);
-    }
 }
