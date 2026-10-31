@@ -48,7 +48,8 @@ use const JSON_THROW_ON_ERROR;
 final readonly class GettextWorkspace
 {
     /**
-     * The header every plain catalogue and template of the tests starts with, followed by a blank line.
+     * The plain header that most catalogues and templates of the tests start with, followed by a blank line. A
+     * test that needs further header lines writes its own.
      */
     public const string HEADER = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
 
@@ -153,11 +154,11 @@ final readonly class GettextWorkspace
     }
 
     /**
-     * Builds the text of a template that holds exactly the entries of the given catalogues, so each of them is the
-     * result of a merge with it. The gettext tools do the work. A catalogue they cannot read adds nothing, the
-     * entries of the others are joined with the first occurrence of a source text winning, and obsolete entries,
-     * fuzzy flags and previous source texts are dropped. Every translation is emptied, whatever the number of lines
-     * it spans, by a filter that reads the text and writes nothing.
+     * Builds the text of a template that holds the entries of the given catalogues, so each of them is the result of
+     * a merge with it. The gettext tools do the work. A catalogue they cannot read adds nothing, the entries of the
+     * others are joined with the first occurrence of a source text winning, and obsolete entries, fuzzy flags and
+     * previous source texts are dropped. Every translation is emptied, whatever the number of lines it spans, by a
+     * filter that reads the text and writes nothing. The text is empty when none of the catalogues can be read.
      *
      * @param list<string> $catalogues The paths of the catalogues to take the entries from
      *
