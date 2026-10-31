@@ -33,6 +33,7 @@ use function array_filter;
 use function basename;
 use function chmod;
 use function dirname;
+use function escapeshellarg;
 use function file_get_contents;
 use function file_put_contents;
 use function function_exists;
@@ -676,8 +677,8 @@ final class WriteTranslationsCommandTest extends TestCase
     }
 
     /**
-     * A catalogue that cannot be written is named with the message of the tool, and both are cleaned. The directory
-     * is made read-only for the run, which only a user other than root feels.
+     * A catalogue that cannot be written is named in the report, and the name is cleaned. The directory is made
+     * read-only for the run, which only a user other than root feels.
      */
     #[Test]
     public function cleansTheNameOfACatalogueThatCannotBeWritten(): void
@@ -955,7 +956,7 @@ final class WriteTranslationsCommandTest extends TestCase
         mkdir($stub, 0700, true);
         file_put_contents(
             $stub . '/msgmerge',
-            "#!/bin/sh\nPATH='" . $original . "' msgmerge \"\$@\" || exit \$?\n"
+            "#!/bin/sh\nPATH=" . escapeshellarg($original) . " msgmerge \"\$@\" || exit \$?\n"
             . "case \" \$* \" in\n*' --update '*) ;;\n*) exit 0 ;;\nesac\n"
             . "for argument in \"\$@\"; do previous=\"\$last\"; last=\"\$argument\"; done\n"
             . "sed -i '" . $change . "' \"\$previous\"\n",
