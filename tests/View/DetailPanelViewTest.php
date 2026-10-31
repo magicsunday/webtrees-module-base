@@ -211,6 +211,7 @@ final class DetailPanelViewTest extends TestCase
 
         self::assertSame(1, substr_count($html, '<style'));
         self::assertCount(1, ViewFixture::elements($xpath, '//style'));
+        self::assertStringContainsString('.webtrees-detail-panel', ViewFixture::first($xpath, '//style')->textContent);
         self::assertStringNotContainsString('style=', $html);
     }
 }

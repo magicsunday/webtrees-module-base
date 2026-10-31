@@ -152,6 +152,7 @@ final class HelpPopoverViewTest extends TestCase
         self::assertStringNotContainsString('style=', $html);
         self::assertSame(1, substr_count($html, '<style'));
         self::assertCount(1, ViewFixture::elements($xpath, '//style'));
+        self::assertStringContainsString('.help-popover', ViewFixture::first($xpath, '//style')->textContent);
     }
 
     /**
