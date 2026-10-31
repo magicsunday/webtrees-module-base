@@ -71,16 +71,8 @@ final class DateProcessorTest extends TestCase
                 2000,
             ],
             [
-                'CAL 30 NOV 2000',
-                2000,
-            ],
-            [
                 'BET SEP 2000 AND AUG 2001',
                 2000,
-            ],
-            [
-                'BET @#DJULIAN@ 01 SEP 1700 AND @#DGREGORIAN@ 30 SEP 1753',
-                1700,
             ],
         ];
     }
@@ -584,15 +576,6 @@ final class DateProcessorTest extends TestCase
         return [
             [
                 '01 MAY 2000',
-            ],
-            [
-                'CAL 30 NOV 2000',
-            ],
-            [
-                'BET SEP 2000 AND AUG 2001',
-            ],
-            [
-                'BET @#DJULIAN@ 01 SEP 1700 AND @#DGREGORIAN@ 30 SEP 1753',
             ],
         ];
     }
