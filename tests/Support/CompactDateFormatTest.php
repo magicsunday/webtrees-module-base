@@ -46,6 +46,40 @@ final class CompactDateFormatTest extends TestCase
     }
 
     /**
+     * @return array<string, array{string, string}>
+     */
+    public static function icuPatternDataProvider(): array
+    {
+        // [ ICU short-date pattern, expected webtrees compact format ]
+        return [
+            'two-digit day and month, any year length' => ['dd.MM.yyyy', '%d.%m.%Y'],
+            'single-letter day and month'              => ['d/M/yy', '%j/%n/%Y'],
+            'a quoted literal keeps its letters'       => ["dd 'yMd' MM yy", '%d yMd %m %Y'],
+            'a quoted literal loses its quotes'        => ["dd.MM.yy 'x'.", '%d.%m.%Y x.'],
+            'a pair of quotes is one apostrophe'       => ["dd''MM''y", "%d'%m'%Y"],
+            'a pair of quotes inside a literal'        => ["'o''clock' d", "o'clock %j"],
+            'an unclosed quote runs to the end'        => ["dd 'MM", '%d MM'],
+            'other letters are copied as they are'     => ['dd EEE yy', '%d EEE %Y'],
+        ];
+    }
+
+    /**
+     * The translation of an ICU pattern maps the day, month and year letters, passes everything inside
+     * single quotes through unchanged and reads a pair of single quotes as one apostrophe.
+     *
+     * @param string $pattern  The ICU short-date pattern
+     * @param string $expected The expected webtrees compact format
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('icuPatternDataProvider')]
+    public function fromIcuPatternTranslatesTheFieldsAndKeepsQuotedText(string $pattern, string $expected): void
+    {
+        self::assertSame($expected, CompactDateFormat::fromIcuPattern($pattern));
+    }
+
+    /**
      * The ICU short pattern of a locale is translated into the matching webtrees
      * compact format with a four-digit year.
      *

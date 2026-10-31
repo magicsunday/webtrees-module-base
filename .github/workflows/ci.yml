@@ -143,6 +143,23 @@ jobs:
               run: |
                   composer ci:test:php:unit
 
+            # The ownership test hands the catalogue to a foreign owner and group and checks
+            # that a rewrite keeps both, which only root may do. On the runner user it skips
+            # itself in the step above, so this step runs that one test through sudo. The
+            # result does not depend on the PHP version, so it runs on the leg of the mutation
+            # run. A skip fails the step, and the cache stays outside the workspace so that
+            # root leaves no file there.
+            - id: ownership
+              name: PHP Unit ownership test as root
+              if: ${{ always() && steps.install.conclusion == 'success' && steps.gettext.conclusion == 'success' && matrix.mutation }}
+              run: |
+                  sudo -E env "PATH=$PATH" php .build/vendor/phpunit/phpunit/phpunit \
+                      --configuration phpunit.xml \
+                      --filter keepsTheOwnerAndTheGroupOfTheCatalogue \
+                      --cache-directory "$RUNNER_TEMP/phpunit-root" \
+                      --fail-on-skipped \
+                      --fail-on-empty-test-suite
+
             # Mutation testing. Deliberately NOT part of the `ci:test` aggregate —
             # that aggregate is what the pre-commit hook runs over the whole
             # worktree, and a full mutation run is too slow to pay on every commit —

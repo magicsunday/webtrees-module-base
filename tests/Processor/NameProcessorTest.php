@@ -605,6 +605,65 @@ final class NameProcessorTest extends TestCase
     }
 
     /**
+     * @return array<string, array{bool, int, string}>
+     */
+    public static function alternateNameDataProvider(): array
+    {
+        // [ canShowName(), index of the secondary name, expected alternate name ]
+        return [
+            'a visible individual with another secondary name reports it'  => [true, 1, '… Smith'],
+            'a hidden individual reports nothing, whatever names it has'   => [false, 1, ''],
+            'a name that is primary and secondary at once reports nothing' => [true, 0, ''],
+        ];
+    }
+
+    /**
+     * The alternate name is the secondary NAME record with webtrees' "name unknown" placeholders
+     * rewritten into an ellipsis. It is reported only when the viewer may see the name at all and
+     * when the secondary name is a different record than the primary one, so a privacy-hidden
+     * individual never leaks a second name and an individual whose secondary name is its primary
+     * one has no alternate.
+     *
+     * @param bool   $canShowName    Whether webtrees lets the viewer see the individual's names
+     * @param int    $secondaryIndex Index of the secondary name among the individual's names
+     * @param string $expected       The expected alternate name
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('alternateNameDataProvider')]
+    public function reportsTheAlternateNameOnlyForAVisibleIndividualWithASecondName(
+        bool $canShowName,
+        int $secondaryIndex,
+        string $expected,
+    ): void {
+        $individual = self::createStub(Individual::class);
+        $individual->method('canShowName')->willReturn($canShowName);
+        $individual->method('getPrimaryName')->willReturn(0);
+        $individual->method('getSecondaryName')->willReturn($secondaryIndex);
+        $individual->method('getAllNames')->willReturn([
+            [
+                'full'   => '<span class="NAME" dir="auto" translate="no">Primary <span class="SURN">Name</span></span>',
+                'fullNN' => 'Primary Name',
+                'type'   => 'BIRT',
+                'surn'   => '',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+            [
+                'full'   => '<span class="NAME" dir="auto" translate="no">Alias <span class="SURN">Smith</span></span>',
+                'fullNN' => Individual::PRAENOMEN_NESCIO . ' Smith ',
+                'type'   => 'NAME',
+                'surn'   => '',
+                'givn'   => '',
+                'sort'   => '',
+            ],
+        ]);
+
+        self::assertSame($expected, (new NameProcessor($individual))->getAlternateName($individual));
+    }
+
+    /**
      * @return array<string, array{string, string, list<array{string, string, bool}>}>
      */
     public static function nameSegmentDataProvider(): array

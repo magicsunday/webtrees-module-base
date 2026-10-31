@@ -13,6 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Double;
 
 use Fisharebest\Webtrees\Cache;
 use Fisharebest\Webtrees\Contracts\CacheFactoryInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 /**
@@ -42,12 +43,15 @@ final readonly class InMemoryCacheFactory implements CacheFactoryInterface
 
     /**
      * Constructor.
+     *
+     * @param ClockInterface|null $clock The clock the entries expire by, or null for the system clock. A test
+     *                                   that pins an expiry time passes a clock it can move.
      */
-    public function __construct()
+    public function __construct(?ClockInterface $clock = null)
     {
         // storeSerialized=false keeps the stored values as-is; these caches only ever
         // hold scalars in tests, and skipping serialisation keeps failures readable.
-        $this->adapter = new ArrayAdapter(0, false);
+        $this->adapter = new ArrayAdapter(0, false, 0, 0, $clock);
     }
 
     /**

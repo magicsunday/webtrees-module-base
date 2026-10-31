@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Bin;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\StartsBinaries;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -20,16 +21,10 @@ use function chmod;
 use function copy;
 use function count;
 use function file_put_contents;
-use function is_resource;
 use function mkdir;
 use function preg_match;
-use function proc_close;
-use function proc_open;
 use function shell_exec;
-use function stream_get_contents;
 use function trim;
-
-use const PHP_BINARY;
 
 /**
  * Starts bin/resolve-fuzzy as a process and pins what a module's language pipeline sees of
@@ -42,6 +37,8 @@ use const PHP_BINARY;
 #[CoversNothing]
 final class ResolveFuzzyBinaryTest extends TestCase
 {
+    use StartsBinaries;
+
     /**
      * The scratch copy of the fixture catalogue that the running test works on.
      */
@@ -211,22 +208,6 @@ final class ResolveFuzzyBinaryTest extends TestCase
      */
     private function start(array $arguments, ?array $environment, string $script = __DIR__ . '/../../bin/resolve-fuzzy'): array
     {
-        $process = proc_open(
-            [PHP_BINARY, $script, ...$arguments],
-            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-            $pipes,
-            null,
-            $environment,
-        );
-
-        if (!is_resource($process)) {
-            self::fail('The binary could not be started.');
-        }
-
-        return [
-            'output' => (string) stream_get_contents($pipes[1]),
-            'error'  => (string) stream_get_contents($pipes[2]),
-            'status' => proc_close($process),
-        ];
+        return $this->startScript($script, $arguments, $environment);
     }
 }

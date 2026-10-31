@@ -13,11 +13,15 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Date\AbstractCalendarDate;
+use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
+use Fisharebest\Webtrees\Family;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
+use Illuminate\Support\Collection;
 use MagicSunday\Webtrees\ModuleBase\Model\LifetimeLabels;
+use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\InMemoryCacheFactory;
@@ -38,6 +42,7 @@ use function strip_tags;
  */
 #[CoversClass(DateProcessor::class)]
 #[UsesClass(LifetimeLabels::class)]
+#[UsesClass(Symbols::class)]
 #[UsesClass(PlainText::class)]
 final class DateProcessorTest extends TestCase
 {
@@ -212,6 +217,252 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function presenceOfADateDataProvider(): array
+    {
+        // [ GEDCOM date, whether webtrees treats it as a usable date ]
+        return [
+            'a complete date'  => ['01 MAY 1853', true],
+            'a qualified year' => ['ABT 1853', true],
+            'no date at all'   => ['', false],
+        ];
+    }
+
+    /**
+     * The presence flags tell a consumer whether a birth or a death date exists. They must read
+     * their own date and not the neighbouring one, so each is checked with the other date empty.
+     *
+     * @param string $input    The GEDCOM date
+     * @param bool   $expected Whether the date counts as present
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('presenceOfADateDataProvider')]
+    public function reportsWhetherABirthOrADeathDateIsPresent(string $input, bool $expected): void
+    {
+        self::assertSame($expected, $this->dateProcessorFor($input)->hasBirthDate());
+        self::assertFalse($this->dateProcessorFor($input)->hasDeathDate());
+        self::assertSame($expected, $this->dateProcessorFor('', $input)->hasDeathDate());
+        self::assertFalse($this->dateProcessorFor('', $input)->hasBirthDate());
+    }
+
+    /**
+     * @return array<string, array{string, int, int, string}>
+     */
+    public static function generationAwareDateDataProvider(): array
+    {
+        // [ GEDCOM date, generation, generations shown in full, expected text ]
+        return [
+            'inside the detail depth the full date shows' => ['12 MAY 1832', 1, 5, '12.05.1832'],
+            'the last detailed generation still shows it' => ['12 MAY 1832', 5, 5, '12.05.1832'],
+            'beyond the detail depth only the year shows' => ['12 MAY 1832', 6, 5, '1832'],
+            'without a date nothing shows'                => ['', 1, 5, ''],
+        ];
+    }
+
+    /**
+     * The generation-aware birth and death dates show the full compact date up to the configured
+     * depth and only the year beyond it, and nothing when the date is missing.
+     *
+     * @param string $input      The GEDCOM date
+     * @param int    $generation The generation depth of the individual
+     * @param int    $detailed   The generations that show the full date
+     * @param string $expected   The expected text
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('generationAwareDateDataProvider')]
+    public function showsTheBirthAndDeathDateByGenerationDepth(
+        string $input,
+        int $generation,
+        int $detailed,
+        string $expected,
+    ): void {
+        $birth = new DateProcessor($this->individualWith($input), $generation, $detailed, '%d.%m.%Y');
+        $death = new DateProcessor($this->individualWith('', $input), $generation, $detailed, '%d.%m.%Y');
+
+        self::assertSame($expected, $birth->getFormattedBirthDate());
+        self::assertSame('', $birth->getFormattedDeathDate());
+        self::assertSame($expected, $death->getFormattedDeathDate());
+        self::assertSame('', $death->getFormattedBirthDate());
+    }
+
+    /**
+     * @return array<string, array{string, bool, int, string}>
+     */
+    public static function marriageOfParentsDataProvider(): array
+    {
+        // [ GEDCOM marriage date, whether a MARR fact exists, generation, expected text ]
+        return [
+            'a dated marriage shows the full date'        => ['12 FEB 1850', true, 1, '12.02.1850'],
+            'a deep generation shows only the year'       => ['12 FEB 1850', true, 7, '1850'],
+            'no space is left beyond the last generation' => ['12 FEB 1850', true, 8, ''],
+            'a marriage without a date shows the unknown' => ['', true, 1, '?'],
+            'no marriage fact shows nothing'              => ['', false, 1, ''],
+        ];
+    }
+
+    /**
+     * The marriage date of the parents is formatted by generation depth, and a marriage that is
+     * recorded without a usable date is told apart from no marriage at all.
+     *
+     * @param string $marriage    The GEDCOM marriage date of the parents
+     * @param bool   $hasMarriage Whether the parents' family has a MARR fact
+     * @param int    $generation  The generation depth of the individual
+     * @param string $expected    The expected text
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('marriageOfParentsDataProvider')]
+    public function formatsTheMarriageOfTheParentsByGenerationDepth(
+        string $marriage,
+        bool $hasMarriage,
+        int $generation,
+        string $expected,
+    ): void {
+        $individual = $this->individualWith(parents: $this->familyWith($marriage, $hasMarriage));
+        $processor  = new DateProcessor($individual, $generation, PHP_INT_MAX, '%d.%m.%Y');
+
+        self::assertSame($expected, $processor->getFormattedMarriageDateOfParents());
+    }
+
+    /**
+     * An individual without a parent family has no marriage of parents to show.
+     *
+     * @return void
+     */
+    #[Test]
+    public function showsNoMarriageOfParentsWithoutAParentFamily(): void
+    {
+        $processor = new DateProcessor($this->individualWith(), 1, PHP_INT_MAX, '%d.%m.%Y');
+
+        self::assertSame('', $processor->getFormattedMarriageDateOfParents());
+    }
+
+    /**
+     * Only the first parent family counts, so a later family does not replace the marriage of the
+     * first one.
+     *
+     * @return void
+     */
+    #[Test]
+    public function readsOnlyTheFirstParentFamilyForTheMarriageOfTheParents(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthDate')->willReturn(new Date(''));
+        $individual->method('getDeathDate')->willReturn(new Date(''));
+        $individual->method('childFamilies')->willReturn(new Collection([
+            $this->familyWith('', true),
+            $this->familyWith('12 FEB 1850', true),
+        ]));
+
+        $processor = new DateProcessor($individual, 1, PHP_INT_MAX, '%d.%m.%Y');
+
+        self::assertSame('?', $processor->getFormattedMarriageDateOfParents());
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function ownMarriageDataProvider(): array
+    {
+        // [ GEDCOM marriage date, expected text of the full compact date ]
+        return [
+            'a dated marriage shows the full date'    => ['12 FEB 1850', '12.02.1850'],
+            'a marriage without a date shows nothing' => ['', ''],
+        ];
+    }
+
+    /**
+     * The own marriage of an individual is read from the first spouse family, once formatted by
+     * generation depth and once always in full for a tooltip.
+     *
+     * @param string $marriage The GEDCOM marriage date of the first spouse family
+     * @param string $expected The expected full compact date
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('ownMarriageDataProvider')]
+    public function formatsTheOwnMarriageFromTheFirstSpouseFamily(string $marriage, string $expected): void
+    {
+        $individual = $this->individualWith(spouse: $this->familyWith($marriage, true));
+        $processor  = new DateProcessor($individual, 1, PHP_INT_MAX, '%d.%m.%Y');
+
+        self::assertSame($expected, $processor->getMarriageDateFull());
+        self::assertSame($expected, $processor->getFormattedMarriageDate());
+    }
+
+    /**
+     * Only the first spouse family counts, so a later family with a dated marriage does not
+     * stand in for a first family without one. An individual without any spouse family has
+     * nothing to show.
+     *
+     * @return void
+     */
+    #[Test]
+    public function readsOnlyTheFirstSpouseFamilyForTheOwnMarriage(): void
+    {
+        $individual = self::createStub(Individual::class);
+        $individual->method('getBirthDate')->willReturn(new Date(''));
+        $individual->method('getDeathDate')->willReturn(new Date(''));
+        $individual->method('spouseFamilies')->willReturn(new Collection([
+            $this->familyWith('', true),
+            $this->familyWith('12 FEB 1850', true),
+        ]));
+
+        $processor = new DateProcessor($individual, 1, PHP_INT_MAX, '%d.%m.%Y');
+
+        self::assertSame('', $processor->getMarriageDateFull());
+        self::assertSame('', $processor->getFormattedMarriageDate());
+        self::assertSame('', (new DateProcessor($this->individualWith(), 1))->getMarriageDateFull());
+    }
+
+    /**
+     * @return array<string, array{string, string, bool, string}>
+     */
+    public static function compactLifetimeDataProvider(): array
+    {
+        // [ GEDCOM birth date, GEDCOM death date, individual is dead, expected text ]
+        return [
+            'both years give the range'             => ['01 MAY 1853', '12 JUN 1933', true, "1853\u{2013}1933"],
+            'a birth year alone gets the star'      => ['01 MAY 1853', '', false, "\u{2605} 1853"],
+            'a death year alone gets the cross'     => ['', '12 JUN 1933', true, "\u{2020} 1933"],
+            'a dead person without years the cross' => ['', '', true, "\u{2020}"],
+            'a living person without years nothing' => ['', '', false, ''],
+        ];
+    }
+
+    /**
+     * The compact lifetime joins the years with a range dash, marks a lone year with the birth or
+     * death symbol and a deceased person without years with the death symbol alone.
+     *
+     * @param string $birthDate The GEDCOM birth date
+     * @param string $deathDate The GEDCOM death date
+     * @param bool   $isDead    Whether webtrees considers the individual deceased
+     * @param string $expected  The expected text
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('compactLifetimeDataProvider')]
+    public function describesTheLifetimeInCompactForm(
+        string $birthDate,
+        string $deathDate,
+        bool $isDead,
+        string $expected,
+    ): void {
+        self::assertSame(
+            $expected,
+            $this->dateProcessorFor($birthDate, $deathDate, $isDead)->getCompactLifetimeDescription(),
+        );
+    }
+
+    /**
      * Builds a DateProcessor the way a consumer does: around an individual, through
      * the real constructor. The individual is a stub because it is the collaborator,
      * not the unit under test — the constructor reads its birth and death dates.
@@ -227,12 +478,53 @@ final class DateProcessorTest extends TestCase
         string $deathDate = '',
         bool $isDead = false,
     ): DateProcessor {
+        return new DateProcessor($this->individualWith($birthDate, $deathDate, $isDead));
+    }
+
+    /**
+     * Builds the individual stub the processor reads. The family collections are empty unless a
+     * family is given, because the processor takes the first family of each.
+     *
+     * @param string      $birthDate The GEDCOM birth date the individual reports
+     * @param string      $deathDate The GEDCOM death date the individual reports
+     * @param bool        $isDead    Whether the individual is reported as deceased
+     * @param Family|null $spouse    The individual's own spouse family, if any
+     * @param Family|null $parents   The family the individual is a child of, if any
+     *
+     * @return Individual
+     */
+    private function individualWith(
+        string $birthDate = '',
+        string $deathDate = '',
+        bool $isDead = false,
+        ?Family $spouse = null,
+        ?Family $parents = null,
+    ): Individual {
         $individual = self::createStub(Individual::class);
         $individual->method('getBirthDate')->willReturn(new Date($birthDate));
         $individual->method('getDeathDate')->willReturn(new Date($deathDate));
         $individual->method('isDead')->willReturn($isDead);
+        $individual->method('spouseFamilies')->willReturn(new Collection($spouse instanceof Family ? [$spouse] : []));
+        $individual->method('childFamilies')->willReturn(new Collection($parents instanceof Family ? [$parents] : []));
 
-        return new DateProcessor($individual);
+        return $individual;
+    }
+
+    /**
+     * Builds a family stub with a marriage date and, optionally, a MARR fact.
+     *
+     * @param string $marriageDate The GEDCOM marriage date of the family
+     * @param bool   $hasMarriage  Whether the family carries a MARR fact
+     *
+     * @return Family
+     */
+    private function familyWith(string $marriageDate, bool $hasMarriage): Family
+    {
+        $family = self::createStub(Family::class);
+        $family->method('getMarriageDate')->willReturn(new Date($marriageDate));
+        $family->method('facts')->willReturn(new Collection($hasMarriage ? [self::createStub(Fact::class)] : []));
+
+        return $family;
     }
 
     /**

@@ -34,12 +34,14 @@ use function chmod;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function function_exists;
 use function getenv;
-use function implode;
 use function json_encode;
 use function mkdir;
+use function posix_geteuid;
 use function putenv;
 use function str_contains;
+use function str_replace;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -61,6 +63,18 @@ use const JSON_THROW_ON_ERROR;
 #[UsesClass(TranslationFiller::class)]
 final class WriteTranslationsCommandTest extends TestCase
 {
+    /**
+     * A value that would start a workflow command in a CI log and turn the text around if it reached the report as it
+     * is, which a contributor can put into a path, a locale or a source text.
+     */
+    private const string HOSTILE = "##[error]\u{202E}x";
+
+    /**
+     * The text the report has to name in place of the hostile value, written out so that the expectation does not
+     * depend on the cleaning it checks.
+     */
+    private const string CLEANED = '##?[error]?x';
+
     /**
      * The scratch directory the running test works in.
      */
@@ -263,31 +277,9 @@ final class WriteTranslationsCommandTest extends TestCase
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
         $before    = (string) file_get_contents($catalogue);
         $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
-        $stub      = $this->workspace->emptyDirectory() . '/stub';
-        $original  = (string) getenv('PATH');
+        $lines     = [];
 
-        // The stub runs the real last tool and then changes the text it wrote, as a misbehaving tool would.
-        mkdir($stub, 0700, true);
-        file_put_contents(
-            $stub . '/msgmerge',
-            "#!/bin/sh\nPATH='" . $original . "' msgmerge \"\$@\" || exit \$?\n"
-            . "case \" \$* \" in\n*' --update '*) ;;\n*) exit 0 ;;\nesac\n"
-            . "for argument in \"\$@\"; do previous=\"\$last\"; last=\"\$argument\"; done\n"
-            . "sed -i '" . $change . "' \"\$previous\"\n",
-        );
-        chmod($stub . '/msgmerge', 0700);
-        putenv('PATH=' . $stub . ':' . $original);
-
-        $lines = [];
-
-        try {
-            $status = (new WriteTranslationsCommand())->run(
-                [$file, $this->workspace->template, $catalogue],
-                $this->collect($lines),
-            );
-        } finally {
-            putenv('PATH=' . $original);
-        }
+        $status = $this->runWithChangedResult($change, [$file, $this->workspace->template, $catalogue], $lines);
 
         self::assertSame(1, $status);
         self::assertContains(
@@ -629,6 +621,355 @@ final class WriteTranslationsCommandTest extends TestCase
     }
 
     /**
+     * The places where the report names text that a contributor controls: a path, a locale, a source text or the
+     * message of a tool.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function placesThatNameForeignText(): array
+    {
+        return [
+            'the translations file is missing'              => ['translations-file-missing'],
+            'the template is missing'                       => ['template-missing'],
+            'the translations file has the wrong shape'     => ['translations-file-wrong-shape'],
+            'the core template is missing'                  => ['core-owned-missing'],
+            'a catalogue is missing'                        => ['catalogue-missing'],
+            'the directory is no locale'                    => ['locale-unknown'],
+            'the header declares another form count'        => ['plural-count-differs'],
+            'the filler refuses an entry'                   => ['refused-reason'],
+            'the header declares no plural rule'            => ['no-plural-header'],
+            'the finished result differs from the plan'     => ['result-differs'],
+            'the catalogue is not merged from the template' => ['not-merged'],
+            'a key matches no entry'                        => ['key-matches-no-entry'],
+            'a locale matches no catalogue'                 => ['locale-matches-no-catalogue'],
+        ];
+    }
+
+    /**
+     * Whatever a path, a locale or a source text holds is cleaned before the report names it, so a contributed
+     * catalogue or file name cannot start a workflow command in a CI log or turn the text around. The places of the
+     * report that name a path, the locale of a directory, a key or a source text are reached with a hostile value
+     * here, and no line may keep it while the cleaned text is named. The cleaning of a tool message and of a locale
+     * that was checked before is not pinned, the first is cleaned where the tool throws and the second cannot carry
+     * such a value.
+     *
+     * @param string $scenario The place the hostile value is put into
+     */
+    #[Test]
+    #[DataProvider('placesThatNameForeignText')]
+    public function cleansForeignTextWhereverTheReportNamesIt(string $scenario): void
+    {
+        $this->requireTools();
+
+        [$arguments, $named, $change] = $this->hostileScenario($scenario);
+
+        $lines = [];
+
+        if ($change === null) {
+            (new WriteTranslationsCommand())->run($arguments, $this->collect($lines));
+        } else {
+            $this->runWithChangedResult($change, $arguments, $lines);
+        }
+
+        $this->assertNamesOnlyTheCleanedText($lines, $named);
+    }
+
+    /**
+     * A catalogue that cannot be written is named with the message of the tool, and both are cleaned. The directory
+     * is made read-only for the run, which only a user other than root feels.
+     */
+    #[Test]
+    public function cleansTheNameOfACatalogueThatCannotBeWritten(): void
+    {
+        $this->requireTools();
+
+        if (
+            !function_exists('posix_geteuid')
+            || (posix_geteuid() === 0)
+        ) {
+            self::markTestSkipped('A directory is only read-only for a user other than root.');
+        }
+
+        $catalogue = $this->prepare($this->hostileCatalogue('de'), 2);
+        $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $lines     = [];
+
+        chmod(dirname($catalogue), 0555);
+
+        try {
+            (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
+        } finally {
+            chmod(dirname($catalogue), 0700);
+        }
+
+        $this->assertNamesOnlyTheCleanedText($lines, [$catalogue]);
+        self::assertTrue(
+            $this->anyLineContains($lines, 'could not be written'),
+            'the report names the catalogue that could not be written',
+        );
+    }
+
+    /**
+     * Builds the files of one place of the report that names foreign text.
+     *
+     * @param string $scenario The place the hostile value is put into
+     *
+     * @return array{list<string>, list<string>, string|null} The arguments of the command, the hostile values the
+     *                                                        report has to name in cleaned form, and the change a
+     *                                                        misbehaving last tool makes, when the scenario needs one
+     */
+    private function hostileScenario(string $scenario): array
+    {
+        $hostile = self::HOSTILE;
+        $file    = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $valid   = $this->prepare($this->workspace->catalogue, 2);
+        $base    = $this->workspace->emptyDirectory();
+
+        return match ($scenario) {
+            'translations-file-missing' => [
+                [$base . '/' . $hostile . '.json', $this->workspace->template, $valid],
+                [$base . '/' . $hostile . '.json'],
+                null,
+            ],
+            'template-missing' => [
+                [$file, $base . '/' . $hostile . '.pot', $valid],
+                [$base . '/' . $hostile . '.pot'],
+                null,
+            ],
+            'translations-file-wrong-shape' => [
+                [$this->shapeless($base . '/' . $hostile . '.json'), $this->workspace->template, $valid],
+                [$base . '/' . $hostile . '.json'],
+                null,
+            ],
+            'core-owned-missing' => [
+                ['--core-owned=' . $base . '/' . $hostile . '.pot', $file, $this->workspace->template, $valid],
+                [$base . '/' . $hostile . '.pot'],
+                null,
+            ],
+            'catalogue-missing' => [
+                [$file, $this->workspace->template, $base . '/' . $hostile . '/messages.po'],
+                [$base . '/' . $hostile . '/messages.po'],
+                null,
+            ],
+            'locale-unknown'       => $this->inLocaleNamed($hostile, $file),
+            'plural-count-differs' => $this->withHostileParent($file, 3, null),
+            'refused-reason'       => $this->refusedReason(),
+            'no-plural-header'     => $this->withoutPluralRule(),
+            'result-differs'       => $this->withHostileParent($file, 2, 's/msgstr "Hallo"/msgstr "Falsch"/'),
+            'not-merged'           => $this->notMerged($file),
+            'key-matches-no-entry' => [
+                [$this->translations([$hostile => ['de' => 'x']]), $this->workspace->template, $valid],
+                [$hostile],
+                null,
+            ],
+            'locale-matches-no-catalogue' => [
+                [$this->translations(['Hello' => [$hostile => 'x']]), $this->workspace->template, $valid],
+                [$hostile],
+                null,
+            ],
+            default => self::fail('Unknown scenario ' . $scenario),
+        };
+    }
+
+    /**
+     * Builds a catalogue whose directory is named like a locale that webtrees does not know, the hostile value.
+     *
+     * @param string $hostile The directory name
+     * @param string $file    The translations file
+     *
+     * @return array{list<string>, list<string>, string|null}
+     */
+    private function inLocaleNamed(string $hostile, string $file): array
+    {
+        $catalogue = $this->prepare($this->hostileCatalogue($hostile), 2);
+
+        return [[$file, $this->workspace->template, $catalogue], [$catalogue, $hostile], null];
+    }
+
+    /**
+     * Builds a catalogue of the locale "de" below a hostile parent directory, so only its path carries the value.
+     *
+     * @param string      $file    The translations file
+     * @param int         $plurals The number of plural forms the header declares
+     * @param string|null $change  The change a misbehaving last tool makes, when the scenario needs one
+     *
+     * @return array{list<string>, list<string>, string|null}
+     */
+    private function withHostileParent(string $file, int $plurals, ?string $change): array
+    {
+        $catalogue = $this->prepare($this->hostileCatalogue('de'), $plurals);
+
+        return [[$file, $this->workspace->template, $catalogue], [$catalogue], $change];
+    }
+
+    /**
+     * Builds a catalogue whose source text is the hostile value and leaves its translation empty, so the filler
+     * refuses the entry and the reason names the source text.
+     *
+     * @return array{list<string>, list<string>, string|null}
+     */
+    private function refusedReason(): array
+    {
+        $hostile = self::HOSTILE;
+        $header  = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n"
+            . "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n";
+        $entries = 'msgid "' . $hostile . "\"\nmsgstr \"\"\n";
+
+        file_put_contents($this->workspace->template, $header . $entries);
+        file_put_contents($this->workspace->catalogue, $header . $entries);
+        GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
+
+        return [
+            [$this->translations([$hostile => ['de' => '']]), $this->workspace->template, $this->workspace->catalogue],
+            ['de: "' . $hostile . '" has an empty translation'],
+            null,
+        ];
+    }
+
+    /**
+     * Builds a catalogue below a hostile parent directory whose header declares no plural rule while a plural entry
+     * is to be written.
+     *
+     * @return array{list<string>, list<string>, string|null}
+     */
+    private function withoutPluralRule(): array
+    {
+        $catalogue = $this->hostileCatalogue('de');
+        $header    = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $entries   = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+
+        file_put_contents($this->workspace->template, $header . $entries);
+        file_put_contents($catalogue, $header . $entries);
+        GettextWorkspace::mergeFile($catalogue, $this->workspace->template);
+
+        $file = $this->translations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Eins', 'Viele']]]);
+
+        return [[$file, $this->workspace->template, $catalogue], [$catalogue], null];
+    }
+
+    /**
+     * Builds a catalogue below a hostile parent directory that is no longer what a merge with the template writes.
+     *
+     * @param string $file The translations file
+     *
+     * @return array{list<string>, list<string>, string|null}
+     */
+    private function notMerged(string $file): array
+    {
+        $catalogue = $this->prepare($this->hostileCatalogue('de'), 2);
+
+        file_put_contents(
+            $this->workspace->template,
+            file_get_contents($this->workspace->template) . "\nmsgid \"Extra\"\nmsgstr \"\"\n",
+        );
+
+        return [[$file, $this->workspace->template, $catalogue], [$catalogue], null];
+    }
+
+    /**
+     * Returns the path of a catalogue in a new directory that is named like the given locale and sits below a
+     * directory named with the hostile value.
+     *
+     * @param string $locale The name of the directory that holds the catalogue
+     *
+     * @return string The path of the catalogue, the directory exists and the file does not
+     */
+    private function hostileCatalogue(string $locale): string
+    {
+        $directory = $this->workspace->emptyDirectory() . '/' . self::HOSTILE . '/' . $locale;
+
+        mkdir($directory, 0700, true);
+
+        return $directory . '/messages.po';
+    }
+
+    /**
+     * Writes a translations file that holds a JSON string where an object is expected.
+     *
+     * @param string $path The path of the file
+     *
+     * @return string The path of the file
+     */
+    private function shapeless(string $path): string
+    {
+        file_put_contents($path, '"text"');
+
+        return $path;
+    }
+
+    /**
+     * Asserts that no line keeps a hostile value and that the cleaned text of every named value appears.
+     *
+     * @param list<string> $lines The lines of the report
+     * @param list<string> $named The hostile values the report has to name in cleaned form
+     */
+    private function assertNamesOnlyTheCleanedText(array $lines, array $named): void
+    {
+        self::assertNotSame([], $lines, 'the command reports something');
+
+        foreach ($lines as $line) {
+            self::assertFalse(
+                str_contains($line, '##[')
+                || str_contains($line, "\u{202E}"),
+                'a line of the report keeps a hostile value',
+            );
+        }
+
+        foreach ($named as $value) {
+            self::assertTrue(
+                $this->anyLineContains($lines, str_replace(self::HOSTILE, self::CLEANED, $value)),
+                'the report names the cleaned text of a hostile value',
+            );
+        }
+    }
+
+    /**
+     * Tells whether any line of the report contains the text.
+     *
+     * @param list<string> $lines The lines of the report
+     * @param string       $text  The text to look for
+     *
+     * @return bool
+     */
+    private function anyLineContains(array $lines, string $text): bool
+    {
+        return array_filter($lines, static fn (string $line): bool => str_contains($line, $text)) !== [];
+    }
+
+    /**
+     * Runs the command with a stub in front of msgmerge that runs the real last tool and then changes the text it
+     * wrote, as a misbehaving tool would.
+     *
+     * @param string       $change    The sed expression with which the stub changes what the last tool wrote
+     * @param list<string> $arguments The arguments of the command
+     * @param list<string> $lines     The list the lines of the report are appended to
+     *
+     * @return int The exit status of the command
+     */
+    private function runWithChangedResult(string $change, array $arguments, array &$lines): int
+    {
+        $stub     = $this->workspace->emptyDirectory() . '/stub';
+        $original = (string) getenv('PATH');
+
+        mkdir($stub, 0700, true);
+        file_put_contents(
+            $stub . '/msgmerge',
+            "#!/bin/sh\nPATH='" . $original . "' msgmerge \"\$@\" || exit \$?\n"
+            . "case \" \$* \" in\n*' --update '*) ;;\n*) exit 0 ;;\nesac\n"
+            . "for argument in \"\$@\"; do previous=\"\$last\"; last=\"\$argument\"; done\n"
+            . "sed -i '" . $change . "' \"\$previous\"\n",
+        );
+        chmod($stub . '/msgmerge', 0700);
+        putenv('PATH=' . $stub . ':' . $original);
+
+        try {
+            return (new WriteTranslationsCommand())->run($arguments, $this->collect($lines));
+        } finally {
+            putenv('PATH=' . $original);
+        }
+    }
+
+    /**
      * Writes a template and a catalogue merged from it, both with two entries, one of them plural.
      *
      * @param string $path    The path of the catalogue
@@ -638,22 +979,7 @@ final class WriteTranslationsCommandTest extends TestCase
      */
     private function prepare(string $path, int $plurals): string
     {
-        $header = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n"
-            . '"Plural-Forms: nplurals=' . $plurals . "; plural=(n != 1);\\n\"\n\n";
-        $forms = [];
-
-        for ($index = 0; $index < $plurals; ++$index) {
-            $forms[] = 'msgstr[' . $index . '] ""';
-        }
-
-        $entries = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\n" . implode("\n", $forms) . "\n";
-
-        file_put_contents($this->workspace->template, $header . $entries);
-        file_put_contents($path, $header . $entries);
-
-        GettextWorkspace::mergeFile($path, $this->workspace->template);
-
-        return $path;
+        return $this->workspace->prepareMergedCatalogue($path, $plurals);
     }
 
     /**
