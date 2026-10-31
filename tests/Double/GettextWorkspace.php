@@ -201,7 +201,11 @@ final readonly class GettextWorkspace
      */
     public function writeTranslations(array $translations): string
     {
-        $path = $this->emptyDirectory() . '/translations.json';
+        $directory = $this->directory . '/translations-' . bin2hex(random_bytes(6));
+
+        mkdir($directory, 0700, true);
+
+        $path = $directory . '/translations.json';
 
         $this->store($path, json_encode($translations, JSON_THROW_ON_ERROR));
 

@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function dirname;
 use function file_put_contents;
 use function implode;
 
@@ -183,6 +184,28 @@ final class GettextWorkspaceTest extends TestCase
                 self::TEMPLATE_HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$broken, $readable]),
             );
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
+     * Every translations file lands in a directory of its own, so a test that makes the shared
+     * scratch directory afterwards finds it free.
+     */
+    #[Test]
+    public function writesEveryTranslationsFileIntoADirectoryOfItsOwn(): void
+    {
+        $workspace = new GettextWorkspace();
+
+        try {
+            $first  = $workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
+            $second = $workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
+
+            self::assertNotSame(dirname($first), dirname($second));
+            self::assertFileExists($first);
+            self::assertFileExists($second);
+            self::assertDirectoryExists($workspace->emptyDirectory());
         } finally {
             $workspace->remove();
         }
