@@ -459,8 +459,9 @@ final class VersionInformationTest extends TestCase
         $clock->sleep(86399);
         self::assertSame('2.6.0', $information->fetchLatestVersion());
 
-        // Past the day the entry has expired, so the check asks again.
-        $clock->sleep(2);
+        // Well past the day, by more than the first call can take, so the entry has expired whichever of the two
+        // times the expiry was stamped from, and the check asks again.
+        $clock->sleep(120);
         self::assertSame('2.6.0', $information->fetchLatestVersion());
     }
 }
