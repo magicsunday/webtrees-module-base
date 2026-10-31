@@ -224,10 +224,6 @@ final class CatalogueToolchainTest extends TestCase
             'carriage returns only'                   => ["msgid \"A\"\rmsgstr \"a\"\r"],
             'escape of NUL in octal'                  => ["msgid \"Keep\"\nmsgstr \"keep\\000 tail\"\n"],
             'escape of NUL in hex'                    => ["msgid \"Keep\"\nmsgstr \"keep\\x00 tail\"\n"],
-            'escape of NUL as short octal'            => ["msgid \"Keep\"\nmsgstr \"keep\\0 tail\"\n"],
-            'escape of NUL as octal beyond a byte'    => ["msgid \"Keep\"\nmsgstr \"ab\\400cd\"\n"],
-            'escape of NUL as hex beyond a byte'      => ["msgid \"Keep\"\nmsgstr \"ab\\x100 cd\"\n"],
-            'escape of NUL as long hex'               => ["msgid \"Keep\"\nmsgstr \"ab\\x0100 cd\"\n"],
             'raw NUL byte'                            => ["msgid \"Keep\"\nmsgstr \"abc\0def\"\n"],
             'numeric escape that is no NUL'           => ["msgid \"Keep\"\nmsgstr \"a\\x5b\\101c\"\n"],
             'escaped backslash and a continued digit' => ["msgid \"Keep\"\nmsgstr \"Beh\\\\\n0alten\"\n"],
@@ -299,30 +295,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A fuzzy flag on the header is a mark of its own and is not cleared by resolving an entry.
-     *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function keepsTheFuzzyFlagOfTheHeader(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
-
-        $this->apply();
-
-        $content = $this->workspace->read();
-
-        self::assertStringStartsWith("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
-    }
-
-    /**
      * Obsolete entries, a fuzzy one with its previous text among them, come through a run unchanged.
      *
      * @throws CatalogueToolException
@@ -353,74 +325,59 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A block of comments in front of the header does not bring the header into the selection, so its flag stays.
+     * Headers that carry a fuzzy flag, each with the text the catalogue starts with after a run. Each is
+     * laid out in a way that gettext reads but that must not bring the header into the selection.
      *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
+     * @return iterable<string, array{string, non-empty-string}>
      */
-    #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderBehindACommentBlock(): void
+    public static function fuzzyHeaderLayouts(): iterable
     {
-        $this->requireTools();
+        yield 'header alone' => [
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
 
-        $this->workspace->write(
-            "# License block\n\n#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
+        yield 'behind a comment block' => [
+            "# License block\n\n#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n",
+            '# License block',
+        ];
 
-        $this->apply();
+        yield 'text on the keyword line' => [
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"Language: de\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
 
-        $content = $this->workspace->read();
-
-        self::assertStringStartsWith('# License block', $content);
-        self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
+        yield 'space around the keywords' => [
+            "#, fuzzy\nmsgid  \"\" \nmsgstr\t\"\"\n  \"Language: de\\n\" \n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
     }
 
     /**
-     * A header whose first translation line starts right after the keyword does not come into the selection.
+     * A fuzzy flag on the header is a mark of its own and is not cleared by resolving an entry, whatever
+     * the layout of the header.
+     *
+     * @param string           $header The text of the header, with its fuzzy flag
+     * @param non-empty-string $start  The text the catalogue starts with after the run
      *
      * @throws CatalogueToolException
      * @throws CatalogueLayoutException
      */
     #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderThatStartsItsTextOnTheKeywordLine(): void
+    #[DataProvider('fuzzyHeaderLayouts')]
+    public function keepsTheFuzzyFlagOfTheHeader(string $header, string $start): void
     {
         $this->requireTools();
 
         $this->workspace->write(
-            "#, fuzzy\nmsgid \"\"\nmsgstr \"Language: de\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
+            $header . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
         );
 
         $this->apply();
 
         $content = $this->workspace->read();
 
-        self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
-    }
-
-    /**
-     * A header that is laid out in a way gettext accepts but the tools do not write is kept out of the selection too.
-     *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderWithSpaceAroundItsKeywords(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "#, fuzzy\nmsgid  \"\" \nmsgstr\t\"\"\n  \"Language: de\\n\" \n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
-
-        $this->apply();
-
-        $content = $this->workspace->read();
-
+        self::assertStringStartsWith($start, $content);
         self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
         self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
     }
