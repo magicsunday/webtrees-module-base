@@ -731,23 +731,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * What a failing tool writes to its error output reaches the exception.
-     */
-    #[Test]
-    public function reportsTheErrorOutputOfAFailingTool(): void
-    {
-        $directory = $this->workspace->emptyDirectory() . '/stub';
-
-        mkdir($directory, 0700, true);
-        file_put_contents($directory . '/msgcat', "#!/bin/sh\nprintf 'broken input\\n' >&2\nexit 3\n");
-        chmod($directory . '/msgcat', 0700);
-
-        $exception = $this->failureWithPath($directory);
-
-        self::assertStringContainsString('exit status 3. broken input', $exception->getMessage());
-    }
-
-    /**
      * What a failing tool writes to both of its streams reaches the exception without either part overwriting the other.
      */
     #[Test]
@@ -770,7 +753,7 @@ final class CatalogueToolchainTest extends TestCase
 
         $message = $this->failureWithPath($directory)->getMessage();
 
-        self::assertStringContainsString('first?second-and-longer?third', $message);
+        self::assertStringEndsWith('exit status 3. first?second-and-longer?third', $message);
     }
 
     /**
