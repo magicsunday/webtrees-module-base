@@ -20,6 +20,7 @@ use function implode;
 use function is_dir;
 use function is_file;
 use function is_resource;
+use function json_encode;
 use function mkdir;
 use function preg_match;
 use function proc_close;
@@ -34,6 +35,8 @@ use function stream_get_contents;
 use function sys_get_temp_dir;
 use function unlink;
 
+use const JSON_THROW_ON_ERROR;
+
 /**
  * A scratch copy of the fuzzy fixture catalogue, and the gettext tools to check it with.
  *
@@ -43,6 +46,11 @@ use function unlink;
  */
 final readonly class GettextWorkspace
 {
+    /**
+     * The header every plain catalogue and template of the tests starts with, followed by a blank line.
+     */
+    public const string HEADER = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+
     /**
      * The path of the messages.pot copy.
      */
@@ -196,7 +204,23 @@ final readonly class GettextWorkspace
             }
         }
 
-        return "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . implode("\n\n", $blocks) . "\n";
+        return self::HEADER . implode("\n\n", $blocks) . "\n";
+    }
+
+    /**
+     * Writes a translations file into a directory of its own inside the scratch directory.
+     *
+     * @param array<array-key, array<string, string|list<string>>> $translations The translations by key and locale
+     *
+     * @return string The path of the file
+     */
+    public function writeTranslations(array $translations): string
+    {
+        $path = $this->emptyDirectory() . '/translations.json';
+
+        file_put_contents($path, json_encode($translations, JSON_THROW_ON_ERROR));
+
+        return $path;
     }
 
     /**

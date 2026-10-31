@@ -23,6 +23,7 @@ use MagicSunday\Webtrees\ModuleBase\Catalogue\Resolution;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\ResolvedEntry;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ShortWriteStream;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -78,6 +79,8 @@ use function symlink;
 #[UsesClass(Resolution::class)]
 final class CatalogueToolchainTest extends TestCase
 {
+    use SkipsWithoutGettextTools;
+
     /**
      * The scratch copy of the fixture catalogue that the running test works on.
      */
@@ -189,7 +192,7 @@ final class CatalogueToolchainTest extends TestCase
     {
         $this->requireTools();
 
-        $this->workspace->write("msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n");
+        $this->workspace->write(GettextWorkspace::HEADER . "msgstr \"orphan\"\n");
 
         $this->expectException(CatalogueToolException::class);
 
@@ -252,7 +255,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . $entries,
+            GettextWorkspace::HEADER . $entries,
         );
 
         // The template holds the entries of the catalogue, so only the text the tools read differently is left as a
@@ -307,7 +310,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n\n"
             . "#~ msgid \"Qqq xjw zzk\"\n#~ msgstr \"Eins\"\n\n"
             . "#, fuzzy\n#~| msgid \"Older\"\n#~ msgid \"Vvv kzp qqx\"\n#~ msgstr \"Zwei\"\n",
@@ -414,7 +417,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "#, fuzzy\n#| msgid \"Stable  entry\"\nmsgid \"Stable entry\"\nmsgstr \"Stabiler Eintrag\"\n",
         );
 
@@ -1059,16 +1062,6 @@ final class CatalogueToolchainTest extends TestCase
             new Resolution("msgid \"\"\nmsgstr \"\"\n", '', 0, [], [], []),
             static fn (): bool => true,
         );
-    }
-
-    /**
-     * Skips the running test where a gettext tool is missing.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
     }
 
     /**

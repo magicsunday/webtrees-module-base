@@ -31,10 +31,7 @@ use function implode;
 #[CoversNothing]
 final class GettextWorkspaceTest extends TestCase
 {
-    /**
-     * The header every catalogue and every template starts with.
-     */
-    private const string HEADER = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+    use SkipsWithoutGettextTools;
 
     /**
      * Builds a catalogue text from the header followed by the given entries.
@@ -45,19 +42,7 @@ final class GettextWorkspaceTest extends TestCase
      */
     private function catalogue(array $entries): string
     {
-        return self::HEADER . implode("\n\n", $entries) . "\n";
-    }
-
-    /**
-     * Skips the test where the gettext tools are missing, as the other catalogue tests do.
-     *
-     * @return void
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
+        return GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n";
     }
 
     /**
@@ -84,7 +69,7 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                self::HEADER
+                GettextWorkspace::HEADER
                 . "msgid \"Alpha\"\nmsgstr \"\"\n\n"
                 . "msgctxt \"menu\"\nmsgid \"File\"\nmsgstr \"\"\n\n"
                 . "msgid \"One apple\"\nmsgid_plural \"%d apples\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n"
@@ -113,7 +98,7 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                self::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                GettextWorkspace::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$path]),
             );
         } finally {
@@ -139,7 +124,7 @@ final class GettextWorkspaceTest extends TestCase
             file_put_contents($broken, "msgid \"unterminated\nmsgstr \"\n");
 
             self::assertSame(
-                self::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                GettextWorkspace::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$broken, $readable]),
             );
         } finally {

@@ -23,7 +23,9 @@ use MagicSunday\Webtrees\ModuleBase\Catalogue\PrintableText;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\PunctuationResolver;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\Resolution;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\ResolvedEntry;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CollectsReportLines;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -73,6 +75,9 @@ use function symlink;
 #[UsesClass(CatalogueToolchain::class)]
 final class FuzzyResolverCommandTest extends TestCase
 {
+    use CollectsReportLines;
+    use SkipsWithoutGettextTools;
+
     /**
      * The scratch copy of the fixture catalogue that the running test works on.
      */
@@ -483,7 +488,7 @@ final class FuzzyResolverCommandTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n",
+            GettextWorkspace::HEADER . "msgstr \"orphan\"\n",
         );
 
         $lines = $this->runRefused();
@@ -505,7 +510,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $refused = $this->workspace->addCatalogue(
             'aa',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n",
+            GettextWorkspace::HEADER . "msgstr \"orphan\"\n",
         );
 
         $lines = [];
@@ -576,7 +581,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         file_put_contents(
             $this->workspace->template,
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "msgid \"A – B\"\nmsgstr \"\"\n\nmsgid \"Plain\"\nmsgstr \"\"\n",
         );
 
@@ -639,7 +644,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $header = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header = GettextWorkspace::HEADER;
 
         file_put_contents(
             $this->workspace->template,
@@ -722,7 +727,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         yield 'a source text with a control character' => [
             'fr',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
+            GettextWorkspace::HEADER . "#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
             '',
             [
                 '  ▸ fr        resolved=  0  remaining-fuzzy=  1',
@@ -765,7 +770,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         yield 'a rewritten translation behind a marker' => [
             'it',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
+            GettextWorkspace::HEADER . "#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
             '',
             [
                 '  ▸ it        resolved=  1  remaining-fuzzy=  0',
@@ -821,7 +826,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $other = $this->workspace->addCatalogue(
             'it',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "msgid \"Gamma\"\nmsgstr \"c\"\n\n"
             . "#, fuzzy\n#| msgid \"Beta - x\"\nmsgid \"Beta · x\"\nmsgstr \"B - x\"\n\n"
             . "msgid \"Alpha\"\nmsgstr \"a\"\n",
@@ -860,7 +865,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $other = $this->workspace->addCatalogue(
             'es',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . implode("\n\n", $entries) . "\n",
+            GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n",
         );
         $lines = [];
 
@@ -972,16 +977,6 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * Skips the running test where a gettext tool is missing, because the command reads every catalogue with one.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
-    }
-
-    /**
      * Runs the command after the catalogues went through the merge the language pipeline of a module runs first.
      *
      * @param list<string> $arguments The template and the catalogues
@@ -1057,23 +1052,9 @@ final class FuzzyResolverCommandTest extends TestCase
 
         file_put_contents(
             $path,
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . implode("\n\n", $entries) . "\n",
+            GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n",
         );
 
         return $path;
-    }
-
-    /**
-     * Builds a writer that collects the lines of the report.
-     *
-     * @param list<string> $lines The list the lines are appended to
-     *
-     * @return Closure(string):void The writer to hand to the command
-     */
-    private function collect(array &$lines): Closure
-    {
-        return static function (string $line) use (&$lines): void {
-            $lines[] = $line;
-        };
     }
 }

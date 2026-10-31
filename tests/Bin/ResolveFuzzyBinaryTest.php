@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Bin;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\StartsBinaries;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,6 +38,7 @@ use function trim;
 #[CoversNothing]
 final class ResolveFuzzyBinaryTest extends TestCase
 {
+    use SkipsWithoutGettextTools;
     use StartsBinaries;
 
     /**
@@ -137,9 +139,7 @@ final class ResolveFuzzyBinaryTest extends TestCase
     #[Test]
     public function resolvesACatalogueAndExitsWithoutAFailure(): void
     {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
+        $this->requireTools();
 
         $result = $this->start([$this->workspace->template, $this->workspace->catalogue], null);
 
@@ -158,9 +158,7 @@ final class ResolveFuzzyBinaryTest extends TestCase
      */
     private function toolDirectory(array $stubs): string
     {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
+        $this->requireTools();
 
         $directory = $this->workspace->emptyDirectory() . '/tools-' . count($stubs);
 
