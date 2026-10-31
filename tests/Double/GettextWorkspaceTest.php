@@ -37,7 +37,7 @@ final class GettextWorkspaceTest extends TestCase
     private const string HEADER = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
 
     /**
-     * Builds a catalogue text: the header followed by the given entries.
+     * Builds a catalogue text from the header followed by the given entries.
      *
      * @param list<string> $entries The entries after the header
      *

@@ -15,8 +15,8 @@ use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Tree;
 
 /**
- * Builds the individual stub that the chart URL tests need: an individual that names itself by
- * its xref and by the name of its tree. A test case composes it, because the stubs come from the
+ * Builds the individual stub that the chart URL tests need. It is an individual that names itself
+ * by its xref and by the name of its tree. A test case composes it, because the stubs come from the
  * test case's own factory.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>

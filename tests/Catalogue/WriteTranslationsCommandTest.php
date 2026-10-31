@@ -640,9 +640,11 @@ final class WriteTranslationsCommandTest extends TestCase
 
     /**
      * Whatever a path, a locale or a source text holds is cleaned before the report names it, so a contributed
-     * catalogue or file name cannot start a workflow command in a CI log or turn the text around. Each place of the
-     * report that names such text is reached with a hostile value, and no line may keep it while the cleaned text is
-     * named.
+     * catalogue or file name cannot start a workflow command in a CI log or turn the text around. The places of the
+     * report that name a path, the locale of a directory, a key or a source text are reached with a hostile value
+     * here, and no line may keep it while the cleaned text is named. The cleaning of a tool message and of a locale
+     * that was checked before is not pinned, the first is cleaned where the tool throws and the second cannot carry
+     * such a value.
      *
      * @param string $scenario The place the hostile value is put into
      */
@@ -900,7 +902,8 @@ final class WriteTranslationsCommandTest extends TestCase
 
         foreach ($lines as $line) {
             self::assertFalse(
-                str_contains($line, '##[') || str_contains($line, "\u{202E}"),
+                str_contains($line, '##[')
+                || str_contains($line, "\u{202E}"),
                 'a line of the report keeps a hostile value',
             );
         }
