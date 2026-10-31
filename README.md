@@ -66,7 +66,7 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`NameSegment`** / **`NameSegmentKind`** — `final readonly` value object and backed enum for one drawable part of a name (given, surname, nickname, married)
 
 ### `src/Support/`
-- **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API
+- **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API. `fromIcuPattern()` is its pure pattern translation step
 - **`TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings
 - **`PlainText`**: reduces webtrees markup to plain text (strips the tags, decodes the entities)
 - **`Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 codes, built on `ext-intl`; used by `PlaceProcessor`'s country-resolving styles

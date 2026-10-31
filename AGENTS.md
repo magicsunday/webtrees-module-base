@@ -92,7 +92,7 @@ tests/
 - **`Model/NameSegment`** / **`Model/NameSegmentKind`** — one drawable part of a name (`label`, `kind` given/surname/nickname/married, `isPreferred`) and its role enum. The serialised kind is the enum's backing value.
 
 ### Support
-- **`Support/CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from the CLDR/ICU short-date pattern of a locale, for `DateProcessor`'s compact API.
+- **`Support/CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from the CLDR/ICU short-date pattern of a locale, for `DateProcessor`'s compact API. `fromIcuPattern()` is its pure pattern translation step, public so that a pattern with quoted literals or an escaped apostrophe, which no short pattern of the locale data holds, can be pinned too.
 - **`Support/TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings.
 - **`Support/PlainText`**: reduces webtrees markup to plain text (strips the tags, decodes the entities). The result may contain characters that are unsafe in HTML, so a consumer escapes it at the HTML sink.
 - **`Support/Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 alpha-2 codes, built on `ext-intl` (`Locale::getDisplayRegion`), the reason this library requires the `intl` extension, and on `mbstring` for folding the ICU display names. Used by `PlaceProcessor`'s `CityCountry`, `CityIso2` and `CityIso3` styles.

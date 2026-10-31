@@ -95,7 +95,7 @@ final class CompactDateFormat
             return self::FALLBACK;
         }
 
-        $format = self::icuToWebtrees($pattern);
+        $format = self::fromIcuPattern($pattern);
 
         // Require a complete day/month/year triple; otherwise fall back rather than
         // ship a partial format for an unexpected locale pattern.
@@ -115,13 +115,16 @@ final class CompactDateFormat
      *
      * ICU field letters map as: any run of y→%Y (webtrees' four-digit long year,
      * so a two-digit ICU short year is widened here too), MM→%m / M→%n, dd→%d /
-     * d→%j. Quoted literals and separators are passed through unchanged.
+     * d→%j. Quoted literals and separators are passed through unchanged, a pair of
+     * single quotes standing for one apostrophe, also inside a quoted literal. This is
+     * the pure translation step of forLocale(), public so that a pattern the locale
+     * data does not hold today can be translated and pinned too.
      *
      * @param string $pattern The ICU short-date pattern (e.g. "dd.MM.yy")
      *
      * @return string
      */
-    private static function icuToWebtrees(string $pattern): string
+    public static function fromIcuPattern(string $pattern): string
     {
         $out     = '';
         $length  = strlen($pattern);
