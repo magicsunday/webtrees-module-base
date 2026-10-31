@@ -17,6 +17,7 @@ use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
+use MagicSunday\Webtrees\ModuleBase\Model\LifetimeLabels;
 use MagicSunday\Webtrees\ModuleBase\Processor\DateProcessor;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\InMemoryCacheFactory;
@@ -36,6 +37,7 @@ use function strip_tags;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(DateProcessor::class)]
+#[UsesClass(LifetimeLabels::class)]
 #[UsesClass(PlainText::class)]
 final class DateProcessorTest extends TestCase
 {
@@ -167,20 +169,68 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * @return array<string, array{string, string, bool, string}>
+     */
+    public static function lifetimeDescriptionDataProvider(): array
+    {
+        // [ GEDCOM birth date, GEDCOM death date, individual is dead, expected text ]
+        return [
+            'both years give the range'                   => ['01 MAY 1853', '12 JUN 1933', true, '1853-1933'],
+            'a birth year alone uses the born text'       => ['01 MAY 1853', '', false, 'born 1853'],
+            'a death year alone uses the died text'       => ['', '12 JUN 1933', true, 'died 1933'],
+            'a dead person without dates is deceased'     => ['', '', true, 'deceased'],
+            'a living person without dates gives nothing' => ['', '', false, ''],
+        ];
+    }
+
+    /**
+     * The lifetime label takes its texts from the caller, so the library never translates and a
+     * consumer's catalogue holds the texts. The texts are made up here, so a pass proves that the
+     * texts the caller supplies reach the result and not a text the library carries.
+     *
+     * @param string $birthDate The GEDCOM birth date
+     * @param string $deathDate The GEDCOM death date
+     * @param bool   $isDead    Whether webtrees considers the individual deceased
+     * @param string $expected  The expected label
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('lifetimeDescriptionDataProvider')]
+    public function describesTheLifetimeWithTheTextsOfTheCaller(
+        string $birthDate,
+        string $deathDate,
+        bool $isDead,
+        string $expected,
+    ): void {
+        $labels = new LifetimeLabels('born %s', 'died %s', 'deceased');
+
+        self::assertSame(
+            $expected,
+            $this->dateProcessorFor($birthDate, $deathDate, $isDead)->getLifetimeDescription($labels),
+        );
+    }
+
+    /**
      * Builds a DateProcessor the way a consumer does: around an individual, through
      * the real constructor. The individual is a stub because it is the collaborator,
      * not the unit under test — the constructor reads its birth and death dates.
      *
      * @param string $birthDate The GEDCOM birth date the individual reports
      * @param string $deathDate The GEDCOM death date the individual reports
+     * @param bool   $isDead    Whether the individual is reported as deceased
      *
      * @return DateProcessor
      */
-    private function dateProcessorFor(string $birthDate = '', string $deathDate = ''): DateProcessor
-    {
+    private function dateProcessorFor(
+        string $birthDate = '',
+        string $deathDate = '',
+        bool $isDead = false,
+    ): DateProcessor {
         $individual = self::createStub(Individual::class);
         $individual->method('getBirthDate')->willReturn(new Date($birthDate));
         $individual->method('getDeathDate')->willReturn(new Date($deathDate));
+        $individual->method('isDead')->willReturn($isDead);
 
         return new DateProcessor($individual);
     }

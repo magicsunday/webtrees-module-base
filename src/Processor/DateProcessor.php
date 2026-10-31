@@ -13,14 +13,15 @@ namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Family;
-use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
+use MagicSunday\Webtrees\ModuleBase\Model\LifetimeLabels;
 use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
 use MagicSunday\Webtrees\ModuleBase\Support\CompactDateFormat;
 use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 
 use function min;
 use function preg_replace;
+use function sprintf;
 use function trim;
 
 use const PHP_INT_MAX;
@@ -30,6 +31,10 @@ use const PHP_INT_MAX;
  *
  * The legacy methods (getBirthDate, getDeathDate, getLifetimeDescription)
  * preserve the locale-aware webtrees display() output.
+ *
+ * The class translates nothing. A text the label needs, such as "Born: %s",
+ * is passed in by the consuming module as a LifetimeLabels object built at its
+ * own call site, where the catalogue of that module holds it.
  *
  * Generation-aware "compact" methods (added in 1.1.0 — getFormattedBirthDate,
  * getFormattedDeathDate, getFormattedMarriageDate,
@@ -134,27 +139,31 @@ final readonly class DateProcessor
     }
 
     /**
-     * Returns a localised lifetime label ("1853-1933", "Born: 1853", "Died:
-     * 1933", "Deceased").
+     * Returns the lifetime label: the range of both years ("1853-1933"), or the text the caller
+     * supplies for a birth year only, a death year only or a deceased person without dates. Empty
+     * when nothing is known. The library carries no translated text, so the caller passes the texts
+     * in from its own call site.
+     *
+     * @param LifetimeLabels $labels The texts for a person without a complete range
      *
      * @return string
      */
-    public function getLifetimeDescription(): string
+    public function getLifetimeDescription(LifetimeLabels $labels): string
     {
         if ($this->birthDate->isOK() && $this->deathDate->isOK()) {
             return $this->getBirthYear() . '-' . $this->getDeathYear();
         }
 
         if ($this->birthDate->isOK()) {
-            return I18N::translate('Born: %s', (string) $this->getBirthYear());
+            return sprintf($labels->bornFormat, $this->getBirthYear());
         }
 
         if ($this->deathDate->isOK()) {
-            return I18N::translate('Died: %s', (string) $this->getDeathYear());
+            return sprintf($labels->diedFormat, $this->getDeathYear());
         }
 
         if ($this->individual->isDead()) {
-            return I18N::translate('Deceased');
+            return $labels->deceased;
         }
 
         return '';
