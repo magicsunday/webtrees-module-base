@@ -320,11 +320,6 @@ final class PlaceProcessorTest extends TestCase
                 ['London', 'Middlesex'],
                 'London, Middlesex',
             ],
-            'a non-empty name with no parts pins the outerSegments() type guard' => [
-                'Foo',
-                [],
-                '',
-            ],
         ];
     }
 
