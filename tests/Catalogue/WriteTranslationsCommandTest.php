@@ -41,6 +41,7 @@ use function mkdir;
 use function posix_geteuid;
 use function putenv;
 use function str_contains;
+use function str_replace;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -67,6 +68,12 @@ final class WriteTranslationsCommandTest extends TestCase
      * is, which a contributor can put into a path, a locale or a source text.
      */
     private const string HOSTILE = "##[error]\u{202E}x";
+
+    /**
+     * The text the report has to name in place of the hostile value, written out so that the expectation does not
+     * depend on the cleaning it checks.
+     */
+    private const string CLEANED = '##?[error]?x';
 
     /**
      * The scratch directory the running test works in.
@@ -910,7 +917,7 @@ final class WriteTranslationsCommandTest extends TestCase
 
         foreach ($named as $value) {
             self::assertTrue(
-                $this->anyLineContains($lines, PrintableText::line($value)),
+                $this->anyLineContains($lines, str_replace(self::HOSTILE, self::CLEANED, $value)),
                 'the report names the cleaned text of a hostile value',
             );
         }
