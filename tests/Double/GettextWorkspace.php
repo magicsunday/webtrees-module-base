@@ -200,6 +200,35 @@ final readonly class GettextWorkspace
     }
 
     /**
+     * Writes the template and a catalogue merged from it, both with two entries, one of them plural, and a header
+     * that declares the given number of plural forms.
+     *
+     * @param string $path    The path of the catalogue
+     * @param int    $plurals The number of plural forms the header declares
+     *
+     * @return string The path of the catalogue
+     */
+    public function prepareMergedCatalogue(string $path, int $plurals): string
+    {
+        $header = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n"
+            . '"Plural-Forms: nplurals=' . $plurals . "; plural=(n != 1);\\n\"\n\n";
+        $forms = [];
+
+        for ($index = 0; $index < $plurals; ++$index) {
+            $forms[] = 'msgstr[' . $index . '] ""';
+        }
+
+        $entries = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\n" . implode("\n", $forms) . "\n";
+
+        file_put_contents($this->template, $header . $entries);
+        file_put_contents($path, $header . $entries);
+
+        self::mergeFile($path, $this->template);
+
+        return $path;
+    }
+
+    /**
      * Checks the catalogue copy with msgfmt.
      *
      * @return int The exit status of the check
