@@ -11,78 +11,77 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Facade;
 
+use Fisharebest\Webtrees\Module\ModuleCustomInterface;
+use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 use MagicSunday\Webtrees\ModuleBase\Facade\ModuleAwareDataFacadeTrait;
-use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
-use PHPUnit\Framework\Attributes\CoversNothing;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\ModuleAwareFacadeDouble;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use ReflectionIntersectionType;
-use ReflectionMethod;
-use ReflectionNamedType;
-
-use function trait_exists;
 
 /**
- * Structural coverage for the lightweight DataFacade trait used by chart
- * modules that need only the owning module reference (no route helpers).
+ * Pins what a chart facade gets from the module-aware trait: setModule() returns the facade for
+ * chaining, and the facade then works with the module it was given, the last one when it is set
+ * again. The facade is a double that composes the trait the way a consuming module does.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-#[CoversNothing]
+#[CoversTrait(ModuleAwareDataFacadeTrait::class)]
 final class ModuleAwareDataFacadeTraitTest extends TestCase
 {
     /**
-     * Verifies the new lightweight facade trait is loadable under its PSR-4
-     * path.
+     * Builds a module stub that reports a fixed URL for every asset.
+     *
+     * @param string $assetUrl The URL the module reports
+     *
+     * @return ModuleCustomInterface&ModuleAssetUrlInterface&Stub
      */
-    #[Test]
-    public function traitExists(): void
+    private function createModule(string $assetUrl): ModuleCustomInterface&ModuleAssetUrlInterface&Stub
     {
-        self::assertTrue(trait_exists(ModuleAwareDataFacadeTrait::class));
+        $module = self::createStubForIntersectionOfInterfaces([
+            ModuleCustomInterface::class,
+            ModuleAssetUrlInterface::class,
+        ]);
+        $module->method('assetUrl')->willReturn($assetUrl);
+
+        return $module;
     }
 
     /**
-     * Pins the public API of setModule(): one typed parameter and a static
-     * return, so chart-module consumers can keep their fluent setter chains.
+     * setModule() hands the facade back, so a module can be set in the middle of a call chain.
      */
     #[Test]
-    public function setModuleAcceptsModuleAndReturnsStatic(): void
+    public function setModuleReturnsTheFacadeForChaining(): void
     {
-        $method = new ReflectionMethod(ModuleAwareDataFacadeTrait::class, 'setModule');
+        $facade = new ModuleAwareFacadeDouble();
 
-        self::assertTrue($method->isPublic());
-        self::assertCount(
-            1,
-            $method->getParameters(),
-            'setModule takes exactly the module reference; further deps belong in separate setters',
-        );
-
-        // setModule uses an intersection type (ModuleCustomInterface&ModuleAssetUrlInterface);
-        // assert a type is declared without pinning the exact intersection, so the trait can
-        // evolve safely. Avoids the PHP 8.5-deprecated (string) cast of a ReflectionType.
-        self::assertInstanceOf(ReflectionIntersectionType::class, $method->getParameters()[0]->getType());
-
-        $returnType = $method->getReturnType();
-        self::assertInstanceOf(ReflectionNamedType::class, $returnType);
-        self::assertSame('static', $returnType->getName());
+        self::assertSame($facade, $facade->setModule($this->createModule('/assets/a.png')));
     }
 
     /**
-     * Guards the trait-split contract: RouteAwareDataFacadeTrait must keep
-     * composing ModuleAwareDataFacadeTrait so existing consumers continue to
-     * get setModule() when they only opt into RouteAware.
+     * The facade works with the module it was given, so an asset URL comes from that module.
      */
     #[Test]
-    public function routeAwareTraitComposesModuleAwareTrait(): void
+    public function theFacadeReadsAssetUrlsFromTheInjectedModule(): void
     {
-        $reflection = new ReflectionClass(RouteAwareDataFacadeTrait::class);
+        $facade = (new ModuleAwareFacadeDouble())->setModule($this->createModule('/assets/a.png'));
 
-        self::assertContains(
-            ModuleAwareDataFacadeTrait::class,
-            $reflection->getTraitNames(),
-        );
+        self::assertSame('/assets/a.png', $facade->assetUrlOf('a.png'));
+    }
+
+    /**
+     * Setting the module again replaces the earlier one.
+     */
+    #[Test]
+    public function aLaterModuleReplacesTheEarlierOne(): void
+    {
+        $facade = new ModuleAwareFacadeDouble();
+        $facade->setModule($this->createModule('/first/a.png'));
+        $facade->setModule($this->createModule('/second/a.png'));
+
+        self::assertSame('/second/a.png', $facade->assetUrlOf('a.png'));
     }
 }

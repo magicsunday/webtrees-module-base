@@ -11,9 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Traits;
 
-use Fisharebest\Webtrees\Individual;
-use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ChartModuleDouble;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CreatesIndividualStubs;
 use MagicSunday\Webtrees\ModuleBase\Traits\ModuleChartTrait;
 use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,6 +36,8 @@ use ReflectionClass;
 #[CoversTrait(ModuleChartTrait::class)]
 final class ModuleChartTraitTest extends TestCase
 {
+    use CreatesIndividualStubs;
+
     /**
      * Builds a chart module composing the trait, with its route-resolving seam
      * mocked so the URL construction can be asserted in isolation.
@@ -48,26 +49,6 @@ final class ModuleChartTraitTest extends TestCase
         return $this->getMockBuilder(ChartModuleDouble::class)
             ->onlyMethods(['buildRouteUrl'])
             ->getMock();
-    }
-
-    /**
-     * Builds an individual whose xref and tree name land in the URL.
-     *
-     * @param string $xref
-     * @param string $treeName
-     *
-     * @return Individual
-     */
-    private function createIndividual(string $xref, string $treeName): Individual
-    {
-        $tree = self::createStub(Tree::class);
-        $tree->method('name')->willReturn($treeName);
-
-        $individual = self::createStub(Individual::class);
-        $individual->method('xref')->willReturn($xref);
-        $individual->method('tree')->willReturn($tree);
-
-        return $individual;
     }
 
     /**
