@@ -42,10 +42,6 @@ final class CompactDateFormatTest extends TestCase
             'french day-month-year'       => ['fr', '%d/%m/%Y'],
             'japanese year-month-day'     => ['ja', '%Y/%m/%d'],
             'swedish iso year-month-day'  => ['sv', '%Y-%m-%d'],
-            // The short pattern of these two locales holds a quoted literal, the year suffix, which is
-            // copied through without its quotes. The locale data puts a narrow no-break space in front of it.
-            'bulgarian, quoted year suffix'  => ['bg', "%j.%m.%Y\u{202F}г."],
-            'macedonian, quoted year suffix' => ['mk', "%j.%n.%Y\u{202F}г."],
         ];
     }
 

@@ -17,7 +17,7 @@ use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
 
 /**
- * A chart data facade as a consuming module writes it: it composes the route-aware trait and
+ * A chart data facade as a consuming module writes it. It composes the route-aware trait and
  * reaches the trait's private members from its own methods. The two methods below stand in for
  * the module's own facade methods that build a chart URL and use the injected module.
  *

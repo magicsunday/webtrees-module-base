@@ -24,7 +24,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pins the chart URL the route-aware trait builds for an individual: the route the facade was
+ * Pins the chart URL the route-aware trait builds for an individual. The route the facade was
  * given is used, the individual contributes its xref and tree, caller parameters are added but
  * cannot displace those two, and the module-aware behaviour of the base trait is part of it.
  *

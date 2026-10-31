@@ -21,7 +21,7 @@ use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pins what a chart facade gets from the module-aware trait: setModule() returns the facade for
+ * Pins what a chart facade gets from the module-aware trait. setModule() returns the facade for
  * chaining, and the facade then works with the module it was given, the last one when it is set
  * again. The facade is a double that composes the trait the way a consuming module does.
  *

@@ -15,13 +15,13 @@ use MagicSunday\Webtrees\ModuleBase\Facade\ModuleAwareDataFacadeTrait;
 
 /**
  * A chart data facade as a consuming module writes it when it needs the owning module but no
- * route: it composes the module-aware trait and reads the injected module from its own method.
+ * route. It composes the module-aware trait and reads the injected module from its own method.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
-class ModuleAwareFacadeDouble
+final class ModuleAwareFacadeDouble
 {
     use ModuleAwareDataFacadeTrait;
 

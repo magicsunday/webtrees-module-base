@@ -62,7 +62,7 @@ final class VersionInformationTest extends TestCase
     }
 
     /**
-     * Builds the module whose version the check reports: it falls back to a bundled version and
+     * Builds the module whose version the check reports. It falls back to a bundled version and
      * asks for its updates at an https address that never resolves.
      *
      * @return ModuleCustomInterface
