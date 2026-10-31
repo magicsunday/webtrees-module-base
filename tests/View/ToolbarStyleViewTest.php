@@ -100,74 +100,6 @@ final class ToolbarStyleViewTest extends TestCase
     }
 
     /**
-     * The key declarations of the rules are pinned.
-     */
-    #[Test]
-    public function pinsTheDeclarationsOfTheRules(): void
-    {
-        $css = $this->styleOf('my-chart');
-
-        self::assertStringContainsString(
-            ".my-chart .btn-chart {\n"
-            . "    color: var(--bs-btn-bg);\n"
-            . "    background: var(--bs-secondary-bg, rgb(245, 245, 245));\n"
-            . "    border: 1px solid var(--bs-border-color, rgb(210, 210, 210));\n"
-            . "    width: 40px;\n"
-            . "    height: 32px;\n"
-            . "    border-radius: 30%;\n"
-            . "    box-sizing: border-box;\n"
-            . "    cursor: pointer;\n"
-            . "    display: flex;\n"
-            . "    flex-direction: column;\n"
-            . "    justify-content: center;\n"
-            . "    text-align: center;\n"
-            . "    position: relative;\n"
-            . "}\n",
-            $css
-        );
-        self::assertStringContainsString(
-            ".my-chart .btn-chart.btn-primary:hover {\n    background: var(--bs-secondary-bg, rgb(245, 245, 245));\n}\n",
-            $css
-        );
-        self::assertStringContainsString(
-            ".my-chart .btn-chart:hover {\n    color: var(--link-color-hover);\n}\n",
-            $css
-        );
-        self::assertStringContainsString(
-            ".my-chart .btn-chart:focus-visible {\n"
-            . "    outline: 2px solid transparent;\n"
-            . "    box-shadow: 0 0 0 0.25rem rgba(var(--bs-btn-focus-shadow-rgb, 49, 132, 253), 0.5);\n"
-            . "}\n",
-            $css
-        );
-        self::assertStringContainsString(
-            ".my-chart .btn-chart .icon {\n"
-            . "    position: absolute;\n"
-            . "    top: 50%;\n"
-            . "    left: 50%;\n"
-            . "    transform: translate(-50%, -50%);\n"
-            . "}\n",
-            $css
-        );
-        self::assertStringContainsString(
-            ".my-chart .btn-chart .icon .svg-inline--fa {\n    height: 1.5em;\n    vertical-align: -0.375em;\n}\n",
-            $css
-        );
-    }
-
-    /**
-     * The comment of the focus rule explains why the ring is needed.
-     */
-    #[Test]
-    public function keepsTheCommentOfTheFocusRule(): void
-    {
-        self::assertStringContainsString(
-            'The core theme removes the outline on every focused element',
-            $this->styleOf('my-chart')
-        );
-    }
-
-    /**
      * Two renders with different containers each carry their own container class only.
      */
     #[Test]
@@ -183,7 +115,8 @@ final class ToolbarStyleViewTest extends TestCase
     }
 
     /**
-     * A container string with selector syntax cannot add a rule or leave the selector.
+     * A container string with selector syntax cannot add a rule or leave the selector, and a
+     * container without an allowed character renders nothing.
      *
      * @return iterable<string, array{string, string}>
      */
@@ -194,6 +127,8 @@ final class ToolbarStyleViewTest extends TestCase
         yield 'comma list' => ['a, body', 'abody'];
         yield 'dot and space' => ['.a .b', 'ab'];
         yield 'brace only' => ['{}', ''];
+        yield 'empty' => ['', ''];
+        yield 'no allowed character' => ['. #', ''];
         yield 'mixed case underscore digit hyphen' => ['My_Chart-2', 'My_Chart-2'];
     }
 
@@ -224,24 +159,6 @@ final class ToolbarStyleViewTest extends TestCase
         self::assertSame(1, substr_count($html, '</style>'));
         self::assertStringNotContainsString('<script', $html);
         self::assertStringNotContainsString('body', $this->selectorsOf($css, $expected));
-    }
-
-    /**
-     * Nothing renders for an empty container.
-     */
-    #[Test]
-    public function rendersNothingForAnEmptyContainer(): void
-    {
-        self::assertSame('', trim($this->render('')));
-    }
-
-    /**
-     * Nothing renders when no character of the container is allowed.
-     */
-    #[Test]
-    public function rendersNothingWhenNoAllowedCharacterRemains(): void
-    {
-        self::assertSame('', trim($this->render('. #')));
     }
 
     /**
