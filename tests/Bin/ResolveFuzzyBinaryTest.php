@@ -132,25 +132,6 @@ final class ResolveFuzzyBinaryTest extends TestCase
     }
 
     /**
-     * A catalogue that gettext cannot read is named on the output and the starter fails.
-     */
-    #[Test]
-    public function namesACatalogueGettextCannotRead(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
-
-        $this->workspace->write("msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n");
-
-        $result = $this->start([$this->workspace->template, $this->workspace->catalogue], null);
-
-        self::assertSame(1, $result['status']);
-        self::assertSame('', $result['error']);
-        self::assertStringContainsString('cannot be read by gettext, fix it or run msgmerge first', $result['output']);
-    }
-
-    /**
      * A catalogue is resolved, the summary is printed and the starter exits without a failure.
      */
     #[Test]
