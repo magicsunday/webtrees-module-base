@@ -135,7 +135,7 @@ jobs:
                   sudo apt-get update
                   sudo apt-get install --yes --no-install-recommends gettext
 
-                  for tool in msgcat msgattrib msgmerge msgfmt; do
+                  for tool in msgcat msgattrib msgfilter msgmerge msgfmt; do
                       command -v "$tool" > /dev/null || { echo "::error::$tool is not installed"; exit 1; }
                   done
 

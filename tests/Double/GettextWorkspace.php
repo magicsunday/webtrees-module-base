@@ -13,16 +13,16 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Double;
 
 use function bin2hex;
 use function copy;
-use function explode;
+use function fclose;
 use function file_get_contents;
 use function file_put_contents;
+use function fwrite;
 use function implode;
 use function is_dir;
 use function is_file;
 use function is_resource;
 use function json_encode;
 use function mkdir;
-use function preg_match;
 use function proc_close;
 use function proc_open;
 use function random_bytes;
@@ -30,7 +30,6 @@ use function rename;
 use function rmdir;
 use function scandir;
 use function sort;
-use function str_starts_with;
 use function stream_get_contents;
 use function sys_get_temp_dir;
 use function unlink;
@@ -89,7 +88,7 @@ final readonly class GettextWorkspace
      */
     public static function toolsAvailable(): bool
     {
-        foreach (['msgcat', 'msgattrib', 'msgmerge', 'msgfmt'] as $tool) {
+        foreach (['msgcat', 'msgattrib', 'msgfilter', 'msgmerge', 'msgfmt'] as $tool) {
             if (self::execute([$tool, '--version']) !== 0) {
                 return false;
             }
@@ -153,7 +152,9 @@ final readonly class GettextWorkspace
 
     /**
      * Builds the text of a template that holds exactly the entries of the given catalogues, so each of them is the
-     * result of a merge with it.
+     * result of a merge with it. The gettext tools do the work. A catalogue they cannot read adds nothing, the
+     * entries of the others are joined with the first occurrence of a source text winning, and obsolete entries and
+     * every translation are dropped.
      *
      * @param list<string> $catalogues The paths of the catalogues to take the entries from
      *
@@ -161,50 +162,18 @@ final readonly class GettextWorkspace
      */
     public static function templateFrom(array $catalogues): string
     {
-        $blocks = [];
+        $readable = [];
 
         foreach ($catalogues as $catalogue) {
-            $target = sys_get_temp_dir() . '/template-from-' . bin2hex(random_bytes(6)) . '.po';
-
-            if (self::execute(['msgcat', '--no-wrap', '--output-file=' . $target, $catalogue]) !== 0) {
-                continue;
-            }
-
-            $text = is_file($target) ? (string) file_get_contents($target) : '';
-
-            if (is_file($target)) {
-                unlink($target);
-            }
-
-            foreach (explode("\n\n", $text) as $block) {
-                $lines  = [];
-                $plural = false;
-
-                foreach (explode("\n", $block) as $line) {
-                    if (str_starts_with($line, '#~')) {
-                        continue 2;
-                    }
-
-                    if (preg_match('/^(msgctxt|msgid|msgid_plural) /', $line) === 1) {
-                        $lines[] = $line;
-                        $plural  = $plural || str_starts_with($line, 'msgid_plural');
-                    }
-                }
-
-                if (
-                    ($lines === [])
-                    || ($lines === ['msgid ""'])
-                ) {
-                    continue;
-                }
-
-                $lines[] = $plural ? "msgstr[0] \"\"\nmsgstr[1] \"\"" : 'msgstr ""';
-
-                $blocks[implode("\n", $lines)] = implode("\n", $lines);
+            if (self::capture(['msgcat', '--no-wrap', $catalogue]) !== null) {
+                $readable[] = $catalogue;
             }
         }
 
-        return self::HEADER . implode("\n\n", $blocks) . "\n";
+        $text = self::capture(['msgcat', '--no-wrap', '--use-first', ...$readable]);
+        $text = self::capture(['msgattrib', '--no-obsolete', '--clear-fuzzy', '--clear-previous', '--no-location', '--no-wrap'], $text);
+
+        return (string) self::capture(['msgfilter', '--keep-header', '--no-wrap', 'sed', '-e', 's/.*//'], $text);
     }
 
     /**
@@ -352,6 +321,31 @@ final readonly class GettextWorkspace
         }
 
         rmdir($path);
+    }
+
+    /**
+     * Runs a command without a shell and returns what it wrote to its output.
+     *
+     * @param list<string> $command The tool followed by its arguments
+     * @param string|null  $input   The text to hand to the tool on its input
+     *
+     * @return string|null The output, or null when the command failed or could not be started
+     */
+    private static function capture(array $command, ?string $input = null): ?string
+    {
+        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+
+        if (!is_resource($process)) {
+            return null;
+        }
+
+        fwrite($pipes[0], $input ?? '');
+        fclose($pipes[0]);
+
+        $output = (string) stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+
+        return proc_close($process) === 0 ? $output : null;
     }
 
     /**

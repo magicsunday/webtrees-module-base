@@ -34,6 +34,11 @@ final class GettextWorkspaceTest extends TestCase
     use SkipsWithoutGettextTools;
 
     /**
+     * The header of a template, as the gettext tools write it on one line.
+     */
+    private const string TEMPLATE_HEADER = "msgid \"\"\nmsgstr \"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+
+    /**
      * Builds a catalogue text from the header followed by the given entries.
      *
      * @param list<string> $entries The entries after the header
@@ -69,7 +74,7 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                GettextWorkspace::HEADER
+                self::TEMPLATE_HEADER
                 . "msgid \"Alpha\"\nmsgstr \"\"\n\n"
                 . "msgctxt \"menu\"\nmsgid \"File\"\nmsgstr \"\"\n\n"
                 . "msgid \"One apple\"\nmsgid_plural \"%d apples\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n"
@@ -98,9 +103,33 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                GettextWorkspace::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                self::TEMPLATE_HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$path]),
             );
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
+     * A source text that holds a line feed is written by the tools on several lines, and its entry stays in the
+     * template like any other.
+     */
+    #[Test]
+    public function keepsAnEntryWhoseSourceTextHoldsALineFeed(): void
+    {
+        $this->requireTools();
+
+        $workspace = new GettextWorkspace();
+
+        try {
+            $path = $workspace->addCatalogue('xa', $this->catalogue([
+                "msgid \"line one\\nline two\"\nmsgstr \"Zeile\"",
+            ]));
+
+            $template = GettextWorkspace::templateFrom([$path]);
+
+            self::assertStringContainsString("\"line one\\n\"\n\"line two\"\nmsgstr \"\"", $template);
         } finally {
             $workspace->remove();
         }
@@ -124,7 +153,7 @@ final class GettextWorkspaceTest extends TestCase
             file_put_contents($broken, "msgid \"unterminated\nmsgstr \"\n");
 
             self::assertSame(
-                GettextWorkspace::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                self::TEMPLATE_HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$broken, $readable]),
             );
         } finally {
