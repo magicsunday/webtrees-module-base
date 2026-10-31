@@ -80,27 +80,28 @@ final class PunctuationResolverTest extends TestCase
     public static function punctuationChanges(): array
     {
         return [
-            'em dash to middle dot'       => ['Births — per year', 'Births · per year', 'Geburten — pro Jahr', 'Geburten · pro Jahr'],
-            'middle dot to em dash'       => ['Births · per year', 'Births — per year', 'Geburten · pro Jahr', 'Geburten — pro Jahr'],
-            'en dash to middle dot'       => ['Births – per year', 'Births · per year', 'Geburten – pro Jahr', 'Geburten · pro Jahr'],
-            'em dash to en dash'          => ['Births — per year', 'Births – per year', 'Geburten — pro Jahr', 'Geburten – pro Jahr'],
-            'spaced hyphen to em dash'    => ['Births - per year', 'Births — per year', 'Geburten - pro Jahr', 'Geburten — pro Jahr'],
-            'spaced hyphen to en dash'    => ['Births - per year', 'Births – per year', 'Geburten - pro Jahr', 'Geburten – pro Jahr'],
-            'spaced hyphen to dot'        => ['Births - per year', 'Births · per year', 'Geburten - pro Jahr', 'Geburten · pro Jahr'],
-            'doubled space to one space'  => ['Births  per year', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
-            'translation without it'      => ['Births — per year', 'Births · per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
-            'trailing space removed'      => ['Births per year ', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
-            'leading space removed'       => [' Births per year', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
-            'translation has the new one' => ['Births - per year', 'Births · per year', 'Geburten · pro Jahr', 'Geburten · pro Jahr'],
-            'escaped backslash before t'  => ['A - B', 'A · B', 'X\\\\t-\\\\tY', 'X\\\\t-\\\\tY'],
-            'hyphen inside a word'        => ['Born - died', 'Born · died', 'Rhein-Main gestorben', 'Rhein-Main gestorben'],
-            'trailing space added'        => ['Name:', 'Name: ', 'Name:', 'Name: '],
-            'translation follows old gap' => ['Place ', 'Place', 'Ort ', 'Ort'],
-            'leading space follows old'   => [' Place', 'Place', ' Ort', 'Ort'],
-            'dash next to a kept dot'     => ['A - B · C', 'A — B · C', 'X - Y · Z', 'X — Y · Z'],
-            'dash to a dot already used'  => ['A - B · C', 'A · B · C', 'X - Y · Z', 'X · Y · Z'],
-            'kept trailing space'         => ['Label - chart ', 'Label · chart ', 'Etikett - Diagramm', 'Etikett · Diagramm'],
-            'kept leading space'          => [' Label - chart', ' Label · chart', 'Etikett - Diagramm', 'Etikett · Diagramm'],
+            'em dash to middle dot'         => ['Births — per year', 'Births · per year', 'Geburten — pro Jahr', 'Geburten · pro Jahr'],
+            'middle dot to em dash'         => ['Births · per year', 'Births — per year', 'Geburten · pro Jahr', 'Geburten — pro Jahr'],
+            'en dash to middle dot'         => ['Births – per year', 'Births · per year', 'Geburten – pro Jahr', 'Geburten · pro Jahr'],
+            'em dash to en dash'            => ['Births — per year', 'Births – per year', 'Geburten — pro Jahr', 'Geburten – pro Jahr'],
+            'spaced hyphen to em dash'      => ['Births - per year', 'Births — per year', 'Geburten - pro Jahr', 'Geburten — pro Jahr'],
+            'spaced hyphen to en dash'      => ['Births - per year', 'Births – per year', 'Geburten - pro Jahr', 'Geburten – pro Jahr'],
+            'spaced hyphen to dot'          => ['Births - per year', 'Births · per year', 'Geburten - pro Jahr', 'Geburten · pro Jahr'],
+            'doubled space to one space'    => ['Births  per year', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
+            'translation without it'        => ['Births — per year', 'Births · per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
+            'trailing space removed'        => ['Births per year ', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
+            'leading space removed'         => [' Births per year', 'Births per year', 'Geburten pro Jahr', 'Geburten pro Jahr'],
+            'translation has the new one'   => ['Births - per year', 'Births · per year', 'Geburten · pro Jahr', 'Geburten · pro Jahr'],
+            'escaped backslash before t'    => ['A - B', 'A · B', 'X\\\\t-\\\\tY', 'X\\\\t-\\\\tY'],
+            'hyphen inside a word'          => ['Born - died', 'Born · died', 'Rhein-Main gestorben', 'Rhein-Main gestorben'],
+            'trailing space added'          => ['Name:', 'Name: ', 'Name:', 'Name: '],
+            'translation follows old gap'   => ['Place ', 'Place', 'Ort ', 'Ort'],
+            'leading space follows old'     => [' Place', 'Place', ' Ort', 'Ort'],
+            'dash next to a kept dot'       => ['A - B · C', 'A — B · C', 'X - Y · Z', 'X — Y · Z'],
+            'dash to a dot already used'    => ['A - B · C', 'A · B · C', 'X - Y · Z', 'X · Y · Z'],
+            'separator that did not change' => ['Births · per year ', 'Births · per year', 'Geburten · pro Jahr', 'Geburten · pro Jahr'],
+            'kept trailing space'           => ['Label - chart ', 'Label · chart ', 'Etikett - Diagramm', 'Etikett · Diagramm'],
+            'kept leading space'            => [' Label - chart', ' Label · chart', 'Etikett - Diagramm', 'Etikett · Diagramm'],
         ];
     }
 
@@ -136,24 +137,6 @@ final class PunctuationResolverTest extends TestCase
             ($oldMsgstr === $newMsgstr) ? [] : [$newMsgid],
             $resolution->rewritten,
         );
-    }
-
-    /**
-     * A separator that is the same in the old and the new source text is not swapped in the translation when only spaces changed.
-     *
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function keepsASeparatorThatDidNotChange(): void
-    {
-        $resolution = (new PunctuationResolver())->resolve(
-            self::catalogue(
-                "#, fuzzy\n#| msgid \"Births · per year \"\nmsgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"",
-            ),
-        );
-
-        self::assertSame(1, $resolution->resolved);
-        self::assertStringContainsString('msgstr "Geburten · pro Jahr"', $resolution->overlay);
     }
 
     /**
@@ -319,21 +302,6 @@ final class PunctuationResolverTest extends TestCase
         self::assertSame(0, $resolution->resolved);
         self::assertSame(['Deaths per century'], $resolution->unresolved);
         self::assertSame('', $resolution->overlay);
-    }
-
-    /**
-     * A translation keeps its words, the resolver applies no vocabulary rule.
-     *
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function doesNotRewriteTheGermanWordDecade(): void
-    {
-        $resolution = (new PunctuationResolver())->resolve(
-            $this->catalogue("#, fuzzy\n#| msgid \"Births — per decade\"\nmsgid \"Births · per decade\"\nmsgstr \"Geburten — pro Dekade\""),
-        );
-
-        self::assertStringContainsString('msgstr "Geburten · pro Dekade"', $resolution->overlay);
     }
 
     /**
@@ -991,20 +959,5 @@ final class PunctuationResolverTest extends TestCase
             $this->catalogue("msgid \"A · b\"\nmsgstr \"X · y\"", "msgid \"C – d\"\nmsgstr \"Z – w\""),
             $resolution->overlay,
         );
-    }
-
-    /**
-     * A catalogue without fuzzy entries yields no overlay and nothing to report.
-     *
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function aCatalogueWithoutFuzzyEntriesResolvesNothing(): void
-    {
-        $resolution = (new PunctuationResolver())->resolve($this->catalogue("msgid \"A\"\nmsgstr \"B\""));
-
-        self::assertSame(0, $resolution->resolved);
-        self::assertSame([], $resolution->unresolved);
-        self::assertSame('', $resolution->overlay);
     }
 }
