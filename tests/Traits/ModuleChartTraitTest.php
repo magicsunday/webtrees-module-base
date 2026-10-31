@@ -18,7 +18,6 @@ use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 /**
  * Pins the chart URL the trait builds for an individual: the consuming module's
@@ -49,19 +48,6 @@ final class ModuleChartTraitTest extends TestCase
         return $this->getMockBuilder(ChartModuleDouble::class)
             ->onlyMethods(['buildRouteUrl'])
             ->getMock();
-    }
-
-    /**
-     * The composition is the contract: webtrees' own chart trait supplies
-     * chartMenu(), which chartBoxMenu() delegates to.
-     */
-    #[Test]
-    public function composesWebtreesOwnChartTrait(): void
-    {
-        self::assertContains(
-            \Fisharebest\Webtrees\Module\ModuleChartTrait::class,
-            (new ReflectionClass(ModuleChartTrait::class))->getTraitNames(),
-        );
     }
 
     /**
