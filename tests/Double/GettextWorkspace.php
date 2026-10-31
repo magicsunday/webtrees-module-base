@@ -155,8 +155,9 @@ final readonly class GettextWorkspace
     /**
      * Builds the text of a template that holds exactly the entries of the given catalogues, so each of them is the
      * result of a merge with it. The gettext tools do the work. A catalogue they cannot read adds nothing, the
-     * entries of the others are joined with the first occurrence of a source text winning, and obsolete entries and
-     * every translation are dropped.
+     * entries of the others are joined with the first occurrence of a source text winning, and obsolete entries,
+     * fuzzy flags and previous source texts are dropped. Every translation is emptied, whatever the number of lines
+     * it spans, by a filter that reads the text and writes nothing.
      *
      * @param list<string> $catalogues The paths of the catalogues to take the entries from
      *
@@ -175,7 +176,7 @@ final readonly class GettextWorkspace
         $text = self::capture(['msgcat', '--no-wrap', '--use-first', ...$readable]);
         $text = self::capture(['msgattrib', '--no-obsolete', '--clear-fuzzy', '--clear-previous', '--no-location', '--no-wrap'], $text);
 
-        return (string) self::capture(['msgfilter', '--keep-header', '--no-wrap', 'sed', '-e', 's/.*//'], $text);
+        return (string) self::capture(['msgfilter', '--keep-header', '--no-wrap', 'sed', '-e', 'd'], $text);
     }
 
     /**

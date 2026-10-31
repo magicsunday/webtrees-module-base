@@ -136,6 +136,33 @@ final class GettextWorkspaceTest extends TestCase
     }
 
     /**
+     * A translation that spans several lines is emptied like any other, for the singular and for every plural form.
+     */
+    #[Test]
+    public function emptiesTranslationsThatSpanSeveralLines(): void
+    {
+        $this->requireTools();
+
+        $workspace = new GettextWorkspace();
+
+        try {
+            $path = $workspace->addCatalogue('xa', $this->catalogue([
+                "msgid \"a\"\nmsgstr \"x\\ny\"",
+                "msgid \"p\"\nmsgid_plural \"q\"\nmsgstr[0] \"a\"\nmsgstr[1] \"b\\nc\"",
+            ]));
+
+            self::assertSame(
+                self::TEMPLATE_HEADER
+                . "msgid \"a\"\nmsgstr \"\"\n\n"
+                . "msgid \"p\"\nmsgid_plural \"q\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n",
+                GettextWorkspace::templateFrom([$path]),
+            );
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
      * A catalogue the gettext tools cannot read adds nothing to the template, and the catalogues
      * after it still count.
      */
