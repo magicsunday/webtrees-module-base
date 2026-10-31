@@ -158,11 +158,15 @@ final readonly class GettextWorkspace
      * a merge with it. The gettext tools do the work. A catalogue they cannot read adds nothing, the entries of the
      * others are joined with the first occurrence of a source text winning, and obsolete entries, fuzzy flags and
      * previous source texts are dropped. Every translation is emptied, whatever the number of lines it spans, by a
-     * filter that reads the text and writes nothing. The text is empty when none of the catalogues can be read.
+     * filter that reads the text and writes nothing. The text is empty when none of the catalogues can be read. A
+     * tool that fails on catalogues it could read raises an exception, so a failure never shows up as an empty
+     * template.
      *
      * @param list<string> $catalogues The paths of the catalogues to take the entries from
      *
      * @return string The text of the template
+     *
+     * @throws RuntimeException When a gettext tool fails on the readable catalogues
      */
     public static function templateFrom(array $catalogues): string
     {
@@ -174,10 +178,18 @@ final readonly class GettextWorkspace
             }
         }
 
-        $text = self::capture(['msgcat', '--no-wrap', '--use-first', ...$readable]);
-        $text = self::capture(['msgattrib', '--no-obsolete', '--clear-fuzzy', '--clear-previous', '--no-location', '--no-wrap'], $text);
+        if ($readable === []) {
+            return '';
+        }
 
-        return (string) self::capture(['msgfilter', '--keep-header', '--no-wrap', 'sed', '-e', 'd'], $text);
+        $text = self::capture(['msgcat', '--no-wrap', '--use-first', ...$readable])
+            ?? throw new RuntimeException('msgcat could not join the catalogues.');
+
+        $text = self::capture(['msgattrib', '--no-obsolete', '--clear-fuzzy', '--clear-previous', '--no-location', '--no-wrap'], $text)
+            ?? throw new RuntimeException('msgattrib could not clean the joined catalogues.');
+
+        return self::capture(['msgfilter', '--keep-header', '--no-wrap', 'sed', '-e', 'd'], $text)
+            ?? throw new RuntimeException('msgfilter could not empty the translations.');
     }
 
     /**
