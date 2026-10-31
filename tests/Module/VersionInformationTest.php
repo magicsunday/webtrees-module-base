@@ -26,6 +26,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
+use Symfony\Component\Clock\MockClock;
 
 use function array_shift;
 use function json_encode;
@@ -61,6 +62,22 @@ final class VersionInformationTest extends TestCase
     }
 
     /**
+     * Builds the module whose version the check reports: it falls back to a bundled version and
+     * asks for its updates at an https address that never resolves.
+     *
+     * @return ModuleCustomInterface
+     */
+    private function createModule(): ModuleCustomInterface
+    {
+        $module = self::createStub(ModuleCustomInterface::class);
+        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
+        $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
+        $module->method('name')->willReturn('version-information-test');
+
+        return $module;
+    }
+
+    /**
      * Runs the real version check against a stubbed HTTP client, so the release-API
      * response can be dictated without reaching the network.
      *
@@ -81,10 +98,7 @@ final class VersionInformationTest extends TestCase
         Response|ConnectException $response,
         ?StreamInterface $body = null,
     ): string {
-        $module = self::createStub(ModuleCustomInterface::class);
-        $module->method('customModuleVersion')->willReturn(self::FALLBACK_VERSION);
-        $module->method('customModuleLatestVersionUrl')->willReturn('https://example.invalid/releases/latest');
-        $module->method('name')->willReturn('version-information-test');
+        $module = $this->createModule();
 
         $client = self::createStub(ClientInterface::class);
 
@@ -412,5 +426,41 @@ final class VersionInformationTest extends TestCase
         self::assertTrue($captured['stream'] ?? false);
         self::assertSame(3, $captured['connect_timeout'] ?? null);
         self::assertSame(10, $captured['timeout'] ?? null);
+    }
+
+    /**
+     * The latest version is looked up once and remembered for a day. A second call inside that
+     * day must not issue a second request, and a call after it asks again. The clock of the cache
+     * is moved by hand to both sides of the day.
+     *
+     * @return void
+     */
+    #[Test]
+    public function remembersTheLatestVersionForADayAndAsksAgainAfterwards(): void
+    {
+        // The cache stamps the expiry of an entry from the system time and compares it with this clock, so the
+        // clock has to start at the present time and only then be moved.
+        $clock = new MockClock('now');
+
+        Registry::cache(new InMemoryCacheFactory($clock));
+
+        $client = $this->createMock(ClientInterface::class);
+        $client->expects(self::exactly(2))
+            ->method('request')
+            ->willReturnCallback(
+                static fn (): Response => new Response(200, [], json_encode(['tag_name' => '2.6.0'], JSON_THROW_ON_ERROR))
+            );
+
+        $information = new VersionInformation($this->createModule(), $client);
+
+        self::assertSame('2.6.0', $information->fetchLatestVersion());
+
+        // Just inside the day the answer comes from the cache, so no second request goes out.
+        $clock->sleep(86399);
+        self::assertSame('2.6.0', $information->fetchLatestVersion());
+
+        // Past the day the entry has expired, so the check asks again.
+        $clock->sleep(2);
+        self::assertSame('2.6.0', $information->fetchLatestVersion());
     }
 }
