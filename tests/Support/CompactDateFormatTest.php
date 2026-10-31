@@ -17,8 +17,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-use function extension_loaded;
-
 /**
  * CompactDateFormatTest.
  *
@@ -92,10 +90,6 @@ final class CompactDateFormatTest extends TestCase
     #[DataProvider('localeDataProvider')]
     public function forLocaleDerivesWebtreesFormat(string $localeTag, string $expected): void
     {
-        if (!extension_loaded('intl')) {
-            self::markTestSkipped('ext-intl is not loaded');
-        }
-
         self::assertSame($expected, CompactDateFormat::forLocale($localeTag));
     }
 
@@ -108,10 +102,6 @@ final class CompactDateFormatTest extends TestCase
     #[Test]
     public function forLocaleAlwaysWidensTheYear(): void
     {
-        if (!extension_loaded('intl')) {
-            self::markTestSkipped('ext-intl is not loaded');
-        }
-
         // "de" ships a two-digit ICU short year (dd.MM.yy) that must be widened.
         self::assertStringContainsString('%Y', CompactDateFormat::forLocale('de'));
         self::assertStringNotContainsString('%y', CompactDateFormat::forLocale('de'));
@@ -119,10 +109,7 @@ final class CompactDateFormatTest extends TestCase
 
     /**
      * An unparseable locale tag (a NUL byte, which ICU rejects with a ValueError)
-     * falls back to the FALLBACK format. Deliberately NOT guarded by the ext-intl
-     * skip: with intl present the ValueError branch is exercised, with intl absent
-     * the early extension_loaded() branch returns the same FALLBACK — so this pins
-     * the FALLBACK contract on every CI leg, including one without ext-intl.
+     * falls back to the FALLBACK format.
      *
      * @return void
      */
