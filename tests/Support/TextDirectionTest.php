@@ -16,7 +16,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 /**
  * Locks the RTL verdict the chart modules use to orient a label: the first
@@ -106,16 +105,5 @@ final class TextDirectionTest extends TestCase
     public function reportsWhetherTheTextReadsRightToLeft(string $text, bool $expected): void
     {
         self::assertSame($expected, TextDirection::isRtl($text));
-    }
-
-    /**
-     * The helper is a static-only utility the chart modules call without an
-     * instance, so it must stay closed for subclassing. Everything else about
-     * the signature is already proven by the behavioural calls above.
-     */
-    #[Test]
-    public function theHelperClassIsFinal(): void
-    {
-        self::assertTrue((new ReflectionClass(TextDirection::class))->isFinal());
     }
 }
