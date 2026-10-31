@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Double;
 
+use RuntimeException;
+
 use function bin2hex;
 use function copy;
 use function fclose;
@@ -114,7 +116,7 @@ final readonly class GettextWorkspace
      */
     public function write(string $content): void
     {
-        file_put_contents($this->catalogue, $content);
+        $this->store($this->catalogue, $content);
     }
 
     /**
@@ -187,7 +189,7 @@ final readonly class GettextWorkspace
     {
         $path = $this->emptyDirectory() . '/translations.json';
 
-        file_put_contents($path, json_encode($translations, JSON_THROW_ON_ERROR));
+        $this->store($path, json_encode($translations, JSON_THROW_ON_ERROR));
 
         return $path;
     }
@@ -213,8 +215,8 @@ final readonly class GettextWorkspace
 
         $entries = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\n" . implode("\n", $forms) . "\n";
 
-        file_put_contents($this->template, $header . $entries);
-        file_put_contents($path, $header . $entries);
+        $this->store($this->template, $header . $entries);
+        $this->store($path, $header . $entries);
 
         self::mergeFile($path, $this->template);
 
@@ -245,7 +247,7 @@ final readonly class GettextWorkspace
 
         $path = $this->directory . '/' . $locale . '/messages.po';
 
-        file_put_contents($path, $content);
+        $this->store($path, $content);
 
         return $path;
     }
@@ -321,6 +323,19 @@ final readonly class GettextWorkspace
         }
 
         rmdir($path);
+    }
+
+    /**
+     * Writes a file and fails when it cannot be written, so a test never runs on a scratch file that is missing.
+     *
+     * @param string $path    The path of the file
+     * @param string $content The text to write
+     */
+    private function store(string $path, string $content): void
+    {
+        if (file_put_contents($path, $content) === false) {
+            throw new RuntimeException('The scratch file ' . $path . ' could not be written.');
+        }
     }
 
     /**
