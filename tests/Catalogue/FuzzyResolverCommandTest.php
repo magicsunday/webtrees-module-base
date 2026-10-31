@@ -219,7 +219,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $this->workspace->write($this->unresolvedCatalogue($count, $first));
+        $this->workspace->write(self::unresolvedCatalogue($count, $first));
 
         $lines = [];
 
@@ -252,9 +252,9 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $quiet = $this->workspace->addCatalogue('aa', "msgid \"\"\nmsgstr \"\"\n\n#: src/A.php:1\nmsgid \"A\"\nmsgstr \"B\"\n");
 
-        $this->workspace->write($this->unresolvedCatalogue(1, 'Text 1'));
+        $this->workspace->write(self::unresolvedCatalogue(1, 'Text 1'));
 
-        $other = $this->workspace->addCatalogue('fr', $this->unresolvedCatalogue(2, 'Text 1'));
+        $other = $this->workspace->addCatalogue('fr', self::unresolvedCatalogue(2, 'Text 1'));
         $lines = [];
 
         $this->runCommand(
@@ -662,89 +662,6 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * Characters of a source text that set the direction of a text do not reach the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function writesNoControlCharacterOfACatalogueIntoTheReport(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
-        );
-
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
-
-        self::assertSame('      - A ?X::error::y', $lines[1]);
-        self::assertSame(0, preg_match('/[\x00-\x08\x0B-\x1F\x7F]/', implode("\n", $lines)));
-    }
-
-    /**
-     * A line feed in a path does not start a line of its own in the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function keepsALineFeedOfAPathOutOfTheReport(): void
-    {
-        $lines = [];
-
-        $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue . '
-::error::x'],
-            self::collect($lines),
-        );
-
-        self::assertSame(1, $status);
-        self::assertSame(['  ✘ ' . $this->workspace->catalogue . '?::error::x not found', '  ✔ resolve-fuzzy: resolved=0, remaining=0'], $lines);
-    }
-
-    /**
-     * The name of the directory of a catalogue reaches the report on one line.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function keepsALineFeedOfALocaleNameOutOfTheReport(): void
-    {
-        $this->requireTools();
-
-        $other = $this->workspace->addCatalogue('x
-::error::y', $this->unresolvedCatalogue(1, 'Text 1'));
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $other], self::collect($lines));
-
-        self::assertSame('  ▸ x?::error::y  resolved=  0  remaining-fuzzy=  1', $lines[0]);
-    }
-
-    /**
-     * A locale name that looks like a CI command is never the first thing of a line of the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function startsEveryLineOfTheReportWithAMarker(): void
-    {
-        $other = $this->workspace->addCatalogue('::error::x##[warning]y', $this->unresolvedCatalogue(1, 'Text 1'));
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $other], self::collect($lines));
-
-        self::assertNotSame([], $lines);
-
-        foreach ($lines as $line) {
-            self::assertStringNotContainsString('##[', $line);
-            self::assertSame(0, preg_match('/^\s*::/', $line), $line);
-            self::assertSame(1, preg_match('/^\s*(▸|-|~|…|✔|✘)/u', $line), $line);
-        }
-    }
-
-    /**
      * Provides a template that is not the one the catalogue was merged from, as the line it holds in place of one of
      * the catalogue.
      *
@@ -795,29 +712,98 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * A rewritten translation is listed with the source text behind a marker, whatever the source text starts with.
+     * The places where the report names text that a contributor controls, each with the locale of the added
+     * catalogue, its text, what is appended to its path and the lines that the report shows for it. A
+     * placeholder in a line stands for the path of the added catalogue.
+     *
+     * @return iterable<string, array{string, string, string, list<string>}>
+     */
+    public static function hostileSites(): iterable
+    {
+        yield 'a source text with a control character' => [
+            'fr',
+            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
+            '',
+            [
+                '  ▸ fr        resolved=  0  remaining-fuzzy=  1',
+                '      - A ?X::error::y',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a line feed in the path of a catalogue' => [
+            'fr',
+            self::unresolvedCatalogue(1, 'Text 1'),
+            "\n::error::x",
+            [
+                '  ✘ {path}?::error::x not found',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=0',
+            ],
+        ];
+
+        yield 'a line feed in the name of the locale directory' => [
+            "x\n::error::y",
+            self::unresolvedCatalogue(1, 'Text 1'),
+            '',
+            [
+                '  ▸ x?::error::y  resolved=  0  remaining-fuzzy=  1',
+                '      - Text 1',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a locale name that looks like a CI command' => [
+            '::error::x##[warning]y',
+            self::unresolvedCatalogue(1, 'Text 1'),
+            '',
+            [
+                '  ▸ ::error::x##?[warning]y  resolved=  0  remaining-fuzzy=  1',
+                '      - Text 1',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a rewritten translation behind a marker' => [
+            'it',
+            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
+            '',
+            [
+                '  ▸ it        resolved=  1  remaining-fuzzy=  0',
+                '      ~ translation rewritten: ::error::x · y',
+                '  ✔ resolve-fuzzy: resolved=1, remaining=0',
+            ],
+        ];
+    }
+
+    /**
+     * Whatever a source text, a path or a locale name holds is cleaned before the report names it, so a
+     * contributed catalogue cannot start a workflow command in a CI log, put a line of its own into the
+     * report or turn the text around, and every line starts with a marker.
+     *
+     * @param string       $locale   The name of the directory of the added catalogue
+     * @param string       $content  The text of the added catalogue
+     * @param string       $suffix   The text appended to the path of the catalogue in the arguments
+     * @param list<string> $expected The lines of the report, with a placeholder for the path of the catalogue
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function listsARewrittenTranslationBehindAMarker(): void
+    #[DataProvider('hostileSites')]
+    public function cleansForeignTextWhereverTheReportNamesIt(string $locale, string $content, string $suffix, array $expected): void
     {
         $this->requireTools();
 
-        $other = $this->workspace->addCatalogue(
-            'it',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
-        );
+        $path  = $this->workspace->addCatalogue($locale, $content);
         $lines = [];
 
-        $this->runCommand([$this->templateOf(['::error::x · y']), $other], self::collect($lines));
+        $this->runCommand([$this->workspace->template, $path . $suffix], self::collect($lines));
 
-        self::assertSame(
-            ['  ▸ it        resolved=  1  remaining-fuzzy=  0', '      ~ translation rewritten: ::error::x · y'],
-            array_slice($lines, 0, 2),
-        );
+        self::assertSame(str_replace('{path}', $path, implode("\n", $expected)), implode("\n", $lines));
+        self::assertSame(0, preg_match('/[\x00-\x08\x0B-\x1F\x7F]/', implode("\n", $lines)));
 
         foreach ($lines as $line) {
+            self::assertStringNotContainsString('##[', $line);
+            self::assertSame(0, preg_match('/^\s*::/', $line), $line);
             self::assertSame(1, preg_match('/^\s*(▸|-|~|…|✔|✘)/u', $line), $line);
         }
     }
@@ -973,7 +959,7 @@ final class FuzzyResolverCommandTest extends TestCase
      *
      * @return string The text of the catalogue
      */
-    private function unresolvedCatalogue(int $count, string $first): string
+    private static function unresolvedCatalogue(int $count, string $first): string
     {
         $entries = [];
 

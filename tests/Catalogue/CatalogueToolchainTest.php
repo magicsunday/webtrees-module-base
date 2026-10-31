@@ -50,6 +50,7 @@ use function is_link;
 use function is_writable;
 use function mkdir;
 use function posix_geteuid;
+use function preg_match;
 use function preg_match_all;
 use function putenv;
 use function restore_error_handler;
@@ -567,27 +568,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A line feed in the path of the working directory does not start a line of its own in the exception.
-     */
-    #[Test]
-    public function keepsALineFeedOfTheWorkingDirectoryOutOfTheException(): void
-    {
-        try {
-            (new CatalogueToolchain($this->workspace->emptyDirectory() . "/gone\n::error::x"))->apply(
-                $this->workspace->catalogue,
-                $this->workspace->template,
-                new Resolution("msgid \"\"\nmsgstr \"\"\n", '', 0, [], [], []),
-                static fn (): bool => true,
-            );
-
-            self::fail('The toolchain should have failed.');
-        } catch (CatalogueToolException $exception) {
-            self::assertStringContainsString('gone?::error::x', $exception->getMessage());
-            self::assertStringNotContainsString("\n::error::", $exception->getMessage());
-        }
-    }
-
-    /**
      * A working directory that cannot be created below an existing one raises no PHP warning.
      */
     #[Test]
@@ -772,26 +752,37 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * The output of a failing tool reaches the exception without its control characters.
+     * The places where the exception names text that a contributor controls, each with the text that the
+     * message holds for it.
+     *
+     * @return iterable<string, array{string, string}>
      */
-    #[Test]
-    public function keepsControlCharactersOfAToolOutputOutOfTheException(): void
+    public static function placesThatNameForeignText(): iterable
     {
-        $exception = $this->failureWithPath($this->stubDirectory());
-
-        self::assertStringContainsString('exit status 3. bad ?[31m', $exception->getMessage());
+        yield 'the working directory' => ['working-directory', 'gone?::error::x'];
+        yield 'the output of a tool' => ['tool-output', 'exit status 3. bad ?[31m'];
+        yield 'the path of a catalogue' => ['catalogue-path', '?::error::x'];
     }
 
     /**
-     * A line feed in the path of a catalogue does not start a line of its own in the exception.
+     * Whatever a path or a tool prints is cleaned before the exception names it, so a contributed path
+     * cannot start a workflow command in a CI log or put a line of its own into it.
+     *
+     * @param string $place    The place the hostile value is put into
+     * @param string $expected The cleaned text that the message holds
      */
     #[Test]
-    public function keepsALineFeedOfACataloguePathOutOfTheException(): void
+    #[DataProvider('placesThatNameForeignText')]
+    public function cleansForeignTextWhereverTheExceptionNamesIt(string $place, string $expected): void
     {
-        $exception = $this->failureWithPath($this->stubDirectory(), $this->workspace->catalogue . "\n::error::x");
+        $message = match ($place) {
+            'working-directory' => $this->failureInWorkingDirectory($this->workspace->emptyDirectory() . "/gone\n::error::x")->getMessage(),
+            'tool-output'       => $this->failureWithPath($this->stubDirectory())->getMessage(),
+            default             => $this->failureWithPath($this->stubDirectory(), $this->workspace->catalogue . "\n::error::x")->getMessage(),
+        };
 
-        self::assertStringContainsString('?::error::x', $exception->getMessage());
-        self::assertStringNotContainsString("\n::error::", $exception->getMessage());
+        self::assertStringContainsString($expected, $message);
+        self::assertSame(0, preg_match('/[\x00-\x1F\x7F]/', $message));
     }
 
     /**
@@ -1121,6 +1112,29 @@ final class CatalogueToolchainTest extends TestCase
             return $exception;
         } finally {
             putenv('PATH=' . $original);
+        }
+
+        self::fail('The toolchain should have failed.');
+    }
+
+    /**
+     * Runs the toolchain with another working directory and returns the exception it raises.
+     *
+     * @param string $workingDirectory The working directory of the toolchain
+     *
+     * @return CatalogueToolException The exception the toolchain raised
+     */
+    private function failureInWorkingDirectory(string $workingDirectory): CatalogueToolException
+    {
+        try {
+            (new CatalogueToolchain($workingDirectory))->apply(
+                $this->workspace->catalogue,
+                $this->workspace->template,
+                new Resolution("msgid \"\"\nmsgstr \"\"\n", '', 0, [], [], []),
+                static fn (): bool => true,
+            );
+        } catch (CatalogueToolException $exception) {
+            return $exception;
         }
 
         self::fail('The toolchain should have failed.');
