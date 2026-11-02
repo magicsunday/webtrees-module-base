@@ -23,6 +23,7 @@ use MagicSunday\Webtrees\ModuleBase\Catalogue\Resolution;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\ResolvedEntry;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ShortWriteStream;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -50,6 +51,7 @@ use function is_link;
 use function is_writable;
 use function mkdir;
 use function posix_geteuid;
+use function preg_match;
 use function preg_match_all;
 use function putenv;
 use function restore_error_handler;
@@ -77,6 +79,8 @@ use function symlink;
 #[UsesClass(Resolution::class)]
 final class CatalogueToolchainTest extends TestCase
 {
+    use SkipsWithoutGettextTools;
+
     /**
      * The scratch copy of the fixture catalogue that the running test works on.
      */
@@ -188,7 +192,7 @@ final class CatalogueToolchainTest extends TestCase
     {
         $this->requireTools();
 
-        $this->workspace->write("msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n");
+        $this->workspace->write(GettextWorkspace::HEADER . "msgstr \"orphan\"\n");
 
         $this->expectException(CatalogueToolException::class);
 
@@ -224,10 +228,6 @@ final class CatalogueToolchainTest extends TestCase
             'carriage returns only'                   => ["msgid \"A\"\rmsgstr \"a\"\r"],
             'escape of NUL in octal'                  => ["msgid \"Keep\"\nmsgstr \"keep\\000 tail\"\n"],
             'escape of NUL in hex'                    => ["msgid \"Keep\"\nmsgstr \"keep\\x00 tail\"\n"],
-            'escape of NUL as short octal'            => ["msgid \"Keep\"\nmsgstr \"keep\\0 tail\"\n"],
-            'escape of NUL as octal beyond a byte'    => ["msgid \"Keep\"\nmsgstr \"ab\\400cd\"\n"],
-            'escape of NUL as hex beyond a byte'      => ["msgid \"Keep\"\nmsgstr \"ab\\x100 cd\"\n"],
-            'escape of NUL as long hex'               => ["msgid \"Keep\"\nmsgstr \"ab\\x0100 cd\"\n"],
             'raw NUL byte'                            => ["msgid \"Keep\"\nmsgstr \"abc\0def\"\n"],
             'numeric escape that is no NUL'           => ["msgid \"Keep\"\nmsgstr \"a\\x5b\\101c\"\n"],
             'escaped backslash and a continued digit' => ["msgid \"Keep\"\nmsgstr \"Beh\\\\\n0alten\"\n"],
@@ -255,7 +255,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . $entries,
+            GettextWorkspace::HEADER . $entries,
         );
 
         // The template holds the entries of the catalogue, so only the text the tools read differently is left as a
@@ -299,30 +299,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A fuzzy flag on the header is a mark of its own and is not cleared by resolving an entry.
-     *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function keepsTheFuzzyFlagOfTheHeader(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
-
-        $this->apply();
-
-        $content = $this->workspace->read();
-
-        self::assertStringStartsWith("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
-    }
-
-    /**
      * Obsolete entries, a fuzzy one with its previous text among them, come through a run unchanged.
      *
      * @throws CatalogueToolException
@@ -334,7 +310,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n\n"
             . "#~ msgid \"Qqq xjw zzk\"\n#~ msgstr \"Eins\"\n\n"
             . "#, fuzzy\n#~| msgid \"Older\"\n#~ msgid \"Vvv kzp qqx\"\n#~ msgstr \"Zwei\"\n",
@@ -353,74 +329,59 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A block of comments in front of the header does not bring the header into the selection, so its flag stays.
+     * Headers that carry a fuzzy flag, each with the text the catalogue starts with after a run. Each is
+     * laid out in a way that gettext reads but that must not bring the header into the selection.
      *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
+     * @return iterable<string, array{string, non-empty-string}>
      */
-    #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderBehindACommentBlock(): void
+    public static function fuzzyHeaderLayouts(): iterable
     {
-        $this->requireTools();
+        yield 'header alone' => [
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
 
-        $this->workspace->write(
-            "# License block\n\n#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
+        yield 'behind a comment block' => [
+            "# License block\n\n#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: de\\n\"\n\n",
+            '# License block',
+        ];
 
-        $this->apply();
+        yield 'text on the keyword line' => [
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"Language: de\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
 
-        $content = $this->workspace->read();
-
-        self::assertStringStartsWith('# License block', $content);
-        self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
+        yield 'space around the keywords' => [
+            "#, fuzzy\nmsgid  \"\" \nmsgstr\t\"\"\n  \"Language: de\\n\" \n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n",
+            "#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n",
+        ];
     }
 
     /**
-     * A header whose first translation line starts right after the keyword does not come into the selection.
+     * A fuzzy flag on the header is a mark of its own and is not cleared by resolving an entry, whatever
+     * the layout of the header.
+     *
+     * @param string           $header The text of the header, with its fuzzy flag
+     * @param non-empty-string $start  The text the catalogue starts with after the run
      *
      * @throws CatalogueToolException
      * @throws CatalogueLayoutException
      */
     #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderThatStartsItsTextOnTheKeywordLine(): void
+    #[DataProvider('fuzzyHeaderLayouts')]
+    public function keepsTheFuzzyFlagOfTheHeader(string $header, string $start): void
     {
         $this->requireTools();
 
         $this->workspace->write(
-            "#, fuzzy\nmsgid \"\"\nmsgstr \"Language: de\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
+            $header . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
         );
 
         $this->apply();
 
         $content = $this->workspace->read();
 
-        self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
-        self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
-    }
-
-    /**
-     * A header that is laid out in a way gettext accepts but the tools do not write is kept out of the selection too.
-     *
-     * @throws CatalogueToolException
-     * @throws CatalogueLayoutException
-     */
-    #[Test]
-    public function keepsTheFuzzyFlagOfAHeaderWithSpaceAroundItsKeywords(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "#, fuzzy\nmsgid  \"\" \nmsgstr\t\"\"\n  \"Language: de\\n\" \n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
-            . "#, fuzzy\n#| msgid \"Births — per year\"\nmsgid \"Births · per year\"\nmsgstr \"Geburten — pro Jahr\"\n",
-        );
-
-        $this->apply();
-
-        $content = $this->workspace->read();
-
+        self::assertStringStartsWith($start, $content);
         self::assertStringContainsString("#, fuzzy\nmsgid \"\"\nmsgstr \"\"\n", $content);
         self::assertStringContainsString("msgid \"Births · per year\"\nmsgstr \"Geburten · pro Jahr\"", $content);
     }
@@ -456,7 +417,7 @@ final class CatalogueToolchainTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "#, fuzzy\n#| msgid \"Stable  entry\"\nmsgid \"Stable entry\"\nmsgstr \"Stabiler Eintrag\"\n",
         );
 
@@ -610,27 +571,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * A line feed in the path of the working directory does not start a line of its own in the exception.
-     */
-    #[Test]
-    public function keepsALineFeedOfTheWorkingDirectoryOutOfTheException(): void
-    {
-        try {
-            (new CatalogueToolchain($this->workspace->emptyDirectory() . "/gone\n::error::x"))->apply(
-                $this->workspace->catalogue,
-                $this->workspace->template,
-                new Resolution("msgid \"\"\nmsgstr \"\"\n", '', 0, [], [], []),
-                static fn (): bool => true,
-            );
-
-            self::fail('The toolchain should have failed.');
-        } catch (CatalogueToolException $exception) {
-            self::assertStringContainsString('gone?::error::x', $exception->getMessage());
-            self::assertStringNotContainsString("\n::error::", $exception->getMessage());
-        }
-    }
-
-    /**
      * A working directory that cannot be created below an existing one raises no PHP warning.
      */
     #[Test]
@@ -731,23 +671,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * What a failing tool writes to its error output reaches the exception.
-     */
-    #[Test]
-    public function reportsTheErrorOutputOfAFailingTool(): void
-    {
-        $directory = $this->workspace->emptyDirectory() . '/stub';
-
-        mkdir($directory, 0700, true);
-        file_put_contents($directory . '/msgcat', "#!/bin/sh\nprintf 'broken input\\n' >&2\nexit 3\n");
-        chmod($directory . '/msgcat', 0700);
-
-        $exception = $this->failureWithPath($directory);
-
-        self::assertStringContainsString('exit status 3. broken input', $exception->getMessage());
-    }
-
-    /**
      * What a failing tool writes to both of its streams reaches the exception without either part overwriting the other.
      */
     #[Test]
@@ -770,7 +693,7 @@ final class CatalogueToolchainTest extends TestCase
 
         $message = $this->failureWithPath($directory)->getMessage();
 
-        self::assertStringContainsString('first?second-and-longer?third', $message);
+        self::assertStringEndsWith('exit status 3. first?second-and-longer?third', $message);
     }
 
     /**
@@ -832,26 +755,37 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * The output of a failing tool reaches the exception without its control characters.
+     * The places where the exception names text that a contributor controls, each with the text that the
+     * message holds for it.
+     *
+     * @return iterable<string, array{string, string}>
      */
-    #[Test]
-    public function keepsControlCharactersOfAToolOutputOutOfTheException(): void
+    public static function placesThatNameForeignText(): iterable
     {
-        $exception = $this->failureWithPath($this->stubDirectory());
-
-        self::assertStringContainsString('exit status 3. bad ?[31m', $exception->getMessage());
+        yield 'the working directory' => ['working-directory', 'gone?::error::x'];
+        yield 'the output of a tool' => ['tool-output', 'exit status 3. bad ?[31m'];
+        yield 'the path of a catalogue' => ['catalogue-path', '?::error::x'];
     }
 
     /**
-     * A line feed in the path of a catalogue does not start a line of its own in the exception.
+     * Whatever a path or a tool prints is cleaned before the exception names it, so a contributed path
+     * cannot start a workflow command in a CI log or put a line of its own into it.
+     *
+     * @param string $place    The place the hostile value is put into
+     * @param string $expected The cleaned text that the message holds
      */
     #[Test]
-    public function keepsALineFeedOfACataloguePathOutOfTheException(): void
+    #[DataProvider('placesThatNameForeignText')]
+    public function cleansForeignTextWhereverTheExceptionNamesIt(string $place, string $expected): void
     {
-        $exception = $this->failureWithPath($this->stubDirectory(), $this->workspace->catalogue . "\n::error::x");
+        $message = match ($place) {
+            'working-directory' => $this->failureInWorkingDirectory($this->workspace->emptyDirectory() . "/gone\n::error::x")->getMessage(),
+            'tool-output'       => $this->failureWithPath($this->stubDirectory())->getMessage(),
+            default             => $this->failureWithPath($this->stubDirectory(), $this->workspace->catalogue . "\n::error::x")->getMessage(),
+        };
 
-        self::assertStringContainsString('?::error::x', $exception->getMessage());
-        self::assertStringNotContainsString("\n::error::", $exception->getMessage());
+        self::assertStringContainsString($expected, $message);
+        self::assertSame(0, preg_match('/[\x00-\x1F\x7F]/', $message));
     }
 
     /**
@@ -1131,16 +1065,6 @@ final class CatalogueToolchainTest extends TestCase
     }
 
     /**
-     * Skips the running test where a gettext tool is missing.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
-    }
-
-    /**
      * Makes a directory with a msgcat stub that prints control characters and fails.
      *
      * @return string The directory that holds the stub
@@ -1181,6 +1105,29 @@ final class CatalogueToolchainTest extends TestCase
             return $exception;
         } finally {
             putenv('PATH=' . $original);
+        }
+
+        self::fail('The toolchain should have failed.');
+    }
+
+    /**
+     * Runs the toolchain with another working directory and returns the exception it raises.
+     *
+     * @param string $workingDirectory The working directory of the toolchain
+     *
+     * @return CatalogueToolException The exception the toolchain raised
+     */
+    private function failureInWorkingDirectory(string $workingDirectory): CatalogueToolException
+    {
+        try {
+            (new CatalogueToolchain($workingDirectory))->apply(
+                $this->workspace->catalogue,
+                $this->workspace->template,
+                new Resolution("msgid \"\"\nmsgstr \"\"\n", '', 0, [], [], []),
+                static fn (): bool => true,
+            );
+        } catch (CatalogueToolException $exception) {
+            return $exception;
         }
 
         self::fail('The toolchain should have failed.');

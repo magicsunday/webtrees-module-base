@@ -11,11 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Facade;
 
-use Fisharebest\Webtrees\Module\ModuleCustomInterface;
-use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 use MagicSunday\Webtrees\ModuleBase\Facade\ModuleAwareDataFacadeTrait;
 use MagicSunday\Webtrees\ModuleBase\Facade\RouteAwareDataFacadeTrait;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\CreatesIndividualStubs;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CreatesModuleStubs;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\RouteAwareFacadeDouble;
 use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
@@ -41,6 +40,7 @@ use PHPUnit\Framework\TestCase;
 final class RouteAwareDataFacadeTraitTest extends TestCase
 {
     use CreatesIndividualStubs;
+    use CreatesModuleStubs;
 
     /**
      * Builds a facade composing the trait, with its route-resolving seam mocked so the URL
@@ -170,11 +170,7 @@ final class RouteAwareDataFacadeTraitTest extends TestCase
     #[Test]
     public function includesTheModuleInjectionOfTheBaseTrait(): void
     {
-        $module = self::createStubForIntersectionOfInterfaces([
-            ModuleCustomInterface::class,
-            ModuleAssetUrlInterface::class,
-        ]);
-
+        $module = $this->createModule('/assets/a.png');
         $facade = new RouteAwareFacadeDouble();
 
         self::assertSame($facade, $facade->setModule($module));

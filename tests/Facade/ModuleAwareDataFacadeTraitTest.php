@@ -11,13 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Facade;
 
-use Fisharebest\Webtrees\Module\ModuleCustomInterface;
-use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 use MagicSunday\Webtrees\ModuleBase\Facade\ModuleAwareDataFacadeTrait;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CreatesModuleStubs;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ModuleAwareFacadeDouble;
 use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -32,23 +30,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversTrait(ModuleAwareDataFacadeTrait::class)]
 final class ModuleAwareDataFacadeTraitTest extends TestCase
 {
-    /**
-     * Builds a module stub that reports a fixed URL for every asset.
-     *
-     * @param string $assetUrl The URL the module reports
-     *
-     * @return ModuleCustomInterface&ModuleAssetUrlInterface&Stub
-     */
-    private function createModule(string $assetUrl): ModuleCustomInterface&ModuleAssetUrlInterface&Stub
-    {
-        $module = self::createStubForIntersectionOfInterfaces([
-            ModuleCustomInterface::class,
-            ModuleAssetUrlInterface::class,
-        ]);
-        $module->method('assetUrl')->willReturn($assetUrl);
-
-        return $module;
-    }
+    use CreatesModuleStubs;
 
     /**
      * setModule() hands the facade back, so a module can be set in the middle of a call chain.

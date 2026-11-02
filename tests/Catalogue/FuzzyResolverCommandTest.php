@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Catalogue;
 
-use Closure;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueBlockParser;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueFile;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueLayoutException;
@@ -23,7 +22,9 @@ use MagicSunday\Webtrees\ModuleBase\Catalogue\PrintableText;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\PunctuationResolver;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\Resolution;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\ResolvedEntry;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CollectsReportLines;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -33,14 +34,12 @@ use PHPUnit\Framework\TestCase;
 use function array_filter;
 use function array_map;
 use function array_pop;
-use function array_slice;
 use function array_values;
 use function chmod;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
 use function implode;
-use function is_file;
 use function is_link;
 use function is_readable;
 use function is_writable;
@@ -73,6 +72,9 @@ use function symlink;
 #[UsesClass(CatalogueToolchain::class)]
 final class FuzzyResolverCommandTest extends TestCase
 {
+    use CollectsReportLines;
+    use SkipsWithoutGettextTools;
+
     /**
      * The scratch copy of the fixture catalogue that the running test works on.
      */
@@ -108,7 +110,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $lines = [];
 
-        $status = $this->runCommand([$this->workspace->template], $this->collect($lines));
+        $status = (new FuzzyResolverCommand())->run([$this->workspace->template], $this->collect($lines));
 
         self::assertSame(2, $status);
         self::assertSame(['Usage: resolve-fuzzy <messages.pot> <messages.po>...'], $lines);
@@ -124,7 +126,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $lines = [];
 
-        $status = $this->runCommand(
+        $status = (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $this->workspace->catalogue . '.missing'],
             $this->collect($lines),
         );
@@ -148,8 +150,7 @@ final class FuzzyResolverCommandTest extends TestCase
             . "#, fuzzy\n#| msgid \"Deaths per decade\"\nmsgid \"Deaths per century\"\nmsgstr \"Tode pro Jahrzehnt\"\n",
         );
 
-        file_put_contents($this->workspace->template, GettextWorkspace::templateFrom([$this->workspace->catalogue]));
-        GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
+        $this->mergeFromTemplateOf($this->workspace->catalogue);
 
         $before = $this->workspace->read();
         $lines  = [];
@@ -182,70 +183,64 @@ final class FuzzyResolverCommandTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write("msgid \"\"\nmsgstr \"\"\n\n#: src/A.php:1\nmsgid \"A\"\nmsgstr \"B\"\n");
+        $this->mergeFromTemplateOf($this->workspace->catalogue);
 
         $lines = [];
 
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], $this->collect($lines));
+        (new FuzzyResolverCommand())->run([$this->workspace->template, $this->workspace->catalogue], $this->collect($lines));
 
         self::assertSame(['  ✔ resolve-fuzzy: resolved=0, remaining=0'], $lines);
     }
 
     /**
-     * Only the first source texts are listed, longer ones are shortened and the rest is counted.
+     * The number of unresolved entries, and the source text of the first one with the text that the
+     * report lists for it, around the limit of listed source texts.
      *
-     * @throws CatalogueToolException
+     * @return iterable<string, array{int, string, string}>
      */
-    #[Test]
-    public function listsAtMostTenSourceTextsPerCatalogueAndShortensLongOnes(): void
+    public static function unresolvedCounts(): iterable
     {
-        $this->requireTools();
-
-        $this->workspace->write($this->unresolvedCatalogue(12, str_repeat('x', 80)));
-
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
-
-        self::assertSame('  ▸ de        resolved=  0  remaining-fuzzy= 12', $lines[0]);
-        self::assertSame('      - ' . str_repeat('x', 59) . '…', $lines[1]);
-        self::assertSame('      - Text 10', $lines[10]);
-        self::assertSame('      … and 2 more', $lines[11]);
-        self::assertSame('  ✔ resolve-fuzzy: resolved=0, remaining=12', $lines[12]);
+        yield 'exactly the limit' => [10, 'Text 1', 'Text 1'];
+        yield 'one over the limit' => [11, 'Text 1', 'Text 1'];
+        yield 'more over the limit and a long text' => [12, str_repeat('x', 80), str_repeat('x', 59) . '…'];
     }
 
     /**
-     * Exactly as many source texts as the limit are all listed and no more-line follows.
+     * Only the first source texts are listed, longer ones are shortened and the rest is counted. Exactly
+     * as many source texts as the limit are all listed and no more-line follows.
+     *
+     * @param int    $count  The number of unresolved entries
+     * @param string $first  The source text of the first entry
+     * @param string $listed The text that the report lists for the first entry
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function addsNoMoreLineForExactlyTenSourceTexts(): void
+    #[DataProvider('unresolvedCounts')]
+    public function listsAtMostTenSourceTextsPerCatalogueAndShortensLongOnes(int $count, string $first, string $listed): void
     {
         $this->requireTools();
 
-        $this->workspace->write($this->unresolvedCatalogue(10, 'Text 1'));
+        $this->workspace->write(self::unresolvedCatalogue($count, $first));
+        $this->mergeFromTemplateOf($this->workspace->catalogue);
 
         $lines = [];
 
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
+        (new FuzzyResolverCommand())->run([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
 
-        self::assertSame(
-            [
-                '  ▸ de        resolved=  0  remaining-fuzzy= 10',
-                '      - Text 1',
-                '      - Text 2',
-                '      - Text 3',
-                '      - Text 4',
-                '      - Text 5',
-                '      - Text 6',
-                '      - Text 7',
-                '      - Text 8',
-                '      - Text 9',
-                '      - Text 10',
-                '  ✔ resolve-fuzzy: resolved=0, remaining=10',
-            ],
-            $lines,
-        );
+        $expected = ['  ▸ de        resolved=  0  remaining-fuzzy=' . sprintf('%3d', $count)];
+
+        for ($number = 1; $number <= 10; ++$number) {
+            $expected[] = '      - ' . ($number === 1 ? $listed : 'Text ' . $number);
+        }
+
+        if ($count > 10) {
+            $expected[] = sprintf('      … and %d more', $count - 10);
+        }
+
+        $expected[] = sprintf('  ✔ resolve-fuzzy: resolved=0, remaining=%d', $count);
+
+        self::assertSame($expected, $lines);
     }
 
     /**
@@ -260,12 +255,15 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $quiet = $this->workspace->addCatalogue('aa', "msgid \"\"\nmsgstr \"\"\n\n#: src/A.php:1\nmsgid \"A\"\nmsgstr \"B\"\n");
 
-        $this->workspace->write($this->unresolvedCatalogue(1, 'Text 1'));
+        $this->workspace->write(self::unresolvedCatalogue(1, 'Text 1'));
 
-        $other = $this->workspace->addCatalogue('fr', $this->unresolvedCatalogue(2, 'Text 1'));
+        $other = $this->workspace->addCatalogue('fr', self::unresolvedCatalogue(2, 'Text 1'));
+
+        $this->mergeFromTemplateOf($quiet, $this->workspace->catalogue, $other);
+
         $lines = [];
 
-        $this->runCommand(
+        (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $quiet, $this->workspace->catalogue, $other],
             self::collect($lines),
         );
@@ -285,45 +283,37 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * A missing catalogue after a valid one is named, and the valid one is still processed.
+     * The catalogues of a run in both orders, named as the valid one and the missing one.
      *
-     * @throws CatalogueToolException
+     * @return iterable<string, array{list<string>}>
      */
-    #[Test]
-    public function namesACatalogueThatDoesNotExistAndGoesOn(): void
+    public static function missingAndValidOrders(): iterable
     {
-        $this->requireTools();
-
-        $lines = [];
-
-        $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue, $this->workspace->catalogue . '.missing'],
-            self::collect($lines),
-        );
-
-        self::assertSame(1, $status);
-        self::assertContains('  ✘ ' . $this->workspace->catalogue . '.missing not found', $lines);
-
-        $summary = array_pop($lines);
-
-        self::assertIsString($summary);
-        self::assertMatchesRegularExpression('/^  ✔ resolve-fuzzy: resolved=[1-9]/', $summary);
+        yield 'missing after a valid one' => [['valid', 'missing']];
+        yield 'missing in front of a valid one' => [['missing', 'valid']];
     }
 
     /**
-     * A missing catalogue in front of a valid one is named, and the valid one is still processed.
+     * A missing catalogue is named wherever it stands, and the valid one is still processed.
+     *
+     * @param list<string> $order The kinds of the catalogues in the order they are handed to the command
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function processesTheCataloguesAfterAMissingOne(): void
+    #[DataProvider('missingAndValidOrders')]
+    public function namesACatalogueThatDoesNotExistAndGoesOn(array $order): void
     {
         $this->requireTools();
 
+        $paths = [
+            'valid'   => $this->workspace->catalogue,
+            'missing' => $this->workspace->catalogue . '.missing',
+        ];
         $lines = [];
 
-        $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue . '.missing', $this->workspace->catalogue],
+        $status = (new FuzzyResolverCommand())->run(
+            [$this->workspace->template, $paths[$order[0]], $paths[$order[1]]],
             self::collect($lines),
         );
 
@@ -383,7 +373,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
             $lines = [];
 
-            $status = $this->runCommand(
+            $status = (new FuzzyResolverCommand())->run(
                 [$this->workspace->template, $this->workspace->catalogue],
                 self::collect($lines),
             );
@@ -412,7 +402,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
             $lines = [];
 
-            $status = $this->runCommand(
+            $status = (new FuzzyResolverCommand())->run(
                 [$this->workspace->template, $this->workspace->catalogue],
                 self::collect($lines),
             );
@@ -441,7 +431,7 @@ final class FuzzyResolverCommandTest extends TestCase
         $before = file_get_contents($target);
         $lines  = [];
 
-        $status = $this->runCommand(
+        $status = (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $this->workspace->catalogue],
             self::collect($lines),
         );
@@ -473,9 +463,11 @@ final class FuzzyResolverCommandTest extends TestCase
             ),
         );
 
+        $this->mergeFromTemplateOf($this->workspace->catalogue);
+
         $lines = [];
 
-        $status = $this->runCommand(
+        $status = (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $this->workspace->catalogue],
             self::collect($lines),
         );
@@ -499,7 +491,7 @@ final class FuzzyResolverCommandTest extends TestCase
         $this->requireTools();
 
         $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n",
+            GettextWorkspace::HEADER . "msgstr \"orphan\"\n",
         );
 
         $lines = $this->runRefused();
@@ -521,12 +513,12 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $refused = $this->workspace->addCatalogue(
             'aa',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgstr \"orphan\"\n",
+            GettextWorkspace::HEADER . "msgstr \"orphan\"\n",
         );
 
         $lines = [];
 
-        $status = $this->runCommand(
+        $status = (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $refused, $this->workspace->catalogue],
             self::collect($lines),
         );
@@ -550,8 +542,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $locked = $this->workspace->addCatalogue('aa', (string) file_get_contents($this->workspace->catalogue));
 
-        file_put_contents($this->workspace->template, GettextWorkspace::templateFrom([$locked, $this->workspace->catalogue]));
-        GettextWorkspace::mergeFile($locked, $this->workspace->template);
+        $this->mergeFromTemplateOf($locked, $this->workspace->catalogue);
 
         chmod(dirname($locked), 0500);
 
@@ -562,7 +553,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
             $lines = [];
 
-            $status = $this->runCommand(
+            $status = (new FuzzyResolverCommand())->run(
                 [$this->workspace->template, $locked, $this->workspace->catalogue],
                 self::collect($lines),
             );
@@ -592,7 +583,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         file_put_contents(
             $this->workspace->template,
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "msgid \"A – B\"\nmsgstr \"\"\n\nmsgid \"Plain\"\nmsgstr \"\"\n",
         );
 
@@ -655,7 +646,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $header = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header = GettextWorkspace::HEADER;
 
         file_put_contents(
             $this->workspace->template,
@@ -675,89 +666,6 @@ final class FuzzyResolverCommandTest extends TestCase
             implode("\n", $lines),
         );
         self::assertSame($before, $this->workspace->read());
-    }
-
-    /**
-     * Characters of a source text that set the direction of a text do not reach the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function writesNoControlCharacterOfACatalogueIntoTheReport(): void
-    {
-        $this->requireTools();
-
-        $this->workspace->write(
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
-        );
-
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $this->workspace->catalogue], self::collect($lines));
-
-        self::assertSame('      - A ?X::error::y', $lines[1]);
-        self::assertSame(0, preg_match('/[\x00-\x08\x0B-\x1F\x7F]/', implode("\n", $lines)));
-    }
-
-    /**
-     * A line feed in a path does not start a line of its own in the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function keepsALineFeedOfAPathOutOfTheReport(): void
-    {
-        $lines = [];
-
-        $status = $this->runCommand(
-            [$this->workspace->template, $this->workspace->catalogue . '
-::error::x'],
-            self::collect($lines),
-        );
-
-        self::assertSame(1, $status);
-        self::assertSame(['  ✘ ' . $this->workspace->catalogue . '?::error::x not found', '  ✔ resolve-fuzzy: resolved=0, remaining=0'], $lines);
-    }
-
-    /**
-     * The name of the directory of a catalogue reaches the report on one line.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function keepsALineFeedOfALocaleNameOutOfTheReport(): void
-    {
-        $this->requireTools();
-
-        $other = $this->workspace->addCatalogue('x
-::error::y', $this->unresolvedCatalogue(1, 'Text 1'));
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $other], self::collect($lines));
-
-        self::assertSame('  ▸ x?::error::y  resolved=  0  remaining-fuzzy=  1', $lines[0]);
-    }
-
-    /**
-     * A locale name that looks like a CI command is never the first thing of a line of the report.
-     *
-     * @throws CatalogueToolException
-     */
-    #[Test]
-    public function startsEveryLineOfTheReportWithAMarker(): void
-    {
-        $other = $this->workspace->addCatalogue('::error::x##[warning]y', $this->unresolvedCatalogue(1, 'Text 1'));
-        $lines = [];
-
-        $this->runCommand([$this->workspace->template, $other], self::collect($lines));
-
-        self::assertNotSame([], $lines);
-
-        foreach ($lines as $line) {
-            self::assertStringNotContainsString('##[', $line);
-            self::assertSame(0, preg_match('/^\s*::/', $line), $line);
-            self::assertSame(1, preg_match('/^\s*(▸|-|~|…|✔|✘)/u', $line), $line);
-        }
     }
 
     /**
@@ -811,29 +719,101 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * A rewritten translation is listed with the source text behind a marker, whatever the source text starts with.
+     * The places where the report names text that a contributor controls, each with the locale of the added
+     * catalogue, its text, what is appended to its path and the lines that the report shows for it. A
+     * placeholder in a line stands for the path of the added catalogue.
+     *
+     * @return iterable<string, array{string, string, string, list<string>}>
+     */
+    public static function hostileSites(): iterable
+    {
+        yield 'a source text with a control character' => [
+            'fr',
+            GettextWorkspace::HEADER . "#, fuzzy\n#| msgid \"Old\"\nmsgid \"A \u{202E}X::error::y\"\nmsgstr \"Alt\"\n",
+            '',
+            [
+                '  ▸ fr        resolved=  0  remaining-fuzzy=  1',
+                '      - A ?X::error::y',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a line feed in the path of a catalogue' => [
+            'fr',
+            self::unresolvedCatalogue(1, 'Text 1'),
+            "\n::error::x",
+            [
+                '  ✘ {path}?::error::x not found',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=0',
+            ],
+        ];
+
+        yield 'a line feed in the name of the locale directory' => [
+            "x\n::error::y",
+            self::unresolvedCatalogue(1, 'Text 1'),
+            '',
+            [
+                '  ▸ x?::error::y  resolved=  0  remaining-fuzzy=  1',
+                '      - Text 1',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a locale name that looks like a CI command' => [
+            '::error::x##[warning]y',
+            self::unresolvedCatalogue(1, 'Text 1'),
+            '',
+            [
+                '  ▸ ::error::x##?[warning]y  resolved=  0  remaining-fuzzy=  1',
+                '      - Text 1',
+                '  ✔ resolve-fuzzy: resolved=0, remaining=1',
+            ],
+        ];
+
+        yield 'a rewritten translation behind a marker' => [
+            'it',
+            GettextWorkspace::HEADER . "#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
+            '',
+            [
+                '  ▸ it        resolved=  1  remaining-fuzzy=  0',
+                '      ~ translation rewritten: ::error::x · y',
+                '  ✔ resolve-fuzzy: resolved=1, remaining=0',
+            ],
+        ];
+    }
+
+    /**
+     * Whatever a source text, a path or a locale name holds is cleaned before the report names it, so a
+     * contributed catalogue cannot start a workflow command in a CI log, put a line of its own into the
+     * report or turn the text around, and every line starts with a marker.
+     *
+     * @param string       $locale   The name of the directory of the added catalogue
+     * @param string       $content  The text of the added catalogue
+     * @param string       $suffix   The text appended to the path of the catalogue in the arguments
+     * @param list<string> $expected The lines of the report, with a placeholder for the path of the catalogue
      *
      * @throws CatalogueToolException
      */
     #[Test]
-    public function listsARewrittenTranslationBehindAMarker(): void
+    #[DataProvider('hostileSites')]
+    public function cleansForeignTextWhereverTheReportNamesIt(string $locale, string $content, string $suffix, array $expected): void
     {
         $this->requireTools();
 
-        $other = $this->workspace->addCatalogue(
-            'it',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n#, fuzzy\n#| msgid \"::error::x - y\"\nmsgid \"::error::x · y\"\nmsgstr \"Foo - Bar\"\n",
-        );
+        $path = $this->workspace->addCatalogue($locale, $content);
+
+        $this->mergeFromTemplateOf($path);
+
         $lines = [];
 
-        $this->runCommand([$this->templateOf(['::error::x · y']), $other], self::collect($lines));
+        (new FuzzyResolverCommand())->run([$this->workspace->template, $path . $suffix], self::collect($lines));
 
-        self::assertSame(
-            ['  ▸ it        resolved=  1  remaining-fuzzy=  0', '      ~ translation rewritten: ::error::x · y'],
-            array_slice($lines, 0, 2),
-        );
+        self::assertSame(str_replace('{path}', $path, implode("\n", $expected)), implode("\n", $lines));
+        self::assertSame(0, preg_match('/[\x00-\x08\x0B-\x1F\x7F]/', implode("\n", $lines)));
 
         foreach ($lines as $line) {
+            self::assertStringNotContainsString('##[', $line);
+            self::assertSame(0, preg_match('/^\s*::/', $line), $line);
             self::assertSame(1, preg_match('/^\s*(▸|-|~|…|✔|✘)/u', $line), $line);
         }
     }
@@ -851,15 +831,18 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $other = $this->workspace->addCatalogue(
             'it',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+            GettextWorkspace::HEADER
             . "msgid \"Gamma\"\nmsgstr \"c\"\n\n"
             . "#, fuzzy\n#| msgid \"Beta - x\"\nmsgid \"Beta · x\"\nmsgstr \"B - x\"\n\n"
             . "msgid \"Alpha\"\nmsgstr \"a\"\n",
         );
-        $lines = [];
+        $template = $this->templateOf(['Alpha', 'Beta · x', 'Gamma']);
+        $lines    = [];
 
-        $status = $this->runCommand(
-            [$this->templateOf(['Alpha', 'Beta · x', 'Gamma']), $other],
+        GettextWorkspace::mergeFile($other, $template);
+
+        $status = (new FuzzyResolverCommand())->run(
+            [$template, $other],
             self::collect($lines),
         );
 
@@ -890,11 +873,14 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $other = $this->workspace->addCatalogue(
             'es',
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . implode("\n\n", $entries) . "\n",
+            GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n",
         );
-        $lines = [];
+        $template = $this->templateOf(array_map(static fn (int $number): string => sprintf('Entry %d · x', $number), range(1, 11)));
+        $lines    = [];
 
-        $this->runCommand([$this->templateOf(array_map(static fn (int $number): string => sprintf('Entry %d · x', $number), range(1, 11))), $other], self::collect($lines));
+        GettextWorkspace::mergeFile($other, $template);
+
+        (new FuzzyResolverCommand())->run([$template, $other], self::collect($lines));
 
         self::assertSame('  ▸ es        resolved= 11  remaining-fuzzy=  0', $lines[0]);
         $rewritten = array_values(array_filter($lines, static fn (string $line): bool => str_contains($line, '~ translation rewritten:')));
@@ -915,7 +901,7 @@ final class FuzzyResolverCommandTest extends TestCase
     {
         $lines = [];
 
-        $status = $this->runCommand(
+        $status = (new FuzzyResolverCommand())->run(
             [$this->workspace->template . '.missing', $this->workspace->catalogue],
             self::collect($lines),
         );
@@ -937,7 +923,7 @@ final class FuzzyResolverCommandTest extends TestCase
         $other = $this->workspace->addCatalogue('fr', $this->workspace->read());
         $lines = [];
 
-        $first = $this->runCommand(
+        $first = (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $this->workspace->catalogue, $other],
             self::collect($lines),
         );
@@ -972,7 +958,7 @@ final class FuzzyResolverCommandTest extends TestCase
 
         $lines = [];
 
-        $this->runCommand(
+        (new FuzzyResolverCommand())->run(
             [$this->workspace->template, $this->workspace->catalogue, $other],
             self::collect($lines),
         );
@@ -989,7 +975,7 @@ final class FuzzyResolverCommandTest extends TestCase
      *
      * @return string The text of the catalogue
      */
-    private function unresolvedCatalogue(int $count, string $first): string
+    private static function unresolvedCatalogue(int $count, string $first): string
     {
         $entries = [];
 
@@ -1002,47 +988,18 @@ final class FuzzyResolverCommandTest extends TestCase
     }
 
     /**
-     * Skips the running test where a gettext tool is missing, because the command reads every catalogue with one.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
-    }
-
-    /**
-     * Runs the command after the catalogues went through the merge the language pipeline of a module runs first.
+     * Writes the template of the workspace from the given catalogues and merges each of them from it, the way the
+     * language pipeline of a module does before it runs the command.
      *
-     * @param list<string> $arguments The template and the catalogues
-     * @param Closure      $write     The writer of the report
-     *
-     * @return int The status of the command
+     * @param string ...$catalogues The paths of the catalogues
      */
-    private function runCommand(array $arguments, Closure $write): int
+    private function mergeFromTemplateOf(string ...$catalogues): void
     {
-        $template = $arguments[0] ?? '';
+        file_put_contents($this->workspace->template, GettextWorkspace::templateFrom(array_values($catalogues)));
 
-        if ($template === $this->workspace->template) {
-            $catalogues = array_values(array_filter(array_slice($arguments, 1), static fn (string $path): bool => is_file($path) && is_readable($path)));
-
-            file_put_contents($template, GettextWorkspace::templateFrom($catalogues));
+        foreach ($catalogues as $catalogue) {
+            GettextWorkspace::mergeFile($catalogue, $this->workspace->template);
         }
-
-        if (is_file($template)) {
-            foreach (array_slice($arguments, 1) as $catalogue) {
-                if (
-                    is_file($catalogue)
-                    && !is_link($catalogue)
-                    && is_readable($catalogue)
-                    && is_writable(dirname($catalogue))
-                ) {
-                    GettextWorkspace::mergeFile($catalogue, $template);
-                }
-            }
-        }
-
-        return (new FuzzyResolverCommand())->run($arguments, $write);
     }
 
     /**
@@ -1087,23 +1044,9 @@ final class FuzzyResolverCommandTest extends TestCase
 
         file_put_contents(
             $path,
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" . implode("\n\n", $entries) . "\n",
+            GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n",
         );
 
         return $path;
-    }
-
-    /**
-     * Builds a writer that collects the lines of the report.
-     *
-     * @param list<string> $lines The list the lines are appended to
-     *
-     * @return Closure(string):void The writer to hand to the command
-     */
-    private function collect(array &$lines): Closure
-    {
-        return static function (string $line) use (&$lines): void {
-            $lines[] = $line;
-        };
     }
 }

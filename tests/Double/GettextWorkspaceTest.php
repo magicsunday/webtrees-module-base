@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function dirname;
 use function file_put_contents;
 use function implode;
 
@@ -31,10 +32,12 @@ use function implode;
 #[CoversNothing]
 final class GettextWorkspaceTest extends TestCase
 {
+    use SkipsWithoutGettextTools;
+
     /**
-     * The header every catalogue and every template starts with.
+     * The header of a template, as the gettext tools write it on one line.
      */
-    private const string HEADER = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+    private const string TEMPLATE_HEADER = "msgid \"\"\nmsgstr \"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
 
     /**
      * Builds a catalogue text from the header followed by the given entries.
@@ -45,19 +48,7 @@ final class GettextWorkspaceTest extends TestCase
      */
     private function catalogue(array $entries): string
     {
-        return self::HEADER . implode("\n\n", $entries) . "\n";
-    }
-
-    /**
-     * Skips the test where the gettext tools are missing, as the other catalogue tests do.
-     *
-     * @return void
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
+        return GettextWorkspace::HEADER . implode("\n\n", $entries) . "\n";
     }
 
     /**
@@ -84,7 +75,7 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                self::HEADER
+                self::TEMPLATE_HEADER
                 . "msgid \"Alpha\"\nmsgstr \"\"\n\n"
                 . "msgctxt \"menu\"\nmsgid \"File\"\nmsgstr \"\"\n\n"
                 . "msgid \"One apple\"\nmsgid_plural \"%d apples\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\n"
@@ -113,7 +104,58 @@ final class GettextWorkspaceTest extends TestCase
             ]));
 
             self::assertSame(
-                self::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                self::TEMPLATE_HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                GettextWorkspace::templateFrom([$path]),
+            );
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
+     * A source text that holds a line feed is written by the tools on several lines, and its entry stays in the
+     * template like any other.
+     */
+    #[Test]
+    public function keepsAnEntryWhoseSourceTextHoldsALineFeed(): void
+    {
+        $this->requireTools();
+
+        $workspace = new GettextWorkspace();
+
+        try {
+            $path = $workspace->addCatalogue('xa', $this->catalogue([
+                "msgid \"line one\\nline two\"\nmsgstr \"Zeile\"",
+            ]));
+
+            $template = GettextWorkspace::templateFrom([$path]);
+
+            self::assertStringContainsString("\"line one\\n\"\n\"line two\"\nmsgstr \"\"", $template);
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
+     * A translation that spans several lines is emptied like any other, for the singular and for every plural form.
+     */
+    #[Test]
+    public function emptiesTranslationsThatSpanSeveralLines(): void
+    {
+        $this->requireTools();
+
+        $workspace = new GettextWorkspace();
+
+        try {
+            $path = $workspace->addCatalogue('xa', $this->catalogue([
+                "msgid \"a\"\nmsgstr \"x\\ny\"",
+                "msgid \"p\"\nmsgid_plural \"q\"\nmsgstr[0] \"a\"\nmsgstr[1] \"b\\nc\"",
+            ]));
+
+            self::assertSame(
+                self::TEMPLATE_HEADER
+                . "msgid \"a\"\nmsgstr \"\"\n\n"
+                . "msgid \"p\"\nmsgid_plural \"q\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n",
                 GettextWorkspace::templateFrom([$path]),
             );
         } finally {
@@ -139,9 +181,31 @@ final class GettextWorkspaceTest extends TestCase
             file_put_contents($broken, "msgid \"unterminated\nmsgstr \"\n");
 
             self::assertSame(
-                self::HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
+                self::TEMPLATE_HEADER . "msgid \"Alpha\"\nmsgstr \"\"\n",
                 GettextWorkspace::templateFrom([$broken, $readable]),
             );
+        } finally {
+            $workspace->remove();
+        }
+    }
+
+    /**
+     * Every translations file lands in a directory of its own, so a test that makes the shared
+     * scratch directory afterwards finds it free.
+     */
+    #[Test]
+    public function writesEveryTranslationsFileIntoADirectoryOfItsOwn(): void
+    {
+        $workspace = new GettextWorkspace();
+
+        try {
+            $first  = $workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
+            $second = $workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
+
+            self::assertNotSame(dirname($first), dirname($second));
+            self::assertFileExists($first);
+            self::assertFileExists($second);
+            self::assertDirectoryExists($workspace->emptyDirectory());
         } finally {
             $workspace->remove();
         }

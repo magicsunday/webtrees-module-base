@@ -21,17 +21,12 @@ use ReflectionClass;
 use RuntimeException;
 
 use function array_diff;
-use function array_keys;
-use function count;
-use function dirname;
-use function file_put_contents;
+use function copy;
 use function is_dir;
 use function mkdir;
-use function pack;
 use function rmdir;
 use function scandir;
 use function sprintf;
-use function strlen;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
@@ -195,62 +190,24 @@ final class ModuleCustomTraitTest extends TestCase
     }
 
     /**
-     * Writes a minimal little-endian gettext MO file, so the parse path is
-     * exercised against a real binary instead of a stubbed reader. Entries are
-     * emitted in insertion order rather than sorted by msgid: the reader under
-     * test scans linearly, so this suffices here, but a binary-searching reader
-     * would require the sorted form the format allows for.
+     * Copies a compiled catalogue of the fixtures into the folder where the trait looks for the language.
      *
-     * The leading entry with the empty msgid is the gettext metadata header
-     * every real catalogue carries — and it is not optional here: the reader
-     * starts its loop at index 1, so a catalogue without it loses its first
-     * translation.
+     * @param string $resources The resources folder of the module, with a trailing slash
+     * @param string $language  The language the catalogue is installed for
+     * @param string $fixture   The path of the fixture catalogue below the fixture catalogues
      *
-     * @param string                   $file         Target path, created including parent directories
-     * @param array<array-key, string> $translations The msgid => msgstr pairs
-     *
-     * @return void
-     *
-     * @throws RuntimeException When the directory or the file cannot be written
+     * @throws RuntimeException When the directory cannot be created or the file cannot be copied
      */
-    private function writeMoFile(string $file, array $translations): void
+    private function installCatalogue(string $resources, string $language, string $fixture): void
     {
-        $directory = dirname($file);
+        $directory = $resources . 'lang/' . $language;
 
         if (!is_dir($directory) && !mkdir($directory, 0o755, true) && !is_dir($directory)) {
             throw new RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
-        $translations       = ['' => "Content-Type: text/plain; charset=UTF-8\n"] + $translations;
-        $count              = count($translations);
-        $originalTable      = 28;
-        $translationTable   = $originalTable + (8 * $count);
-        $stringOffset       = $translationTable + (8 * $count);
-        $originalEntries    = '';
-        $translationEntries = '';
-        $strings            = '';
-
-        foreach (array_keys($translations) as $msgid) {
-            // A numeric msgid ("2024") arrives as an int array key.
-            $msgid = (string) $msgid;
-
-            $originalEntries .= pack('VV', strlen($msgid), $stringOffset + strlen($strings));
-            $strings         .= $msgid . "\0";
-        }
-
-        foreach ($translations as $msgstr) {
-            $translationEntries .= pack('VV', strlen($msgstr), $stringOffset + strlen($strings));
-            $strings            .= $msgstr . "\0";
-        }
-
-        // The trailing pair is the hash table: size 0, and therefore no offset.
-        $payload = pack('VVVVVVV', 0x950412DE, 0, $count, $originalTable, $translationTable, 0, 0)
-            . $originalEntries
-            . $translationEntries
-            . $strings;
-
-        if (file_put_contents($file, $payload) !== strlen($payload)) {
-            throw new RuntimeException(sprintf('Catalogue "%s" was not written completely', $file));
+        if (!copy(__DIR__ . '/../fixtures/catalogues/' . $fixture, $directory . '/messages.mo')) {
+            throw new RuntimeException(sprintf('Catalogue "%s" was not copied', $fixture));
         }
     }
 
@@ -283,20 +240,26 @@ final class ModuleCustomTraitTest extends TestCase
 
     /**
      * Pins the lookup path and the parse: the catalogue is read from
-     * `{resourcesFolder}lang/{language}/messages.mo`.
+     * `{resourcesFolder}lang/{language}/messages.mo`, each language gets its own, and a language
+     * without one gets nothing. The first fixture holds a single entry, which is its first one, and the
+     * second holds the entry `404` besides.
      */
     #[Test]
     public function customTranslationsReadsTheCompiledCatalogueOfTheRequestedLanguage(): void
     {
         $resources = $this->createResourcesFolder();
 
-        $this->writeMoFile($resources . 'lang/de/messages.mo', ['Ancestors' => 'Vorfahren']);
-        $this->writeMoFile($resources . 'lang/nl/messages.mo', ['Ancestors' => 'Voorouders']);
+        $this->installCatalogue($resources, 'de', 'no-plural-entry/cs/messages.mo');
+        $this->installCatalogue($resources, 'nl', 'numeric-msgid/cs/messages.mo');
 
         $module = $this->createModule($resources);
 
-        self::assertSame(['Ancestors' => 'Vorfahren'], $module->customTranslations('de'));
-        self::assertSame(['Ancestors' => 'Voorouders'], $module->customTranslations('nl'));
+        $german = $module->customTranslations('de');
+        $dutch  = $module->customTranslations('nl');
+
+        self::assertSame(['Hello' => 'Ahoj'], $german);
+        self::assertSame('Ahoj', $dutch['Hello'] ?? null);
+        self::assertSame('Nenalezeno', $dutch['404'] ?? null);
         self::assertSame([], $module->customTranslations('fr'));
     }
 }

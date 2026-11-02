@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Bin;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\StartsBinaries;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,11 +20,7 @@ use PHPUnit\Framework\TestCase;
 
 use function copy;
 use function file_get_contents;
-use function file_put_contents;
-use function json_encode;
 use function mkdir;
-
-use const JSON_THROW_ON_ERROR;
 
 /**
  * Starts bin/write-translations as a process and pins what a module's language pipeline sees of it, which is its
@@ -36,6 +33,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversNothing]
 final class WriteTranslationsBinaryTest extends TestCase
 {
+    use SkipsWithoutGettextTools;
     use StartsBinaries;
 
     /**
@@ -107,7 +105,7 @@ final class WriteTranslationsBinaryTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->workspace->prepareMergedCatalogue($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
 
         $result = $this->start([$file, $this->workspace->template, $catalogue]);
 
@@ -127,7 +125,7 @@ final class WriteTranslationsBinaryTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->workspace->prepareMergedCatalogue($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo', 'fr' => 'Bonjour']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo', 'fr' => 'Bonjour']]);
 
         $result = $this->start([$file, $this->workspace->template, $catalogue]);
 
@@ -150,7 +148,7 @@ final class WriteTranslationsBinaryTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->workspace->prepareMergedCatalogue($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
         $missing   = $this->workspace->emptyDirectory() . '/core.pot';
 
         $result = $this->start(['--core-owned=' . $missing, $file, $this->workspace->template, $catalogue]);
@@ -158,32 +156,6 @@ final class WriteTranslationsBinaryTest extends TestCase
         self::assertSame(1, $result['status']);
         self::assertSame('', $result['error']);
         self::assertStringContainsString('cannot be read', $result['output']);
-    }
-
-    /**
-     * Writes a translations file.
-     *
-     * @param array<string, array<string, string>> $translations The translations by source text and locale
-     *
-     * @return string The path of the file
-     */
-    private function translations(array $translations): string
-    {
-        $path = $this->workspace->emptyDirectory() . '/translations.json';
-
-        file_put_contents($path, json_encode($translations, JSON_THROW_ON_ERROR));
-
-        return $path;
-    }
-
-    /**
-     * Skips the running test where a gettext tool is missing.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
     }
 
     /**

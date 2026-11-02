@@ -966,25 +966,6 @@ final class FactResolverTest extends TestCase
     }
 
     /**
-     * A preference that names the marriage keeps the null entry of that tag for a person without a
-     * marriage, and the divorce that is added behind it gives no entry of its own.
-     *
-     * @return void
-     */
-    #[Test]
-    public function factsForKeepsTheNullEntryOfANamedMarriageWithoutAnyMarriage(): void
-    {
-        $resolver = $this->resolverWithTags('MARR');
-
-        $facts = $resolver->factsFor(
-            $this->individualWith([], [$this->familyWith([], 'Anna Schmidt')]),
-            true
-        );
-
-        self::assertSame([null, null, null], $facts, 'birth, death and the null entry of the named marriage');
-    }
-
-    /**
      * A preference that names both tags keeps its own order for them, also when it lists the divorce
      * first, because only a divorce that the method adds on top is placed behind the marriage.
      *

@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Catalogue;
 
-use Closure;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueBlockParser;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueEntryReader;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\CatalogueFile;
@@ -21,7 +20,9 @@ use MagicSunday\Webtrees\ModuleBase\Catalogue\PrintableText;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\Resolution;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\TranslationFiller;
 use MagicSunday\Webtrees\ModuleBase\Catalogue\WriteTranslationsCommand;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\CollectsReportLines;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\GettextWorkspace;
+use MagicSunday\Webtrees\ModuleBase\Test\Double\SkipsWithoutGettextTools;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,18 +33,16 @@ use function array_filter;
 use function basename;
 use function chmod;
 use function dirname;
+use function escapeshellarg;
 use function file_get_contents;
 use function file_put_contents;
 use function function_exists;
 use function getenv;
-use function json_encode;
 use function mkdir;
 use function posix_geteuid;
 use function putenv;
 use function str_contains;
 use function str_replace;
-
-use const JSON_THROW_ON_ERROR;
 
 /**
  * Pins what the command writes into a catalogue and what it refuses.
@@ -63,6 +62,9 @@ use const JSON_THROW_ON_ERROR;
 #[UsesClass(TranslationFiller::class)]
 final class WriteTranslationsCommandTest extends TestCase
 {
+    use CollectsReportLines;
+    use SkipsWithoutGettextTools;
+
     /**
      * A value that would start a workflow command in a CI log and turn the text around if it reached the report as it
      * is, which a contributor can put into a path, a locale or a source text.
@@ -109,7 +111,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Ding', 'Dinge']]]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Ding', 'Dinge']]]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -140,7 +142,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->addCatalogue('ru', ''), 3);
-        $file      = $this->translations(['Hello' => ['ru' => 'Привет'], 'One' => ['ru' => ['a', 'b']]]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['ru' => 'Привет'], 'One' => ['ru' => ['a', 'b']]]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -182,13 +184,13 @@ final class WriteTranslationsCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $header = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header = GettextWorkspace::HEADER;
 
         file_put_contents($this->workspace->template, $header . "msgid \"404\"\nmsgstr \"\"\n");
         file_put_contents($this->workspace->catalogue, $header . "msgid \"404\"\nmsgstr \"\"\n");
         GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
 
-        $file  = $this->translations(['404' => ['de' => 'Nicht gefunden']]);
+        $file  = $this->workspace->writeTranslations(['404' => ['de' => 'Nicht gefunden']]);
         $lines = [];
 
         $status = (new WriteTranslationsCommand())->run(
@@ -234,11 +236,11 @@ final class WriteTranslationsCommandTest extends TestCase
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
         $core      = $this->workspace->emptyDirectory() . '/core.pot';
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Ding', 'Dinge']]]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Ding', 'Dinge']]]);
 
         file_put_contents(
             $core,
-            "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\nmsgid \"Hello\"\nmsgstr \"\"\n",
+            GettextWorkspace::HEADER . "msgid \"Hello\"\nmsgstr \"\"\n",
         );
 
         $lines  = [];
@@ -276,7 +278,7 @@ final class WriteTranslationsCommandTest extends TestCase
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
         $before    = (string) file_get_contents($catalogue);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
         $lines     = [];
 
         $status = $this->runWithChangedResult($change, [$file, $this->workspace->template, $catalogue], $lines);
@@ -319,7 +321,7 @@ final class WriteTranslationsCommandTest extends TestCase
 
         file_put_contents($this->workspace->template, file_get_contents($this->workspace->template) . "\nmsgid \"Extra\"\nmsgstr \"\"\n");
 
-        $file  = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file  = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
         $lines = [];
 
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -339,7 +341,7 @@ final class WriteTranslationsCommandTest extends TestCase
 
         $catalogue = $this->prepare($this->workspace->addCatalogue('ru', ''), 2);
         $before    = (string) file_get_contents($catalogue);
-        $file      = $this->translations(['One' => ['ru' => ['a', 'b', 'c']]]);
+        $file      = $this->workspace->writeTranslations(['One' => ['ru' => ['a', 'b', 'c']]]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -358,7 +360,7 @@ final class WriteTranslationsCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $header  = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header  = GettextWorkspace::HEADER;
         $entries = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
 
         file_put_contents($this->workspace->template, $header . $entries);
@@ -366,7 +368,7 @@ final class WriteTranslationsCommandTest extends TestCase
         GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
 
         $before = (string) file_get_contents($this->workspace->catalogue);
-        $file   = $this->translations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Eins', 'Viele']]]);
+        $file   = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Eins', 'Viele']]]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run(
@@ -397,7 +399,7 @@ final class WriteTranslationsCommandTest extends TestCase
         file_put_contents($this->workspace->catalogue, $header . $entries);
         GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
 
-        $file = $this->translations(['One' => ['de' => ['Eins', 'Viele']]]);
+        $file = $this->workspace->writeTranslations(['One' => ['de' => ['Eins', 'Viele']]]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run(
@@ -417,7 +419,7 @@ final class WriteTranslationsCommandTest extends TestCase
     {
         $this->requireTools();
 
-        $header  = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header  = GettextWorkspace::HEADER;
         $entries = "msgid \"0\"\nmsgstr \"\"\n\nmsgid \"1\"\nmsgstr \"\"\n";
 
         file_put_contents($this->workspace->template, $header . $entries);
@@ -455,7 +457,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $russian = $missing
             ? dirname($this->workspace->addCatalogue('ru', '')) . '/absent.po'
             : $this->prepare($this->workspace->addCatalogue('ru', ''), 2);
-        $file = $this->translations(['Hello' => ['de' => 'Hallo', 'ru' => 'Привет']]);
+        $file = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo', 'ru' => 'Привет']]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run(
@@ -489,7 +491,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo'], 'Typo' => ['de' => 'Tippfehler']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo'], 'Typo' => ['de' => 'Tippfehler']]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -508,7 +510,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => '']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => '']]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -592,7 +594,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->catalogue, 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo', 'fr_CA' => 'Allo']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo', 'fr_CA' => 'Allo']]);
 
         $lines  = [];
         $status = (new WriteTranslationsCommand())->run([$file, $this->workspace->template, $catalogue], $this->collect($lines));
@@ -610,7 +612,7 @@ final class WriteTranslationsCommandTest extends TestCase
         $this->requireTools();
 
         $catalogue = $this->prepare($this->workspace->addCatalogue('fr', ''), 2);
-        $file      = $this->translations(['Hello' => ['fr' => 'Bonjour']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['fr' => 'Bonjour']]);
         $dotted    = dirname($catalogue) . '/./' . basename($catalogue);
 
         $lines  = [];
@@ -675,8 +677,8 @@ final class WriteTranslationsCommandTest extends TestCase
     }
 
     /**
-     * A catalogue that cannot be written is named with the message of the tool, and both are cleaned. The directory
-     * is made read-only for the run, which only a user other than root feels.
+     * A catalogue that cannot be written is named in the report, and the name is cleaned. The directory is made
+     * read-only for the run, which only a user other than root feels.
      */
     #[Test]
     public function cleansTheNameOfACatalogueThatCannotBeWritten(): void
@@ -691,7 +693,7 @@ final class WriteTranslationsCommandTest extends TestCase
         }
 
         $catalogue = $this->prepare($this->hostileCatalogue('de'), 2);
-        $file      = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file      = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
         $lines     = [];
 
         chmod(dirname($catalogue), 0555);
@@ -721,7 +723,7 @@ final class WriteTranslationsCommandTest extends TestCase
     private function hostileScenario(string $scenario): array
     {
         $hostile = self::HOSTILE;
-        $file    = $this->translations(['Hello' => ['de' => 'Hallo']]);
+        $file    = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo']]);
         $valid   = $this->prepare($this->workspace->catalogue, 2);
         $base    = $this->workspace->emptyDirectory();
 
@@ -758,12 +760,12 @@ final class WriteTranslationsCommandTest extends TestCase
             'result-differs'       => $this->withHostileParent($file, 2, 's/msgstr "Hallo"/msgstr "Falsch"/'),
             'not-merged'           => $this->notMerged($file),
             'key-matches-no-entry' => [
-                [$this->translations([$hostile => ['de' => 'x']]), $this->workspace->template, $valid],
+                [$this->workspace->writeTranslations([$hostile => ['de' => 'x']]), $this->workspace->template, $valid],
                 [$hostile],
                 null,
             ],
             'locale-matches-no-catalogue' => [
-                [$this->translations(['Hello' => [$hostile => 'x']]), $this->workspace->template, $valid],
+                [$this->workspace->writeTranslations(['Hello' => [$hostile => 'x']]), $this->workspace->template, $valid],
                 [$hostile],
                 null,
             ],
@@ -820,7 +822,7 @@ final class WriteTranslationsCommandTest extends TestCase
         GettextWorkspace::mergeFile($this->workspace->catalogue, $this->workspace->template);
 
         return [
-            [$this->translations([$hostile => ['de' => '']]), $this->workspace->template, $this->workspace->catalogue],
+            [$this->workspace->writeTranslations([$hostile => ['de' => '']]), $this->workspace->template, $this->workspace->catalogue],
             ['de: "' . $hostile . '" has an empty translation'],
             null,
         ];
@@ -835,14 +837,14 @@ final class WriteTranslationsCommandTest extends TestCase
     private function withoutPluralRule(): array
     {
         $catalogue = $this->hostileCatalogue('de');
-        $header    = "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n";
+        $header    = GettextWorkspace::HEADER;
         $entries   = "msgid \"Hello\"\nmsgstr \"\"\n\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
 
         file_put_contents($this->workspace->template, $header . $entries);
         file_put_contents($catalogue, $header . $entries);
         GettextWorkspace::mergeFile($catalogue, $this->workspace->template);
 
-        $file = $this->translations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Eins', 'Viele']]]);
+        $file = $this->workspace->writeTranslations(['Hello' => ['de' => 'Hallo'], 'One' => ['de' => ['Eins', 'Viele']]]);
 
         return [[$file, $this->workspace->template, $catalogue], [$catalogue], null];
     }
@@ -954,7 +956,7 @@ final class WriteTranslationsCommandTest extends TestCase
         mkdir($stub, 0700, true);
         file_put_contents(
             $stub . '/msgmerge',
-            "#!/bin/sh\nPATH='" . $original . "' msgmerge \"\$@\" || exit \$?\n"
+            "#!/bin/sh\nPATH=" . escapeshellarg($original) . " msgmerge \"\$@\" || exit \$?\n"
             . "case \" \$* \" in\n*' --update '*) ;;\n*) exit 0 ;;\nesac\n"
             . "for argument in \"\$@\"; do previous=\"\$last\"; last=\"\$argument\"; done\n"
             . "sed -i '" . $change . "' \"\$previous\"\n",
@@ -980,45 +982,5 @@ final class WriteTranslationsCommandTest extends TestCase
     private function prepare(string $path, int $plurals): string
     {
         return $this->workspace->prepareMergedCatalogue($path, $plurals);
-    }
-
-    /**
-     * Writes a translations file.
-     *
-     * @param array<array-key, array<string, string|list<string>>> $translations The translations by key and locale
-     *
-     * @return string The path of the file
-     */
-    private function translations(array $translations): string
-    {
-        $path = $this->workspace->emptyDirectory() . '/translations.json';
-
-        file_put_contents($path, json_encode($translations, JSON_THROW_ON_ERROR));
-
-        return $path;
-    }
-
-    /**
-     * Skips the running test where a gettext tool is missing.
-     */
-    private function requireTools(): void
-    {
-        if (!GettextWorkspace::toolsAvailable()) {
-            self::markTestSkipped('The gettext tools are not installed.');
-        }
-    }
-
-    /**
-     * Builds a writer that collects the lines of the report.
-     *
-     * @param list<string> $lines The list the lines are appended to
-     *
-     * @return Closure(string):void The writer to hand to the command
-     */
-    private function collect(array &$lines): Closure
-    {
-        return static function (string $line) use (&$lines): void {
-            $lines[] = $line;
-        };
     }
 }
