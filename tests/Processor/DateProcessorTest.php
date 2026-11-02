@@ -257,6 +257,38 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * A person that the viewer may not see is never reported as deceased. webtrees decides from the
+     * raw record that such a person is dead, for example while a keep-alive period hides a recent
+     * death, and the dates of the person are hidden at the same time, so the lifetime label, the
+     * compact label and the deceased flag stay neutral, as for any other hidden fact. A visible dead
+     * person keeps its label, which the data providers of the other lifetime tests pin.
+     *
+     * @return void
+     */
+    #[Test]
+    public function reportsAHiddenDeadPersonNeitherAsDeceasedNorWithASymbol(): void
+    {
+        $processor = new DateProcessor($this->individualWith(isDead: true, canShow: false));
+
+        self::assertFalse($processor->isDead());
+        self::assertSame('', $processor->getLifetimeDescription(new LifetimeLabels('born %s', 'died %s', 'deceased')));
+        self::assertSame('', $processor->getCompactLifetimeDescription());
+    }
+
+    /**
+     * The deceased flag of a visible person follows webtrees, so the gate only takes the flag away
+     * from a person that the viewer may not see.
+     *
+     * @return void
+     */
+    #[Test]
+    public function reportsAVisibleDeadPersonAsDeceased(): void
+    {
+        self::assertTrue((new DateProcessor($this->individualWith(isDead: true)))->isDead());
+        self::assertFalse((new DateProcessor($this->individualWith(isDead: false)))->isDead());
+    }
+
+    /**
      * @return array<string, array{string, bool}>
      */
     public static function presenceOfADateDataProvider(): array
@@ -530,6 +562,7 @@ final class DateProcessorTest extends TestCase
      * @param bool        $isDead    Whether the individual is reported as deceased
      * @param Family|null $spouse    The individual's own spouse family, if any
      * @param Family|null $parents   The family the individual is a child of, if any
+     * @param bool        $canShow   Whether the viewer may see the individual
      *
      * @return Individual
      */
@@ -539,8 +572,10 @@ final class DateProcessorTest extends TestCase
         bool $isDead = false,
         ?Family $spouse = null,
         ?Family $parents = null,
+        bool $canShow = true,
     ): Individual {
         $individual = self::createStub(Individual::class);
+        $individual->method('canShow')->willReturn($canShow);
         $individual->method('getBirthDate')->willReturn(new Date($birthDate));
         $individual->method('getDeathDate')->willReturn(new Date($deathDate));
         $individual->method('isDead')->willReturn($isDead);
