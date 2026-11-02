@@ -45,7 +45,7 @@ final class NodeDataTest extends TestCase
      * The serialised form of a node that has not been filled in.
      */
     private const string EMPTY_JSON
-        = '{"id":0,"xref":"","url":"","updateUrl":"","generation":0,"name":"","isNameRtl":false,'
+        = '{"xref":"","url":"","updateUrl":"","generation":0,"name":"","isNameRtl":false,'
         . '"nameSegments":[],"alternativeName":"",'
         . '"isAltRtl":false,"thumbnail":"","silhouette":"","sex":"U","birth":"","death":"","timespan":""}';
 
@@ -53,12 +53,12 @@ final class NodeDataTest extends TestCase
      * The serialised form of a fully populated node.
      */
     private const string FILLED_JSON
-        = '{"id":7,"xref":"X1","url":"\/individual\/X1","updateUrl":"\/chart\/X1","generation":3,'
+        = '{"xref":"X1","url":"\/individual\/X1","updateUrl":"\/chart\/X1","generation":3,'
         . '"name":"Max Mustermann","isNameRtl":true,"nameSegments":['
         . '{"label":"Max","kind":"given","isPreferred":true},{"label":"\"M\u00e4xchen\"","kind":"nickname","isPreferred":false},'
         . '{"label":"Mustermann","kind":"surname","isPreferred":false}],"alternativeName":"Maxi Muster","isAltRtl":true,'
         . '"thumbnail":"\/media\/x.jpg","silhouette":"\/media\/m.svg","sex":"M","birth":"1 JAN 1900",'
-        . '"death":"2 FEB 1980","timespan":"1900 - 1980"}';
+        . '"death":"2 FEB 1980","timespan":"1900 - 1980","id":7}';
 
     /**
      * A node that has not been filled in serialises every key, in the fixed order.
@@ -102,6 +102,20 @@ final class NodeDataTest extends TestCase
             ->setTimespan('1900 - 1980');
 
         self::assertSame(self::FILLED_JSON, json_encode($nodeData, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * The id is part of the serialised form only when a consumer set it. A node that never got one
+     * carries no id, and an id of zero that a consumer set on purpose is still sent.
+     *
+     * @return void
+     */
+    #[Test]
+    public function sendsTheIdOnlyWhenItWasSet(): void
+    {
+        self::assertArrayNotHasKey('id', (new NodeData())->jsonSerialize());
+        self::assertSame(0, (new NodeData())->setId(0)->jsonSerialize()['id']);
+        self::assertSame(7, (new NodeData())->setId(7)->jsonSerialize()['id']);
     }
 
     /**
