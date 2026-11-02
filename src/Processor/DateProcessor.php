@@ -21,7 +21,7 @@ use MagicSunday\Webtrees\ModuleBase\Support\PlainText;
 
 use function min;
 use function preg_replace;
-use function sprintf;
+use function str_replace;
 use function trim;
 
 use const PHP_INT_MAX;
@@ -155,11 +155,11 @@ final readonly class DateProcessor
         }
 
         if ($this->birthDate->isOK()) {
-            return sprintf($labels->bornFormat, $this->getBirthYear());
+            return str_replace('%s', (string) $this->getBirthYear(), $labels->bornFormat);
         }
 
         if ($this->deathDate->isOK()) {
-            return sprintf($labels->diedFormat, $this->getDeathYear());
+            return str_replace('%s', (string) $this->getDeathYear(), $labels->diedFormat);
         }
 
         if ($this->individual->isDead()) {

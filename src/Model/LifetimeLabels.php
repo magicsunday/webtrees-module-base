@@ -25,8 +25,8 @@ namespace MagicSunday\Webtrees\ModuleBase\Model;
 final readonly class LifetimeLabels
 {
     /**
-     * @param string $bornFormat The text for a person with a birth year only, with one `%s` for the year
-     * @param string $diedFormat The text for a person with a death year only, with one `%s` for the year
+     * @param string $bornFormat The text for a person with a birth year only, where each `%s` is replaced by the year
+     * @param string $diedFormat The text for a person with a death year only, where each `%s` is replaced by the year
      * @param string $deceased   The text for a deceased person without a birth or death year
      */
     public function __construct(
