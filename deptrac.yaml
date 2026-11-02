@@ -125,8 +125,9 @@ deptrac:
             - Contract
             - LeafContract
 
-        # The reusable test cases the consuming modules extend. They depend on PHPUnit
-        # and the webtrees localization library only, never on the rest of src/.
+        # The reusable test cases and fixtures the consuming modules use. They depend on
+        # PHPUnit, webtrees and the router and database libraries of webtrees, never on
+        # the rest of src/.
         Testing:
             - Testing
 

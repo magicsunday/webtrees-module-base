@@ -133,6 +133,12 @@ final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
 
   webtrees merges a module's catalogue over the catalogue of webtrees itself, so a plural entry with the wrong number of forms or an empty form damages the translation of the same text everywhere in the installation. The checks guard against that. PHPUnit is a dev dependency of the consuming module. The subclass carries `#[CoversNothing]` because it covers no class. A `phpunit.xml` with `requireCoverageMetadata="true"` demands the attribute. A module whose catalogues carry no plural string overrides `shipsPluralEntries()` and returns `false`. The case then checks that no plural entry exists, so one added later fails until the override is removed.
 
+- **`EnglishLocaleFixture`**, **`RoutingFixture`**, **`ModuleSettingsFixture`** and **`MarkupFixture`**, the test helpers of the chart modules. All four are `final` classes with static methods, for the tests of the consuming module's own suite:
+  - `EnglishLocaleFixture::install(array $messages = [])` installs the English locale and a translator that knows the given messages, so translated texts are deterministic.
+  - `RoutingFixture::register(array $services = [])` registers a route factory that renders a route as its name and query, and a container that serves the route factory and the given services by their id. Asking for another id fails. It returns the route map that the route factory hands out, so a test can read back the routes that the code registers.
+  - `ModuleSettingsFixture::seed(string $moduleName, array $preferences)` seeds the preferences of one module into an in-memory database, because the method that reads a preference is final. The consuming module builds its module object itself.
+  - `MarkupFixture::xpathOf()`, `elements()` and `first()` parse rendered markup and find elements in it.
+
 ## Development
 
 See [AGENTS.md](AGENTS.md) for the full development workflow, including the
