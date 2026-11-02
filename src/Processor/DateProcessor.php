@@ -162,7 +162,7 @@ final readonly class DateProcessor
             return str_replace('%s', (string) $this->getDeathYear(), $labels->diedFormat);
         }
 
-        if ($this->individual->isDead()) {
+        if ($this->isDead()) {
             return $labels->deceased;
         }
 
@@ -195,13 +195,16 @@ final readonly class DateProcessor
 
     /**
      * Returns true when webtrees considers the individual to be deceased, even
-     * if no explicit death date is recorded.
+     * if no explicit death date is recorded. An individual that the viewer may
+     * not see is never reported as deceased, because webtrees derives that state
+     * from the raw record, for example while a keep-alive period hides a recent
+     * death, and the dates of such an individual are hidden as well.
      *
      * @return bool
      */
     public function isDead(): bool
     {
-        return $this->individual->isDead();
+        return $this->individual->canShow() && $this->individual->isDead();
     }
 
     /**
@@ -343,7 +346,7 @@ final readonly class DateProcessor
             return Symbols::Death->value . ' ' . $deathYear;
         }
 
-        if ($this->individual->isDead()) {
+        if ($this->isDead()) {
             return Symbols::Death->value;
         }
 
