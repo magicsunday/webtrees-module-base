@@ -24,9 +24,10 @@ use JsonSerializable;
 final class NodeData implements JsonSerializable
 {
     /**
-     * The unique ID of the individual.
+     * The unique ID of the individual. It stays null until a consumer sets one, and the serialised
+     * form then carries no id.
      */
-    private int $id = 0;
+    private ?int $id = null;
 
     /**
      * The XREF of the individual.
@@ -385,15 +386,15 @@ final class NodeData implements JsonSerializable
     }
 
     /**
-     * Returns the relevant data as an array. The facts are appended as the last key and only when
-     * the list is not empty, so a consumer that never sets facts keeps its payload unchanged.
+     * Returns the relevant data as an array. The id is appended only when a consumer set one, and
+     * the facts are appended last and only when the list is not empty, so a consumer that never
+     * sets facts keeps its payload unchanged.
      *
      * @return array<string, int|bool|string|list<NameSegment>|list<FactView|null>>
      */
     public function jsonSerialize(): array
     {
         $data = [
-            'id'              => $this->id,
             'xref'            => $this->xref,
             'url'             => $this->url,
             'updateUrl'       => $this->updateUrl,
@@ -410,6 +411,10 @@ final class NodeData implements JsonSerializable
             'death'           => $this->death,
             'timespan'        => $this->timespan,
         ];
+
+        if ($this->id !== null) {
+            $data['id'] = $this->id;
+        }
 
         if ($this->facts !== []) {
             $data['facts'] = $this->facts;
