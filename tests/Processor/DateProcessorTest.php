@@ -166,6 +166,54 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * @return array<string, array{string, string, string, string, string}>
+     */
+    public static function lifetimeFormatEdgeCaseDataProvider(): array
+    {
+        // [ GEDCOM birth date, GEDCOM death date, born text, died text, expected label ]
+        return [
+            'a percent sign in the born text'        => ['01 MAY 1853', '', '100% born %s', 'died %s', '100% born 1853'],
+            'a percent sign in the died text'        => ['', '12 JUN 1933', 'born %s', '50%d died %s', '50%d died 1933'],
+            'an unknown specifier in the text'       => ['01 MAY 1853', '', 'born %y %s', 'died %s', 'born %y 1853'],
+            'a second placeholder in the text'       => ['01 MAY 1853', '', '%s (b. %s)', 'died %s', '1853 (b. 1853)'],
+            'a missing placeholder in the born text' => ['01 MAY 1853', '', 'born', 'died %s', 'born'],
+            'a missing placeholder in the died text' => ['', '12 JUN 1933', 'born %s', 'died', 'died'],
+            'an unknown specifier in the died text'  => ['', '12 JUN 1933', 'born %s', 'died %y %s', 'died %y 1933'],
+            'a second placeholder in the died text'  => ['', '12 JUN 1933', 'born %s', '%s (d. %s)', '1933 (d. 1933)'],
+        ];
+    }
+
+    /**
+     * The caller has already run its text through one format pass when it reaches the library, so
+     * the library only places the year. A percent sign, an unknown specifier, a further placeholder
+     * or no placeholder at all must therefore neither raise an error nor garble the year.
+     *
+     * @param string $birthDate The GEDCOM birth date
+     * @param string $deathDate The GEDCOM death date
+     * @param string $bornText  The text for a birth year only
+     * @param string $diedText  The text for a death year only
+     * @param string $expected  The expected label
+     *
+     * @return void
+     */
+    #[Test]
+    #[DataProvider('lifetimeFormatEdgeCaseDataProvider')]
+    public function placesTheYearIntoAnyTextOfTheCaller(
+        string $birthDate,
+        string $deathDate,
+        string $bornText,
+        string $diedText,
+        string $expected,
+    ): void {
+        $labels = new LifetimeLabels($bornText, $diedText, 'deceased');
+
+        self::assertSame(
+            $expected,
+            $this->dateProcessorFor($birthDate, $deathDate, false)->getLifetimeDescription($labels),
+        );
+    }
+
+    /**
      * @return array<string, array{string, string, bool, string}>
      */
     public static function lifetimeDescriptionDataProvider(): array
