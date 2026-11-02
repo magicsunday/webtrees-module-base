@@ -11,11 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Processor;
 
+use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Date\AbstractCalendarDate;
 use Fisharebest\Webtrees\Fact;
 use Fisharebest\Webtrees\Factories\CalendarDateFactory;
 use Fisharebest\Webtrees\Family;
+use Fisharebest\Webtrees\Gedcom;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
@@ -289,6 +291,41 @@ final class DateProcessorTest extends TestCase
     }
 
     /**
+     * A visible person whose only death event is hidden from the viewer, for example by a
+     * restriction on the fact, is still dead in the raw record. The viewer must not learn the
+     * death from the labels, so the flag, the lifetime label and the compact label stay neutral.
+     *
+     * @return void
+     */
+    #[Test]
+    public function reportsNoDeathOfAVisiblePersonWhoseDeathEventIsHidden(): void
+    {
+        $processor = new DateProcessor($this->individualWith(isDead: true, hasHiddenDeathEvent: true));
+
+        self::assertFalse($processor->isDead());
+        self::assertSame('', $processor->getLifetimeDescription(new LifetimeLabels('born %s', 'died %s', 'deceased')));
+        self::assertSame('', $processor->getCompactLifetimeDescription());
+    }
+
+    /**
+     * A death event the viewer may see keeps the deceased state, also when a further death event is
+     * hidden, and so does a person whose dead state comes from the record without any death event.
+     *
+     * @return void
+     */
+    #[Test]
+    public function keepsTheDeceasedStateWhenADeathEventIsVisibleOrNoneExists(): void
+    {
+        $visibleOnly = $this->individualWith(isDead: true, hasVisibleDeathEvent: true);
+        $both        = $this->individualWith(isDead: true, hasVisibleDeathEvent: true, hasHiddenDeathEvent: true);
+        $withoutAny  = $this->individualWith(isDead: true);
+
+        self::assertTrue((new DateProcessor($visibleOnly))->isDead());
+        self::assertTrue((new DateProcessor($both))->isDead());
+        self::assertTrue((new DateProcessor($withoutAny))->isDead());
+    }
+
+    /**
      * @return array<string, array{string, bool}>
      */
     public static function presenceOfADateDataProvider(): array
@@ -557,12 +594,14 @@ final class DateProcessorTest extends TestCase
      * Builds the individual stub the processor reads. The family collections are empty unless a
      * family is given, because the processor takes the first family of each.
      *
-     * @param string      $birthDate The GEDCOM birth date the individual reports
-     * @param string      $deathDate The GEDCOM death date the individual reports
-     * @param bool        $isDead    Whether the individual is reported as deceased
-     * @param Family|null $spouse    The individual's own spouse family, if any
-     * @param Family|null $parents   The family the individual is a child of, if any
-     * @param bool        $canShow   Whether the viewer may see the individual
+     * @param string      $birthDate            The GEDCOM birth date the individual reports
+     * @param string      $deathDate            The GEDCOM death date the individual reports
+     * @param bool        $isDead               Whether the individual is reported as deceased
+     * @param Family|null $spouse               The individual's own spouse family, if any
+     * @param Family|null $parents              The family the individual is a child of, if any
+     * @param bool        $canShow              Whether the viewer may see the individual
+     * @param bool        $hasVisibleDeathEvent Whether a death event is visible to the viewer
+     * @param bool        $hasHiddenDeathEvent  Whether a death event exists that the viewer may not see
      *
      * @return Individual
      */
@@ -573,12 +612,33 @@ final class DateProcessorTest extends TestCase
         ?Family $spouse = null,
         ?Family $parents = null,
         bool $canShow = true,
+        bool $hasVisibleDeathEvent = false,
+        bool $hasHiddenDeathEvent = false,
     ): Individual {
         $individual = self::createStub(Individual::class);
         $individual->method('canShow')->willReturn($canShow);
         $individual->method('getBirthDate')->willReturn(new Date($birthDate));
         $individual->method('getDeathDate')->willReturn(new Date($deathDate));
         $individual->method('isDead')->willReturn($isDead);
+        $individual->method('facts')->willReturnCallback(
+            static function (array $filter = [], bool $sort = false, ?int $accessLevel = null) use ($hasVisibleDeathEvent, $hasHiddenDeathEvent): Collection {
+                $events = [];
+
+                if ($filter !== Gedcom::DEATH_EVENTS) {
+                    return new Collection($events);
+                }
+
+                if ($hasVisibleDeathEvent) {
+                    $events[] = self::createStub(Fact::class);
+                }
+
+                if ($hasHiddenDeathEvent && ($accessLevel === Auth::PRIV_HIDE)) {
+                    $events[] = self::createStub(Fact::class);
+                }
+
+                return new Collection($events);
+            }
+        );
         $individual->method('spouseFamilies')->willReturn(new Collection($spouse instanceof Family ? [$spouse] : []));
         $individual->method('childFamilies')->willReturn(new Collection($parents instanceof Family ? [$parents] : []));
 

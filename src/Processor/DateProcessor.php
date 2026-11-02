@@ -11,8 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Processor;
 
+use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\Date;
 use Fisharebest\Webtrees\Family;
+use Fisharebest\Webtrees\Gedcom;
 use Fisharebest\Webtrees\Individual;
 use MagicSunday\Webtrees\ModuleBase\Model\LifetimeLabels;
 use MagicSunday\Webtrees\ModuleBase\Model\Symbols;
@@ -198,13 +200,31 @@ final readonly class DateProcessor
      * if no explicit death date is recorded. An individual that the viewer may
      * not see is never reported as deceased, because webtrees derives that state
      * from the raw record, for example while a keep-alive period hides a recent
-     * death, and the dates of such an individual are hidden as well.
+     * death, and the dates of such an individual are hidden as well. The same holds for a visible
+     * individual whose only death events are hidden from the viewer, for example by a restriction
+     * on the fact.
      *
      * @return bool
      */
     public function isDead(): bool
     {
-        return $this->individual->canShow() && $this->individual->isDead();
+        return $this->individual->canShow()
+            && $this->individual->isDead()
+            && !$this->hidesItsDeathEvents();
+    }
+
+    /**
+     * Returns true when the record holds a death event, but the viewer may see none of them.
+     *
+     * @return bool
+     */
+    private function hidesItsDeathEvents(): bool
+    {
+        if ($this->individual->facts(Gedcom::DEATH_EVENTS)->isNotEmpty()) {
+            return false;
+        }
+
+        return $this->individual->facts(Gedcom::DEATH_EVENTS, false, Auth::PRIV_HIDE)->isNotEmpty();
     }
 
     /**
