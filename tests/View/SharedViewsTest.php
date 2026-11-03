@@ -16,6 +16,7 @@ use MagicSunday\Webtrees\ModuleBase\Testing\MarkupFixture;
 use MagicSunday\Webtrees\ModuleBase\View\SharedViews;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function view;
@@ -28,6 +29,7 @@ use function view;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(SharedViews::class)]
+#[UsesClass(MarkupFixture::class)]
 final class SharedViewsTest extends TestCase
 {
     /**
