@@ -12,9 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\View;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ViewFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\MarkupFixture;
 use MagicSunday\Webtrees\ModuleBase\View\SharedViews;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function view;
@@ -27,6 +29,7 @@ use function view;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(SharedViews::class)]
+#[UsesClass(MarkupFixture::class)]
 final class SharedViewsTest extends TestCase
 {
     /**
@@ -38,11 +41,11 @@ final class SharedViewsTest extends TestCase
         SharedViews::register();
         SharedViews::register();
 
-        $xpath = ViewFixture::xpathOf(
+        $xpath = MarkupFixture::xpathOf(
             ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS)
         );
 
-        self::assertCount(1, ViewFixture::elements($xpath, '//aside'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//aside'));
     }
 
     /**
@@ -53,10 +56,10 @@ final class SharedViewsTest extends TestCase
     {
         SharedViews::register();
 
-        $xpath = ViewFixture::xpathOf(
+        $xpath = MarkupFixture::xpathOf(
             view('webtrees-module-base::detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS)
         );
 
-        self::assertCount(1, ViewFixture::elements($xpath, '//aside'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//aside'));
     }
 }

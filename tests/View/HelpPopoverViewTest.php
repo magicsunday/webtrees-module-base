@@ -13,6 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\View;
 
 use DOMElement;
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ViewFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\MarkupFixture;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -51,10 +52,10 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function exposesTheStateOfThePopoverOnTheButton(): void
     {
-        $xpath = ViewFixture::xpathOf($this->render());
+        $xpath = MarkupFixture::xpathOf($this->render());
 
-        $button  = ViewFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-help ")]');
-        $popover = ViewFixture::first($xpath, '//div[contains(concat(" ", @class, " "), " help-popover ")]');
+        $button  = MarkupFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-help ")]');
+        $popover = MarkupFixture::first($xpath, '//div[contains(concat(" ", @class, " "), " help-popover ")]');
 
         self::assertSame('false', $button->getAttribute('aria-expanded'));
         self::assertSame('my-help', $popover->getAttribute('id'));
@@ -73,7 +74,7 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function keepsTheOrderOfTheRowsAndTheClassesOfTheParts(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('help-popover', [
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('help-popover', [
             'id'    => 'my-help',
             'label' => 'Show help',
             'rows'  => [
@@ -88,35 +89,35 @@ final class HelpPopoverViewTest extends TestCase
             ['First', 'Second', 'Third'],
             array_map(
                 static fn (DOMElement $key): string => trim($key->textContent),
-                ViewFixture::elements($xpath, '//tr/td[1]/strong'),
+                MarkupFixture::elements($xpath, '//tr/td[1]/strong'),
             ),
         );
         self::assertSame(
             ['one', 'two', 'three'],
             array_map(
                 static fn (DOMElement $text): string => trim($text->textContent),
-                ViewFixture::elements($xpath, '//tr/td[2]'),
+                MarkupFixture::elements($xpath, '//tr/td[2]'),
             ),
         );
 
-        self::assertSame('btn-primary btn-chart btn-help', ViewFixture::first($xpath, '//button')->getAttribute('class'));
-        self::assertCount(1, ViewFixture::elements($xpath, '//button/span[@class="icon"]/svg'));
+        self::assertSame('btn-primary btn-chart btn-help', MarkupFixture::first($xpath, '//button')->getAttribute('class'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//button/span[@class="icon"]/svg'));
 
-        $icon = ViewFixture::first($xpath, '//button/span[@class="icon"]/svg');
+        $icon = MarkupFixture::first($xpath, '//button/span[@class="icon"]/svg');
 
         self::assertSame('svg-inline--fa fa-fw', $icon->getAttribute('class'));
         self::assertSame('0 0 320 512', $icon->getAttribute('viewbox'));
 
-        $path = ViewFixture::first($xpath, '//button//svg/path');
+        $path = MarkupFixture::first($xpath, '//button//svg/path');
 
         self::assertSame('currentColor', $path->getAttribute('fill'));
         self::assertStringStartsWith('M80 160c0-35.3', $path->getAttribute('d'));
-        self::assertSame('position-relative d-inline-block', ViewFixture::first($xpath, '/html/body/div')->getAttribute('class'));
+        self::assertSame('position-relative d-inline-block', MarkupFixture::first($xpath, '/html/body/div')->getAttribute('class'));
         self::assertSame(
             'help-popover d-none position-absolute top-100 end-0 mt-2 p-3 bg-white border rounded shadow-sm',
-            ViewFixture::first($xpath, '//div[@id="my-help"]')->getAttribute('class')
+            MarkupFixture::first($xpath, '//div[@id="my-help"]')->getAttribute('class')
         );
-        self::assertSame('table table-sm table-borderless mb-0', ViewFixture::first($xpath, '//div[@id="my-help"]/table')->getAttribute('class'));
+        self::assertSame('table table-sm table-borderless mb-0', MarkupFixture::first($xpath, '//div[@id="my-help"]/table')->getAttribute('class'));
     }
 
     /**
@@ -125,8 +126,8 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function positionsThePopoverBelowTheButton(): void
     {
-        $xpath   = ViewFixture::xpathOf($this->render());
-        $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
+        $xpath   = MarkupFixture::xpathOf($this->render());
+        $popover = MarkupFixture::first($xpath, '//div[@id="my-help"]');
         $classes = explode(' ', $popover->getAttribute('class'));
 
         foreach (['position-absolute', 'top-100', 'end-0', 'mt-2'] as $class) {
@@ -143,16 +144,16 @@ final class HelpPopoverViewTest extends TestCase
     public function carriesTheRulesOfThePopoverOnce(): void
     {
         $html    = $this->render();
-        $xpath   = ViewFixture::xpathOf($html);
-        $popover = ViewFixture::first($xpath, '//div[@id="my-help"]');
+        $xpath   = MarkupFixture::xpathOf($html);
+        $popover = MarkupFixture::first($xpath, '//div[@id="my-help"]');
         $classes = explode(' ', $popover->getAttribute('class'));
 
         self::assertContains('help-popover', $classes);
         self::assertFalse($popover->hasAttribute('style'));
         self::assertStringNotContainsString('style=', $html);
         self::assertSame(1, substr_count($html, '<style'));
-        self::assertCount(1, ViewFixture::elements($xpath, '//style'));
-        self::assertStringContainsString('.help-popover', ViewFixture::first($xpath, '//style')->textContent);
+        self::assertCount(1, MarkupFixture::elements($xpath, '//style'));
+        self::assertStringContainsString('.help-popover', MarkupFixture::first($xpath, '//style')->textContent);
     }
 
     /**
@@ -162,11 +163,11 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function marksTheRowsOfEachMode(): void
     {
-        $xpath = ViewFixture::xpathOf($this->render());
+        $xpath = MarkupFixture::xpathOf($this->render());
 
-        $tooltip = ViewFixture::elements($xpath, '//tr[@data-help-mode="tooltip"]');
-        $panel   = ViewFixture::elements($xpath, '//tr[@data-help-mode="panel"]');
-        $both    = ViewFixture::elements($xpath, '//tr[not(@data-help-mode)]');
+        $tooltip = MarkupFixture::elements($xpath, '//tr[@data-help-mode="tooltip"]');
+        $panel   = MarkupFixture::elements($xpath, '//tr[@data-help-mode="panel"]');
+        $both    = MarkupFixture::elements($xpath, '//tr[not(@data-help-mode)]');
 
         self::assertCount(1, $tooltip);
         self::assertCount(1, $panel);
@@ -183,7 +184,7 @@ final class HelpPopoverViewTest extends TestCase
             ['Tab key', 'Ctrl + scroll'],
             array_map(
                 static fn (DOMElement $key): string => trim($key->textContent),
-                ViewFixture::elements($xpath, '//tr[not(@data-help-mode)]/td[1]/strong'),
+                MarkupFixture::elements($xpath, '//tr[not(@data-help-mode)]/td[1]/strong'),
             ),
         );
     }
@@ -194,15 +195,15 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function showsTheRowsOfTheActiveMode(): void
     {
-        $xpath = ViewFixture::xpathOf($this->render('panel'));
+        $xpath = MarkupFixture::xpathOf($this->render('panel'));
 
         self::assertStringContainsString(
             'd-none',
-            ViewFixture::first($xpath, '//tr[@data-help-mode="tooltip"]')->getAttribute('class')
+            MarkupFixture::first($xpath, '//tr[@data-help-mode="tooltip"]')->getAttribute('class')
         );
         self::assertStringNotContainsString(
             'd-none',
-            ViewFixture::first($xpath, '//tr[@data-help-mode="panel"]')->getAttribute('class')
+            MarkupFixture::first($xpath, '//tr[@data-help-mode="panel"]')->getAttribute('class')
         );
     }
 
@@ -212,13 +213,13 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function hidesEveryModedRowWithoutAnActiveMode(): void
     {
-        $xpath = ViewFixture::xpathOf($this->render(null));
+        $xpath = MarkupFixture::xpathOf($this->render(null));
 
-        foreach (ViewFixture::elements($xpath, '//tr[@data-help-mode]') as $row) {
+        foreach (MarkupFixture::elements($xpath, '//tr[@data-help-mode]') as $row) {
             self::assertStringContainsString('d-none', $row->getAttribute('class'));
         }
 
-        foreach (ViewFixture::elements($xpath, '//tr[not(@data-help-mode)]') as $row) {
+        foreach (MarkupFixture::elements($xpath, '//tr[not(@data-help-mode)]') as $row) {
             self::assertSame('', $row->getAttribute('class'));
         }
     }
@@ -231,23 +232,23 @@ final class HelpPopoverViewTest extends TestCase
     public function escapesTheLabelTheIdAndTheRows(): void
     {
         $text  = 'Say "help" & <b>more</b>';
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('help-popover', [
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('help-popover', [
             'id'         => 'a"b',
             'label'      => $text,
             'rows'       => [['key' => $text . ' key', 'text' => $text . ' text', 'mode' => 'm"x']],
             'activeMode' => 'm"x',
         ]));
 
-        $popover = ViewFixture::first($xpath, '//div[contains(concat(" ", @class, " "), " help-popover ")]');
+        $popover = MarkupFixture::first($xpath, '//div[contains(concat(" ", @class, " "), " help-popover ")]');
 
-        self::assertSame($text, ViewFixture::first($xpath, '//button')->getAttribute('title'));
+        self::assertSame($text, MarkupFixture::first($xpath, '//button')->getAttribute('title'));
         self::assertSame($text, $popover->getAttribute('aria-label'));
         self::assertSame('a"b', $popover->getAttribute('id'));
-        self::assertSame('a"b', ViewFixture::first($xpath, '//button')->getAttribute('aria-controls'));
-        self::assertSame('m"x', ViewFixture::first($xpath, '//tr')->getAttribute('data-help-mode'));
-        self::assertSame($text . ' key', ViewFixture::first($xpath, '//tr/td[1]/strong')->textContent);
-        self::assertSame($text . ' text', ViewFixture::first($xpath, '//tr/td[2]')->textContent);
-        self::assertSame([], ViewFixture::elements($xpath, '//b'));
+        self::assertSame('a"b', MarkupFixture::first($xpath, '//button')->getAttribute('aria-controls'));
+        self::assertSame('m"x', MarkupFixture::first($xpath, '//tr')->getAttribute('data-help-mode'));
+        self::assertSame($text . ' key', MarkupFixture::first($xpath, '//tr/td[1]/strong')->textContent);
+        self::assertSame($text . ' text', MarkupFixture::first($xpath, '//tr/td[2]')->textContent);
+        self::assertSame([], MarkupFixture::elements($xpath, '//b'));
     }
 
     /**
@@ -257,9 +258,9 @@ final class HelpPopoverViewTest extends TestCase
     #[Test]
     public function carriesNoInlineClickHandler(): void
     {
-        $xpath = ViewFixture::xpathOf($this->render());
+        $xpath = MarkupFixture::xpathOf($this->render());
 
-        self::assertSame([], ViewFixture::elements($xpath, '//*[@onclick]'));
+        self::assertSame([], MarkupFixture::elements($xpath, '//*[@onclick]'));
     }
 
     /**

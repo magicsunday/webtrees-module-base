@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\View;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ViewFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\MarkupFixture;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -65,9 +66,9 @@ final class ToolbarStyleViewTest extends TestCase
     public function writesOneStyleElementAndNothingElse(): void
     {
         $html  = $this->render('my-chart');
-        $xpath = ViewFixture::xpathOf($html);
+        $xpath = MarkupFixture::xpathOf($html);
 
-        self::assertCount(1, ViewFixture::elements($xpath, '//style'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//style'));
         self::assertSame(1, substr_count($html, '<style'));
         self::assertStringStartsWith('<style>', trim($html));
         self::assertStringEndsWith('</style>', trim($html));
@@ -203,8 +204,8 @@ final class ToolbarStyleViewTest extends TestCase
      */
     private function styleOf(string $container): string
     {
-        $xpath = ViewFixture::xpathOf($this->render($container));
+        $xpath = MarkupFixture::xpathOf($this->render($container));
 
-        return ViewFixture::first($xpath, '//style')->textContent;
+        return MarkupFixture::first($xpath, '//style')->textContent;
     }
 }

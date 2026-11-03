@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\View;
 
 use MagicSunday\Webtrees\ModuleBase\Test\Double\ViewFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\MarkupFixture;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -51,11 +52,11 @@ final class DetailPanelViewTest extends TestCase
     #[DataProvider('panelParts')]
     public function carriesEveryPartOnce(string $part): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         self::assertCount(
             1,
-            ViewFixture::elements($xpath, '//aside//*[@data-panel="' . $part . '"]')
+            MarkupFixture::elements($xpath, '//aside//*[@data-panel="' . $part . '"]')
         );
     }
 
@@ -66,8 +67,8 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function isAHiddenOffcanvasNamedByItsTitle(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
-        $aside = ViewFixture::first($xpath, '//aside[@id="webtrees-fan-detail-panel"]');
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
+        $aside = MarkupFixture::first($xpath, '//aside[@id="webtrees-fan-detail-panel"]');
 
         self::assertTrue($aside->hasAttribute('hidden'));
         self::assertSame('webtrees-fan-detail-panel-title', $aside->getAttribute('aria-labelledby'));
@@ -79,7 +80,7 @@ final class DetailPanelViewTest extends TestCase
             self::assertContains($class, $classes);
         }
 
-        $heading = ViewFixture::first($xpath, '//*[@id="webtrees-fan-detail-panel-title"]');
+        $heading = MarkupFixture::first($xpath, '//*[@id="webtrees-fan-detail-panel-title"]');
 
         self::assertSame('title', $heading->getAttribute('data-panel'));
     }
@@ -91,16 +92,16 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function startsWithTheHintAndHiddenDetails(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         foreach (['image', 'empty', 'actions'] as $part) {
-            self::assertTrue(ViewFixture::first($xpath, '//*[@data-panel="' . $part . '"]')->hasAttribute('hidden'));
+            self::assertTrue(MarkupFixture::first($xpath, '//*[@data-panel="' . $part . '"]')->hasAttribute('hidden'));
         }
 
-        self::assertFalse(ViewFixture::first($xpath, '//*[@data-panel="hint"]')->hasAttribute('hidden'));
+        self::assertFalse(MarkupFixture::first($xpath, '//*[@data-panel="hint"]')->hasAttribute('hidden'));
 
         foreach (['individual', 'center'] as $action) {
-            self::assertSame('button', ViewFixture::first($xpath, '//*[@data-panel="' . $action . '"]')->tagName);
+            self::assertSame('button', MarkupFixture::first($xpath, '//*[@data-panel="' . $action . '"]')->tagName);
         }
     }
 
@@ -111,7 +112,7 @@ final class DetailPanelViewTest extends TestCase
     public function escapesTheTextsItShows(): void
     {
         $text  = 'Say "x" & <b>y</b>';
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', [
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', [
             'id'              => 'a"b',
             'moduleClass'     => 'm"c',
             'closeLabel'      => $text,
@@ -121,18 +122,18 @@ final class DetailPanelViewTest extends TestCase
             'centerLabel'     => $text . ' center',
         ]));
 
-        self::assertSame($text, ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
-        self::assertSame($text . ' hint', ViewFixture::first($xpath, '//*[@data-panel="hint"]')->textContent);
-        self::assertSame($text . ' empty', ViewFixture::first($xpath, '//*[@data-panel="empty"]')->textContent);
-        self::assertSame($text . ' individual', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->textContent);
-        self::assertSame($text . ' center', ViewFixture::first($xpath, '//*[@data-panel="center"]')->textContent);
-        self::assertSame('a"b', ViewFixture::first($xpath, '//aside')->getAttribute('id'));
-        self::assertSame('a"b-title', ViewFixture::first($xpath, '//aside')->getAttribute('aria-labelledby'));
-        self::assertStringContainsString('m"c', ViewFixture::first($xpath, '//aside')->getAttribute('class'));
-        self::assertSame([], ViewFixture::elements($xpath, '//b'));
+        self::assertSame($text, MarkupFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
+        self::assertSame($text . ' hint', MarkupFixture::first($xpath, '//*[@data-panel="hint"]')->textContent);
+        self::assertSame($text . ' empty', MarkupFixture::first($xpath, '//*[@data-panel="empty"]')->textContent);
+        self::assertSame($text . ' individual', MarkupFixture::first($xpath, '//*[@data-panel="individual"]')->textContent);
+        self::assertSame($text . ' center', MarkupFixture::first($xpath, '//*[@data-panel="center"]')->textContent);
+        self::assertSame('a"b', MarkupFixture::first($xpath, '//aside')->getAttribute('id'));
+        self::assertSame('a"b-title', MarkupFixture::first($xpath, '//aside')->getAttribute('aria-labelledby'));
+        self::assertStringContainsString('m"c', MarkupFixture::first($xpath, '//aside')->getAttribute('class'));
+        self::assertSame([], MarkupFixture::elements($xpath, '//b'));
 
         // The heading is found by the escaped id that the aside points to.
-        self::assertSame('title', ViewFixture::first($xpath, "//*[@id='a\"b-title']")->getAttribute('data-panel'));
+        self::assertSame('title', MarkupFixture::first($xpath, "//*[@id='a\"b-title']")->getAttribute('data-panel'));
     }
 
     /**
@@ -141,31 +142,31 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function keepsTheMarkupThatScriptAndStylesDependOn(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
-        self::assertSame('offcanvas', ViewFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-close ")]')->getAttribute('data-bs-dismiss'));
-        self::assertSame('-1', ViewFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('tabindex'));
+        self::assertSame('offcanvas', MarkupFixture::first($xpath, '//button[contains(concat(" ", @class, " "), " btn-close ")]')->getAttribute('data-bs-dismiss'));
+        self::assertSame('-1', MarkupFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('tabindex'));
 
-        $image = ViewFixture::first($xpath, '//*[@data-panel="image"]');
+        $image = MarkupFixture::first($xpath, '//*[@data-panel="image"]');
 
         self::assertSame('img', $image->tagName);
         self::assertSame('detail-image', $image->getAttribute('class'));
         self::assertTrue($image->hasAttribute('alt'));
         self::assertSame('', $image->getAttribute('alt'));
 
-        $facts = ViewFixture::first($xpath, '//*[@data-panel="facts"]');
+        $facts = MarkupFixture::first($xpath, '//*[@data-panel="facts"]');
 
         self::assertSame('dl', $facts->tagName);
         self::assertContains('detail-facts', explode(' ', $facts->getAttribute('class')));
 
-        $header = ViewFixture::first($xpath, '//aside/div[@class="offcanvas-header"]');
-        $body   = ViewFixture::first($xpath, '//aside/div[@class="offcanvas-body"]');
+        $header = MarkupFixture::first($xpath, '//aside/div[@class="offcanvas-header"]');
+        $body   = MarkupFixture::first($xpath, '//aside/div[@class="offcanvas-body"]');
 
-        self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-header"]//*[@data-panel="title"]'));
-        self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-header"]//button[@data-bs-dismiss]'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//div[@class="offcanvas-header"]//*[@data-panel="title"]'));
+        self::assertCount(1, MarkupFixture::elements($xpath, '//div[@class="offcanvas-header"]//button[@data-bs-dismiss]'));
 
         foreach (['image', 'hint', 'facts', 'empty', 'actions'] as $part) {
-            self::assertCount(1, ViewFixture::elements($xpath, '//div[@class="offcanvas-body"]//*[@data-panel="' . $part . '"]'));
+            self::assertCount(1, MarkupFixture::elements($xpath, '//div[@class="offcanvas-body"]//*[@data-panel="' . $part . '"]'));
         }
 
         self::assertSame('div', $header->tagName);
@@ -179,25 +180,25 @@ final class DetailPanelViewTest extends TestCase
     #[Test]
     public function keepsTheActionsAndTheClassesOfTheParts(): void
     {
-        $xpath = ViewFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
+        $xpath = MarkupFixture::xpathOf(ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS));
 
         foreach (['individual', 'center'] as $action) {
-            self::assertCount(1, ViewFixture::elements($xpath, '//*[@data-panel="actions"]//*[@data-panel="' . $action . '"]'));
+            self::assertCount(1, MarkupFixture::elements($xpath, '//*[@data-panel="actions"]//*[@data-panel="' . $action . '"]'));
         }
 
-        self::assertSame('d-grid gap-2 mt-3', ViewFixture::first($xpath, '//*[@data-panel="actions"]')->getAttribute('class'));
-        self::assertSame('offcanvas-title h5', ViewFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('class'));
-        self::assertSame('h2', ViewFixture::first($xpath, '//*[@data-panel="title"]')->tagName);
-        self::assertSame('text-muted', ViewFixture::first($xpath, '//*[@data-panel="hint"]')->getAttribute('class'));
-        self::assertSame('text-muted', ViewFixture::first($xpath, '//*[@data-panel="empty"]')->getAttribute('class'));
-        self::assertSame('detail-facts mb-0', ViewFixture::first($xpath, '//*[@data-panel="facts"]')->getAttribute('class'));
-        self::assertSame('btn-close', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('class'));
-        self::assertSame('button', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('type'));
-        self::assertSame('button', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('type'));
-        self::assertSame('button', ViewFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('type'));
-        self::assertSame('btn btn-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('class'));
-        self::assertSame('btn btn-outline-primary btn-sm', ViewFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('class'));
-        self::assertSame('close', ViewFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
+        self::assertSame('d-grid gap-2 mt-3', MarkupFixture::first($xpath, '//*[@data-panel="actions"]')->getAttribute('class'));
+        self::assertSame('offcanvas-title h5', MarkupFixture::first($xpath, '//*[@data-panel="title"]')->getAttribute('class'));
+        self::assertSame('h2', MarkupFixture::first($xpath, '//*[@data-panel="title"]')->tagName);
+        self::assertSame('text-muted', MarkupFixture::first($xpath, '//*[@data-panel="hint"]')->getAttribute('class'));
+        self::assertSame('text-muted', MarkupFixture::first($xpath, '//*[@data-panel="empty"]')->getAttribute('class'));
+        self::assertSame('detail-facts mb-0', MarkupFixture::first($xpath, '//*[@data-panel="facts"]')->getAttribute('class'));
+        self::assertSame('btn-close', MarkupFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('class'));
+        self::assertSame('button', MarkupFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('type'));
+        self::assertSame('button', MarkupFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('type'));
+        self::assertSame('button', MarkupFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('type'));
+        self::assertSame('btn btn-primary btn-sm', MarkupFixture::first($xpath, '//*[@data-panel="individual"]')->getAttribute('class'));
+        self::assertSame('btn btn-outline-primary btn-sm', MarkupFixture::first($xpath, '//*[@data-panel="center"]')->getAttribute('class'));
+        self::assertSame('close', MarkupFixture::first($xpath, '//button[@data-bs-dismiss]')->getAttribute('aria-label'));
     }
 
     /**
@@ -207,11 +208,11 @@ final class DetailPanelViewTest extends TestCase
     public function writesOneStyleElementAndNoInlineStyle(): void
     {
         $html  = ViewFixture::render('detail-panel', ViewFixture::DETAIL_PANEL_PARAMETERS);
-        $xpath = ViewFixture::xpathOf($html);
+        $xpath = MarkupFixture::xpathOf($html);
 
         self::assertSame(1, substr_count($html, '<style'));
-        self::assertCount(1, ViewFixture::elements($xpath, '//style'));
-        self::assertStringContainsString('.webtrees-detail-panel', ViewFixture::first($xpath, '//style')->textContent);
+        self::assertCount(1, MarkupFixture::elements($xpath, '//style'));
+        self::assertStringContainsString('.webtrees-detail-panel', MarkupFixture::first($xpath, '//style')->textContent);
         self::assertStringNotContainsString('style=', $html);
     }
 }
