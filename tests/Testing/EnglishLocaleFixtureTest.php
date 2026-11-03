@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Testing;
 
 use Fisharebest\Localization\Locale\LocaleInterface;
+use Fisharebest\Localization\Translation;
 use Fisharebest\Localization\Translator;
 use Fisharebest\Webtrees\I18N;
 use MagicSunday\Webtrees\ModuleBase\Testing\EnglishLocaleFixture;
@@ -96,6 +97,56 @@ final class EnglishLocaleFixtureTest extends TestCase
 
         self::assertSame('Hallo', I18N::translate('Hello'));
         self::assertSame('Other', I18N::translate('Other'));
+    }
+
+    /**
+     * A given locale code replaces the English locale, so a test can ask for a right-to-left language.
+     *
+     * @return void
+     */
+    #[Test]
+    public function installsTheGivenLocaleInPlaceOfEnglish(): void
+    {
+        EnglishLocaleFixture::install([], 'ar');
+
+        self::assertSame('ar', I18N::languageTag());
+        self::assertSame('rtl', I18N::direction());
+    }
+
+    /**
+     * Without a locale code the direction is left to right, and a later call with the default
+     * installs English again after another locale.
+     *
+     * @return void
+     */
+    #[Test]
+    public function installsEnglishAgainAfterAnotherLocale(): void
+    {
+        EnglishLocaleFixture::install([], 'ar');
+        EnglishLocaleFixture::install();
+
+        self::assertSame('en', I18N::languageTag());
+        self::assertSame('ltr', I18N::direction());
+    }
+
+    /**
+     * The translator follows the plural rule of the given locale, so the plural form of a count comes
+     * from that locale and not from the English rule.
+     *
+     * @return void
+     */
+    #[Test]
+    public function translatesPluralsWithTheRuleOfTheGivenLocale(): void
+    {
+        $forms = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
+        EnglishLocaleFixture::install(
+            ['%s item' . Translation::PLURAL_SEPARATOR . '%s items' => implode(Translation::PLURAL_SEPARATOR, $forms)],
+            'ar',
+        );
+
+        self::assertSame('two', I18N::plural('%s item', '%s items', 2, '2'));
+        self::assertSame('few', I18N::plural('%s item', '%s items', 5, '5'));
     }
 
     /**

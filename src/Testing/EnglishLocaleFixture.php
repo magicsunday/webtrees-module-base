@@ -34,13 +34,15 @@ final class EnglishLocaleFixture
     }
 
     /**
-     * Installs the English locale and a translator that knows the given messages.
+     * Installs the English locale, or the given one, and a translator that knows the given messages.
+     * The translator follows the plural rule of the installed locale.
      *
-     * @param array<string, string> $messages The translations by source text
+     * @param array<string, string> $messages   The translations by source text
+     * @param string                $localeCode The code of the locale to install, English by default
      */
-    public static function install(array $messages = []): void
+    public static function install(array $messages = [], string $localeCode = 'en'): void
     {
-        $locale     = Locale::create('en');
+        $locale     = Locale::create($localeCode);
         $translator = new Translator($messages, $locale->pluralRule());
 
         $localeProperty = new ReflectionProperty(I18N::class, 'locale');
