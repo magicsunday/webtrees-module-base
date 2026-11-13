@@ -136,7 +136,10 @@ final class MediaPreloaderTest extends TestCase
         $individuals = $this->people($tree, $xrefs);
         $loaded      = $this->statementsOf(fn () => (new MediaPreloader())->preload($tree, $individuals));
 
-        $mediaStatements = array_filter($loaded, static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_media"'));
+        $mediaStatements = array_filter(
+            $loaded,
+            static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_media"'),
+        );
 
         self::assertCount(intdiv($people + MediaPreloader::CHUNK_SIZE - 1, MediaPreloader::CHUNK_SIZE), $mediaStatements);
 
@@ -154,7 +157,7 @@ final class MediaPreloaderTest extends TestCase
         self::assertSame([], $walk, 'The walk looks nothing up.');
         self::assertSame(
             array_map(static fn (int $person): string => 'image' . $person . '.jpg', range(1, $people)),
-            $files
+            $files,
         );
     }
 
@@ -180,7 +183,7 @@ final class MediaPreloaderTest extends TestCase
         self::assertSame(
             ['one.jpg', null, null, null, null, null, null, null, 'nine.jpg'],
             $withoutPreload,
-            'The record factories hide every media object that a private record is linked to.'
+            'The record factories hide every media object that a private record is linked to.',
         );
 
         Registry::cache(new CacheFactory());
@@ -208,7 +211,10 @@ final class MediaPreloaderTest extends TestCase
 
         // The links of a media object are looked up by the preload and not by the walk. The media object
         // with a restriction notice of its own is decided by that notice before the core reads its links.
-        $linkStatements = array_filter($statements, static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_link"'));
+        $linkStatements = array_filter(
+            $statements,
+            static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_link"'),
+        );
 
         self::assertSame([], $linkStatements);
 
@@ -248,7 +254,7 @@ final class MediaPreloaderTest extends TestCase
         // hides both.
         self::assertSame(
             [null, ($xref === null) ? null : 'nine.jpg'],
-            $this->highlightFiles($tree, $xrefs)
+            $this->highlightFiles($tree, $xrefs),
         );
     }
 
@@ -562,7 +568,7 @@ final class MediaPreloaderTest extends TestCase
 
         self::assertSame(
             ['one.jpg', 'two.jpg', 'two.jpg', 'three.jpg', null, 'six.jpg', 'seven.jpg', 'seven.jpg', 'nine.jpg'],
-            $this->highlightFiles($tree, $xrefs)
+            $this->highlightFiles($tree, $xrefs),
         );
     }
 
@@ -935,10 +941,12 @@ final class MediaPreloaderTest extends TestCase
      */
     private function highlightFiles(Tree $tree, array $xrefs): array
     {
-        return array_values(array_map(
-            static fn (Individual $person): ?string => $person->findHighlightedMediaFile()?->filename(),
-            $this->people($tree, $xrefs),
-        ));
+        return array_values(
+            array_map(
+                static fn (Individual $person): ?string => $person->findHighlightedMediaFile()?->filename(),
+                $this->people($tree, $xrefs),
+            ),
+        );
     }
 
     /**
