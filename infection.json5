@@ -16,7 +16,7 @@
     "timeoutsAsEscaped": true,
     // A mutant of the media preload or of the pending lookup re-runs the tests that boot the
     // real webtrees schema for every test, which takes longer than the default timeout of a
-    // mutant on a slow runner. With the default, almost every one of those mutants timed out
+    // mutant on a slow runner. With the default, most of those mutants timed out
     // and counted as escaped, which is not what the tests caught.
     "timeout": 60,
     // No minimum score here on purpose. The full run only reports, and the gate is the
