@@ -103,7 +103,7 @@ final class RealTreeFixture
                 ->createServerRequest('GET', 'https://webtrees.test/index.php')
                 ->withAttribute('base_url', 'https://webtrees.test')
                 ->withAttribute('client-ip', '127.0.0.1')
-                ->withAttribute('user', new GuestUser())
+                ->withAttribute('user', new GuestUser()),
         );
 
         $admin = (new UserService())->create('admin', 'Admin', 'admin@example.test', 'secret');

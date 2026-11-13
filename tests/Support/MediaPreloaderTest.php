@@ -867,7 +867,10 @@ final class MediaPreloaderTest extends TestCase
     {
         $this->indexDirectory = sys_get_temp_dir() . '/module-base-media-' . uniqid('', true) . '/';
 
-        if (!mkdir($this->indexDirectory . 'media', 0o777, true) && !is_dir($this->indexDirectory . 'media')) {
+        if (
+            !mkdir($this->indexDirectory . 'media', 0o777, true)
+            && !is_dir($this->indexDirectory . 'media')
+        ) {
             self::fail('The media directory could not be created.');
         }
 
