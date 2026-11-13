@@ -69,6 +69,8 @@ class Module extends AbstractModule implements ModuleCustomInterface, ModuleAsse
 - **`CompactDateFormat`** — derives a locale-aware, compact (numeric) date format string from a locale's CLDR/ICU short-date pattern, for `DateProcessor`'s compact API. `fromIcuPattern()` is its pure pattern translation step
 - **`TextDirection`** — resolves script direction (LTR/RTL) for arbitrary strings
 - **`PlainText`**: reduces webtrees markup to plain text (strips the tags, decodes the entities)
+- **`MediaPreloader`**: loads the media objects of one generation of people in chunked statements before a chart walk reads the highlight image of each person, and decides the visibility of the media objects for a visitor in bulk by the rule of the core, so the statements of a request grow with the number of generations and not with the number of people. Create one instance per request and call `preload(Tree $tree, array $people)` for each generation. What a viewer sees does not change. A media object with a restriction notice of its own, a rule for an individual, the record of the account, a pending change, and the decision for an editor or a manager stay with the core
+- **`PendingRecords`**: `xrefs(Tree $tree, array $xrefs, int $chunkSize)` returns the xrefs of the records with a pending change, and nothing for a viewer who is no editor. The preload of a chart leaves such a record to the record factory
 - **`Locale/IsoCountryMap`** — maps free-text country names from GEDCOM PLAC lines to ISO-3166-1 codes, built on `ext-intl`; used by `PlaceProcessor`'s country-resolving styles
 
 ### `src/Module/`
@@ -138,6 +140,7 @@ final class CatalogueStructureTest extends AbstractCatalogueStructureTestCase
   - `RoutingFixture::register(array $services = [])` registers a route factory that renders a route as its name and query, and a container that serves the route factory and the given services by their id. Asking for another id fails. It returns the route map that the route factory hands out, so a test can read back the routes that the code registers.
   - `ModuleSettingsFixture::seed(string $moduleName, array $preferences)` seeds the preferences of one module into an in-memory database, because the method that reads a preference is final. The consuming module builds its module object itself.
   - `MarkupFixture::xpathOf()`, `elements()` and `first()` parse rendered markup and find elements in it.
+- **`RealTreeFixture`**, a `final` class with static methods for tests that need the real schema, the real record factories and the real privacy engine. `RealTreeFixture::boot()` builds the webtrees schema in memory and logs in an administrator, `RealTreeFixture::importGedcom(string $gedcom, string $name)` imports a GEDCOM into a new tree record by record as the production import does, and `RealTreeFixture::restoreMinimalDatabase()` gives the process the minimal database of `ModuleSettingsFixture` back. A test that boots the real schema calls the restore in `tearDown()`, because the other fixtures reuse the global connection.
 
 ## Development
 
