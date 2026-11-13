@@ -47,11 +47,7 @@ final class PendingRecords
      */
     public static function xrefs(Tree $tree, array $xrefs, int $chunkSize): array
     {
-        // Nothing to look up means nothing to decide, so the viewer is not even asked.
-        if (
-            ($xrefs === [])
-            || !Auth::isEditor($tree)
-        ) {
+        if (!Auth::isEditor($tree)) {
             return [];
         }
 
