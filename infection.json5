@@ -14,6 +14,11 @@
     // a timeout as a kill, which quietly inflates the score: a mutation that made the
     // suite hang is not a mutation the tests caught, so the score means what it says.
     "timeoutsAsEscaped": true,
+    // A mutant of the media preload or of the pending lookup re-runs the tests that boot the
+    // real webtrees schema for every test, which takes longer than the default timeout of a
+    // mutant on a slow runner. With the default, most of those mutants timed out
+    // and counted as escaped, which is not what the tests caught.
+    "timeout": 60,
     // No minimum score here on purpose. The full run only reports, and the gate is the
     // changed-lines script `composer ci:test:php:infection:changed`. A fixed floor over
     // the whole tree rewards tests that only kill a mutant in a getter, a literal, a
