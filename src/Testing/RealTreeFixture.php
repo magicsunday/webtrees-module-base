@@ -24,6 +24,7 @@ use Fisharebest\Webtrees\Services\GedcomImportService;
 use Fisharebest\Webtrees\Services\MigrationService;
 use Fisharebest\Webtrees\Services\TreeService;
 use Fisharebest\Webtrees\Services\UserService;
+use Fisharebest\Webtrees\Session;
 use Fisharebest\Webtrees\Site;
 use Fisharebest\Webtrees\Tree;
 use Fisharebest\Webtrees\Webtrees;
@@ -113,10 +114,16 @@ final class RealTreeFixture
 
     /**
      * Replaces the real schema by the minimal in-memory database that holds the module settings only
-     * and has no foreign keys, as the settings fixture boots it.
+     * and has no foreign keys, as the settings fixture boots it. The viewer that boot() logged in, the
+     * session and the preferences of the site are dropped as well, because the user table is gone with
+     * the real schema and a later test would find an administrator that no longer exists.
      */
     public static function restoreMinimalDatabase(): void
     {
+        Auth::logout();
+        Session::clear();
+        Site::$preferences = [];
+
         DB::connect(
             driver: DB::SQLITE,
             host: '',

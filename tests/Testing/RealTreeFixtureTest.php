@@ -95,6 +95,22 @@ final class RealTreeFixtureTest extends TestCase
     }
 
     /**
+     * The restore drops the administrator that boot() logged in, because the user table of the real schema
+     * is gone and a later test would otherwise run as a user that no longer exists.
+     */
+    #[Test]
+    public function restoreDropsTheAdministratorThatBootLoggedIn(): void
+    {
+        RealTreeFixture::boot();
+
+        self::assertTrue(Auth::isAdmin());
+
+        RealTreeFixture::restoreMinimalDatabase();
+
+        self::assertNull(Auth::id());
+    }
+
+    /**
      * After the restore the database holds the module settings only, like the one that the settings
      * fixture boots, and no table of the real schema is left.
      */
