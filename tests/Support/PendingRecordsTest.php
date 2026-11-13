@@ -155,6 +155,33 @@ final class PendingRecordsTest extends TestCase
     }
 
     /**
+     * An empty list has nothing to look up, so the result is empty and no statement is sent, also for an
+     * editor who could have pending changes.
+     */
+    #[Test]
+    public function anEmptyListGetsNothingWithoutAStatement(): void
+    {
+        $tree = RealTreeFixture::importGedcom("0 HEAD\n0 TRLR", 'pending');
+
+        $this->insertChange($tree, '101', 'pending');
+
+        $connection = DB::connection();
+        $connection->enableQueryLog();
+        $connection->flushQueryLog();
+
+        $xrefs = PendingRecords::xrefs($tree, [], 10);
+
+        $changeStatements = array_filter(
+            $connection->getQueryLog(),
+            static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
+        );
+        $connection->disableQueryLog();
+
+        self::assertSame([], $xrefs);
+        self::assertSame([], $changeStatements);
+    }
+
+    /**
      * A member who is no editor sees no pending change either.
      */
     #[Test]
