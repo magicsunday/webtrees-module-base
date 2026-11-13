@@ -11,8 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Webtrees\ModuleBase\Test\Testing;
 
+use Aura\Router\RouterContainer;
 use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\DB;
+use Fisharebest\Webtrees\GuestUser;
+use Fisharebest\Webtrees\Http\RequestHandlers\HomePage;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Session;
@@ -21,6 +24,7 @@ use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Pins what the real-tree fixture gives a test, which is a booted schema with an administrator, a tree
@@ -67,6 +71,27 @@ final class RealTreeFixtureTest extends TestCase
         self::assertSame('fixture', $tree->name());
         self::assertTrue(Auth::isAdmin());
         self::assertTrue($person->canShow());
+    }
+
+    /**
+     * Code that builds a link or reads the request finds the routes of webtrees and a web request of a
+     * guest from the test host in the container.
+     */
+    #[Test]
+    public function registersTheRoutesAndTheRequestOfAWebRequest(): void
+    {
+        RealTreeFixture::boot();
+
+        $router  = Registry::container()->get(RouterContainer::class);
+        $request = Registry::container()->get(ServerRequestInterface::class);
+
+        self::assertInstanceOf(RouterContainer::class, $router);
+        self::assertStringStartsWith('/', $router->getGenerator()->generate(HomePage::class));
+
+        self::assertInstanceOf(ServerRequestInterface::class, $request);
+        self::assertSame('https://webtrees.test', $request->getAttribute('base_url'));
+        self::assertSame('127.0.0.1', $request->getAttribute('client-ip'));
+        self::assertInstanceOf(GuestUser::class, $request->getAttribute('user'));
     }
 
     /**
