@@ -220,7 +220,10 @@ final class MediaPreloader
             foreach ($links['byMedia'][$this->linkKey($object->xref())] ?? [] as $linkedXref) {
                 $record = Registry::gedcomRecordFactory()->make($linkedXref, $tree);
 
-                if (($record instanceof GedcomRecord) && !$record->canShow($accessLevel)) {
+                if (
+                    ($record instanceof GedcomRecord)
+                    && !$record->canShow($accessLevel)
+                ) {
                     $visible = false;
 
                     break;
@@ -235,9 +238,11 @@ final class MediaPreloader
     }
 
     /**
-     * Returns the key under which the links of a media object are grouped. The columns of the link table
-     * and of the media table compare case-insensitively on the databases of webtrees, so the spelling of
-     * a link can differ from the spelling of the xref of its media object.
+     * Returns the key under which the links of a media object are grouped. Some databases compare the
+     * columns of the link table and of the media table case-insensitively (MySQL and MariaDB with a
+     * case-insensitive collation), so the spelling of a link can differ from the spelling of the xref of
+     * its media object. On a database that compares case-sensitively two xrefs that differ only in case
+     * share one group, which hides a media object more often and never less often.
      *
      * @param string $xref The xref of a media object, or the target of a link
      */
