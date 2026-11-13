@@ -98,7 +98,7 @@ final class MediaPreloader
      *
      * @param list<Individual> $people The people of one generation
      *
-     * @return list<string>
+     * @return list<string> The xrefs of the media objects that were not requested before
      */
     private function newMediaXrefs(array $people): array
     {
@@ -245,6 +245,8 @@ final class MediaPreloader
      * share one group, which hides a media object more often and never less often.
      *
      * @param string $xref The xref of a media object, or the target of a link
+     *
+     * @return string The key of the group of links
      */
     private function linkKey(string $xref): string
     {

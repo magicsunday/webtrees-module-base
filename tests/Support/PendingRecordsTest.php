@@ -45,7 +45,7 @@ use function str_contains;
 final class PendingRecordsTest extends TestCase
 {
     /**
-     * Boots webtrees on a real schema and imports a tree with numeric xrefs.
+     * Boots webtrees on a real schema.
      */
     protected function setUp(): void
     {
@@ -175,6 +175,7 @@ final class PendingRecordsTest extends TestCase
             $connection->getQueryLog(),
             static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
         );
+
         $connection->disableQueryLog();
 
         self::assertSame([], $xrefs);

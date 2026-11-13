@@ -59,8 +59,9 @@ use function unlink;
  * The tests therefore compare the result with the result of the same lookups on a cold cache, and
  * they count the statements of the lookups after the preload.
  *
- * Every xref of the fixtures is numeric, like the xrefs of many imported trees, so a number that
- * turns into an integer array key on its way through the preload fails the typed record factories.
+ * The xrefs of the fixtures are numeric, like the xrefs of many imported trees, except for the pair of
+ * a link spelling test, so a number that turns into an integer array key on its way through the preload
+ * fails the typed record factories.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
@@ -141,7 +142,10 @@ final class MediaPreloaderTest extends TestCase
             static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_media"'),
         );
 
-        self::assertCount(intdiv($people + MediaPreloader::CHUNK_SIZE - 1, MediaPreloader::CHUNK_SIZE), $mediaStatements);
+        self::assertCount(
+            intdiv($people + MediaPreloader::CHUNK_SIZE - 1, MediaPreloader::CHUNK_SIZE),
+            $mediaStatements,
+        );
 
         foreach ($mediaStatements as $statement) {
             // The tree is bound next to the xrefs of the chunk.
@@ -275,10 +279,10 @@ final class MediaPreloaderTest extends TestCase
     }
 
     /**
-     * The columns of the link table and of the media table compare case-insensitively on MySQL, so a link
-     * whose spelling differs from the xref of the media object still belongs to it, and a media object that
-     * a private record is linked to stays hidden from a visitor. The link table of the test compares the
-     * target case-insensitively as well.
+     * The columns of the link table and of the media table compare case-insensitively on MySQL and MariaDB
+     * with a case-insensitive collation, so a link whose spelling differs from the xref of the media object
+     * still belongs to it, and a media object that a private record is linked to stays hidden from a
+     * visitor. The link table of the test compares the target case-insensitively as well.
      */
     #[Test]
     public function aLinkWithAnotherSpellingStillHidesTheMediaObject(): void
@@ -478,7 +482,7 @@ final class MediaPreloaderTest extends TestCase
     /**
      * The rules of the tree that hide a media object from a visitor.
      *
-     * @return array<string, array{string|null, string|null}>
+     * @return array<string, array{string|null, string|null}> The rule of the tree by the name of the case
      */
     public static function mediaRules(): array
     {
@@ -715,7 +719,7 @@ final class MediaPreloaderTest extends TestCase
     /**
      * Lists the viewers.
      *
-     * @return array<string, array{bool}>
+     * @return array<string, array{bool}> The viewer flag by the name of the viewer
      */
     public static function viewers(): array
     {
@@ -737,6 +741,8 @@ final class MediaPreloaderTest extends TestCase
      * 6 shares a media object with a family that has a confidential restriction.
      * 7 is living and shares a media object with the person 8.
      * 9 shares a media object with a public family.
+     *
+     * @return Tree The imported tree, without restriction rules of the tree
      */
     private function importPrivacyTree(): Tree
     {
@@ -748,6 +754,8 @@ final class MediaPreloaderTest extends TestCase
      *
      * @param list<array{xref: string|null, tag_type: string|null, resn: string}> $rules The rules, each for a
      *                                                                                   record or for a type of record
+     *
+     * @return Tree The imported tree with the rules
      */
     private function importPrivacyTreeWithRules(array $rules): Tree
     {
@@ -914,7 +922,7 @@ final class MediaPreloaderTest extends TestCase
      * @param Tree         $tree  The tree of the people
      * @param list<string> $xrefs The xrefs of the people
      *
-     * @return list<Individual>
+     * @return list<Individual> The people in the order of the xrefs
      */
     private function people(Tree $tree, array $xrefs): array
     {
@@ -937,7 +945,7 @@ final class MediaPreloaderTest extends TestCase
      * @param Tree         $tree  The tree of the people
      * @param list<string> $xrefs The xrefs of the people
      *
-     * @return list<string|null>
+     * @return list<string|null> The file name of the highlight image of each person, or null
      */
     private function highlightFiles(Tree $tree, array $xrefs): array
     {
@@ -954,7 +962,7 @@ final class MediaPreloaderTest extends TestCase
      *
      * @param Closure(): void $action The action to run
      *
-     * @return list<array{query: string, bindings: list<string>}>
+     * @return list<array{query: string, bindings: list<string>}> The statements in the order they were sent
      */
     private function statementsOf(Closure $action): array
     {
