@@ -341,6 +341,84 @@ final class MediaPreloaderTest extends TestCase
     }
 
     /**
+     * The family column compares case-insensitively on MySQL and MariaDB with a case-insensitive collation,
+     * so the core finds the family with one spelling of an xref when it asks for the family of the person
+     * with the other spelling. The preload does not store that xref as no family then, so that the
+     * visibility of a media object that the person is linked to follows the private family, as it does
+     * without the preload, whichever of the two has the lower case.
+     *
+     * @param string $personXref The xref of the person that the media object is linked to
+     * @param string $familyXref The xref of the private family
+     */
+    #[Test]
+    #[DataProvider('familySpellings')]
+    public function aFamilyWithAnotherSpellingThanAPersonStaysTheFamilyOfThatXref(
+        string $personXref,
+        string $familyXref,
+    ): void {
+        DB::connection()->statement('DROP TABLE "wt_families"');
+        DB::connection()->statement(
+            'CREATE TABLE "wt_families" ("f_id" varchar(20) collate nocase not null, "f_file" integer not null, '
+            . '"f_husb" varchar(20) null, "f_wife" varchar(20) null, "f_gedcom" text not null, '
+            . '"f_numchil" integer not null, primary key ("f_id", "f_file"))'
+        );
+
+        $this->createIndexDirectory(['one']);
+
+        $tree = RealTreeFixture::importGedcom(
+            implode("\n", [
+                '0 HEAD',
+                '0 @' . $personXref . '@ INDI',
+                '1 NAME Public /Person/',
+                '1 DEAT',
+                '2 DATE 1900',
+                '1 OBJE @M1@',
+                '0 @' . $familyXref . '@ FAM',
+                '1 RESN confidential',
+                '0 @M1@ OBJE',
+                '1 FILE one.jpg',
+                '2 FORM jpg',
+                '0 TRLR',
+            ]),
+            'family-spelling',
+        );
+
+        $tree->setPreference('HIDE_LIVE_PEOPLE', '1');
+        $tree->setPreference('SHOW_DEAD_PEOPLE', (string) Auth::PRIV_PRIVATE);
+        $tree->setPreference('SHOW_HIGHLIGHT_IMAGES', '1');
+
+        $asAdministrator = $this->highlightFiles($tree, [$personXref]);
+
+        self::assertSame(['one.jpg'], $asAdministrator);
+
+        Auth::logout();
+        Registry::cache(new CacheFactory());
+
+        $withoutPreload = $this->highlightFiles($tree, [$personXref]);
+
+        self::assertSame([null], $withoutPreload);
+
+        Registry::cache(new CacheFactory());
+
+        (new MediaPreloader())->preload($tree, $this->people($tree, [$personXref]));
+
+        self::assertSame($withoutPreload, $this->highlightFiles($tree, [$personXref]));
+    }
+
+    /**
+     * The spellings of the xref of a person and of the private family that differ only in case.
+     *
+     * @return array<string, array{string, string}> The xref of the person and of the family by the name of the case
+     */
+    public static function familySpellings(): array
+    {
+        return [
+            'a family with the lower case' => ['I1', 'i1'],
+            'a person with the lower case' => ['i1', 'I1'],
+        ];
+    }
+
+    /**
      * A tree that does not hide living people shows its media objects, whatever restriction the tree has
      * for the type of record, because the core does not look at that restriction then. The preload steps
      * aside as well.
