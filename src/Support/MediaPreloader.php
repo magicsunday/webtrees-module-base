@@ -330,7 +330,7 @@ final class MediaPreloader
                     continue;
                 }
 
-                $families[$this->linkKey($row->f_id)] = true;
+                $families[$this->linkKey($row->f_id)] = $row->f_id;
 
                 Registry::cache()->array()->remember(
                     FamilyFactory::class . $row->f_id . '@' . $tree->id(),
