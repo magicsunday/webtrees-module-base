@@ -59,9 +59,9 @@ use function unlink;
  * The tests therefore compare the result with the result of the same lookups on a cold cache, and
  * they count the statements of the lookups after the preload.
  *
- * The xrefs of the fixtures are numeric, like the xrefs of many imported trees, except for the pair of
- * a link spelling test, so a number that turns into an integer array key on its way through the preload
- * fails the typed record factories.
+ * The xrefs of the fixtures are numeric, like the xrefs of many imported trees, except for the tests of
+ * the spelling of a link and of a family, so a number that turns into an integer array key on its way
+ * through the preload fails the typed record factories.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
  * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License v3.0
