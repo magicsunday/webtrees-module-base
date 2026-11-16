@@ -4,6 +4,6 @@
     "private": true,
     "license": "GPL-3.0-or-later",
     "devDependencies": {
-        "jscpd": "5.3.2"
+        "jscpd": "5.4.3"
     }
 }
