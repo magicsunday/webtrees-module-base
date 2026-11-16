@@ -238,13 +238,15 @@ final class MediaPreloader
     }
 
     /**
-     * Returns the key under which the links of a media object are grouped. Some databases compare the
-     * columns of the link table and of the media table case-insensitively (MySQL and MariaDB with a
-     * case-insensitive collation), so the spelling of a link can differ from the spelling of the xref of
-     * its media object. On a database that compares case-sensitively two xrefs that differ only in case
-     * share one group, which hides a media object more often and never less often.
+     * Returns the key under which the links of a media object are grouped, and under which a family is
+     * matched to a person with the same xref. Some databases compare the columns of the link table, of the
+     * media table and of the family table case-insensitively (MySQL and MariaDB with a case-insensitive
+     * collation), so the spelling of a link can differ from the spelling of the xref of its media object,
+     * and a family can differ from a person in case only. On a database that compares case-sensitively two
+     * xrefs that differ only in case share one group, which hides a media object more often and never less
+     * often.
      *
-     * @param string $xref The xref of a media object, or the target of a link
+     * @param string $xref The xref of a media object, of a family, or the target of a link
      *
      * @return string The key of the group of links
      */
@@ -302,7 +304,9 @@ final class MediaPreloader
     /**
      * Loads the people and families that media objects are linked to into the record cache, so that the
      * generic record factory finds them there. Without that it asks for a family first and sends a
-     * statement for every person. An xref that is a person and no family is stored as no family.
+     * statement for every person. An xref that is a person and no family is stored as no family. The
+     * families are matched to the people by the key of the xref, because the database finds a family for
+     * a person whose xref differs from that of the family only in case.
      *
      * @param Tree         $tree  The tree of the records
      * @param list<string> $xrefs The xrefs of the linked records
@@ -326,7 +330,7 @@ final class MediaPreloader
                     continue;
                 }
 
-                $families[$row->f_id] = true;
+                $families[$this->linkKey($row->f_id)] = $row->f_id;
 
                 Registry::cache()->array()->remember(
                     FamilyFactory::class . $row->f_id . '@' . $tree->id(),
@@ -346,7 +350,7 @@ final class MediaPreloader
         }
 
         foreach ($people as $xref) {
-            if (isset($families[$xref])) {
+            if (isset($families[$this->linkKey($xref)])) {
                 continue;
             }
 
