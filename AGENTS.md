@@ -96,7 +96,7 @@ Where the testing policy and the changed-lines mutation gate point to different 
 bin/
   resolve-fuzzy   — starter for the catalogue resolver, installed by Composer as a binary for the consuming modules
   write-translations — starter for the translations writer, installed the same way
-resources/views/ holds the shared PHP templates (detail-panel.phtml, help-popover.phtml, toolbar-style.phtml), rendered by the chart modules through SharedViews
+resources/views/ holds the shared PHP templates (detail-panel.phtml, help-popover.phtml, toolbar-style.phtml, center-button.phtml, png-export-button.phtml, svg-export-button.phtml, checkbox.phtml), rendered by the chart modules through SharedViews
 src/
   Catalogue/      — resolver for the fuzzy entries and writer for the translations of the translation catalogues
   Contract/       — local interfaces required by processors (e.g. ModuleAssetUrlInterface)

@@ -50,7 +50,7 @@ final class ViewFixture
     /**
      * Renders a shared view with the namespace registered.
      *
-     * @param array<string, string|list<array{key: string, text: string, mode?: string}>|null> $data The view parameters
+     * @param array<string, string|bool|list<array{key: string, text: string, mode?: string}>|null> $data The view parameters
      *
      * @return string The rendered markup
      */
