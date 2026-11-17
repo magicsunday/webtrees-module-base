@@ -18,7 +18,6 @@ use Fisharebest\Webtrees\GuestUser;
 use Fisharebest\Webtrees\Http\RequestHandlers\HomePage;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
-use Fisharebest\Webtrees\Session;
 use Fisharebest\Webtrees\Site;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -42,10 +41,6 @@ final class RealTreeFixtureTest extends TestCase
      */
     protected function tearDown(): void
     {
-        Auth::logout();
-        Session::clear();
-        Site::$preferences = [];
-
         RealTreeFixture::restoreMinimalDatabase();
 
         parent::tearDown();
@@ -108,6 +103,41 @@ final class RealTreeFixtureTest extends TestCase
         RealTreeFixture::restoreMinimalDatabase();
 
         self::assertNull(Auth::id());
+    }
+
+    /**
+     * The restore drops the preferences of the site that a test set, because the next test would read
+     * them from the previous one.
+     */
+    #[Test]
+    public function restoreDropsThePreferencesOfTheSite(): void
+    {
+        RealTreeFixture::boot();
+
+        Site::$preferences = ['SHOW_COUNTER' => '1'];
+
+        RealTreeFixture::restoreMinimalDatabase();
+
+        self::assertSame([], Site::$preferences);
+    }
+
+    /**
+     * The restore drops the record cache, because a record that a test cached would otherwise be served
+     * to the next test from the cache and not read from its own database.
+     */
+    #[Test]
+    public function restoreDropsTheRecordCache(): void
+    {
+        RealTreeFixture::boot();
+
+        Registry::cache()->array()->remember('fixture-probe', static fn (): string => 'first');
+
+        RealTreeFixture::restoreMinimalDatabase();
+
+        self::assertSame(
+            'second',
+            Registry::cache()->array()->remember('fixture-probe', static fn (): string => 'second'),
+        );
     }
 
     /**
