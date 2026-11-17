@@ -59,6 +59,21 @@ final class CheckboxViewTest extends TestCase
     }
 
     /**
+     * A render that leaves out the optional settings does not check or disable the box, so a form
+     * that renders a box without them keeps it editable and unchecked.
+     */
+    #[Test]
+    public function leavesTheBoxUncheckedAndEnabledWithoutTheOptionalSettings(): void
+    {
+        $xpath = MarkupFixture::xpathOf($this->render());
+
+        $checkbox = MarkupFixture::first($xpath, '//input[@type="checkbox"]');
+
+        self::assertFalse($checkbox->hasAttribute('checked'));
+        self::assertFalse($checkbox->hasAttribute('disabled'));
+    }
+
+    /**
      * The optional settings and the label reach the checkbox of the core unchanged, so the box can
      * start checked or disabled and be reached by its id.
      */
