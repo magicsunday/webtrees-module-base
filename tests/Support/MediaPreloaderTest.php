@@ -17,11 +17,11 @@ use Fisharebest\Webtrees\Contracts\UserInterface;
 use Fisharebest\Webtrees\DB;
 use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Individual;
+use Fisharebest\Webtrees\Media;
 use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Services\GedcomImportService;
 use Fisharebest\Webtrees\Services\TreeService;
 use Fisharebest\Webtrees\Services\UserService;
-use Fisharebest\Webtrees\Session;
 use Fisharebest\Webtrees\Site;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\MediaPreloader;
@@ -92,11 +92,6 @@ final class MediaPreloaderTest extends TestCase
      */
     protected function tearDown(): void
     {
-        Auth::logout();
-        Session::clear();
-        Site::$preferences = [];
-        Registry::cache(new CacheFactory());
-
         $this->removeIndexDirectory();
         RealTreeFixture::restoreMinimalDatabase();
 
@@ -276,6 +271,38 @@ final class MediaPreloaderTest extends TestCase
         (new MediaPreloader())->preload($tree, $this->people($tree, ['1']));
 
         self::assertSame(['one.jpg'], $this->highlightFiles($tree, ['1']));
+    }
+
+    /**
+     * The preload stores the visibility of a media object under the key that the core reads in
+     * canShow(), so the core answers from the cache and runs no link check of its own. A key that the
+     * core does not read would leave every check to the core and the preload would save nothing.
+     */
+    #[Test]
+    public function theCoreReadsTheVisibilityThatThePreloadStored(): void
+    {
+        $tree = $this->importPrivacyTree();
+
+        Auth::logout();
+        Registry::cache(new CacheFactory());
+
+        (new MediaPreloader())->preload($tree, $this->people($tree, ['1']));
+
+        $media = Registry::mediaFactory()->make('8001', $tree);
+
+        self::assertInstanceOf(Media::class, $media);
+
+        $statements = $this->statementsOf(static function () use ($media): void {
+            $media->canShow();
+        });
+
+        self::assertSame(
+            [],
+            array_filter(
+                $statements,
+                static fn (array $statement): bool => str_contains($statement['query'], 'from "wt_link"'),
+            ),
+        );
     }
 
     /**
