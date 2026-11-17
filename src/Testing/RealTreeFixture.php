@@ -15,6 +15,7 @@ use Aura\Router\RouterContainer;
 use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\Contracts\UserInterface;
 use Fisharebest\Webtrees\DB;
+use Fisharebest\Webtrees\Factories\CacheFactory;
 use Fisharebest\Webtrees\Gedcom;
 use Fisharebest\Webtrees\GuestUser;
 use Fisharebest\Webtrees\Http\Routes\WebRoutes;
@@ -115,14 +116,16 @@ final class RealTreeFixture
     /**
      * Replaces the real schema by the minimal in-memory database that holds the module settings only
      * and has no foreign keys, as the settings fixture boots it. The viewer that boot() logged in, the
-     * session and the preferences of the site are dropped as well, because the user table is gone with
-     * the real schema and a later test would find an administrator that no longer exists.
+     * session, the preferences of the site and the record cache are dropped as well, because the user
+     * table is gone with the real schema and a later test would find an administrator that no longer
+     * exists or a record that the cache still holds from the previous test.
      */
     public static function restoreMinimalDatabase(): void
     {
         Auth::logout();
         Session::clear();
         Site::$preferences = [];
+        Registry::cache(new CacheFactory());
 
         DB::connect(
             driver: DB::SQLITE,

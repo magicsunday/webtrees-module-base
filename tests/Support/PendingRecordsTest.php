@@ -14,11 +14,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Support;
 use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\Contracts\UserInterface;
 use Fisharebest\Webtrees\DB;
-use Fisharebest\Webtrees\Factories\CacheFactory;
-use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Services\UserService;
-use Fisharebest\Webtrees\Session;
-use Fisharebest\Webtrees\Site;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
@@ -59,11 +55,6 @@ final class PendingRecordsTest extends TestCase
      */
     protected function tearDown(): void
     {
-        Auth::logout();
-        Session::clear();
-        Site::$preferences = [];
-        Registry::cache(new CacheFactory());
-
         RealTreeFixture::restoreMinimalDatabase();
 
         parent::tearDown();
@@ -148,6 +139,7 @@ final class PendingRecordsTest extends TestCase
             $connection->getQueryLog(),
             static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
         );
+
         $connection->disableQueryLog();
 
         self::assertSame([], $xrefs);
