@@ -76,7 +76,7 @@ final class MediaPreloader
      */
     public function preload(Tree $tree, array $people): void
     {
-        // The highlight image is not read at all without this setting.
+        // The chart walk of a module reads no highlight image without this setting, so nothing is preloaded.
         if ($tree->getPreference('SHOW_HIGHLIGHT_IMAGES') === '') {
             return;
         }
