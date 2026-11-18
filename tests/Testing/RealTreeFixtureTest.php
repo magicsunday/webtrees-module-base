@@ -81,12 +81,12 @@ final class RealTreeFixtureTest extends TestCase
             "0 HEAD\n0 TRLR",
             'fixture-preferences',
             [
-                'HIDE_LIVE_PEOPLE' => '1',
+                'HIDE_LIVE_PEOPLE' => '0',
                 'SHOW_DEAD_PEOPLE' => '0',
             ],
         );
 
-        self::assertSame('1', $tree->getPreference('HIDE_LIVE_PEOPLE'));
+        self::assertSame('0', $tree->getPreference('HIDE_LIVE_PEOPLE'));
         self::assertSame('0', $tree->getPreference('SHOW_DEAD_PEOPLE'));
     }
 
