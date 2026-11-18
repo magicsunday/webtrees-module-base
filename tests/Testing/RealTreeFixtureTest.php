@@ -69,6 +69,28 @@ final class RealTreeFixtureTest extends TestCase
     }
 
     /**
+     * The preferences that are passed are set on the new tree, so a test that needs a tree with a
+     * privacy setting does not set each preference after the import.
+     */
+    #[Test]
+    public function setsThePreferencesThatArePassedOnTheNewTree(): void
+    {
+        RealTreeFixture::boot();
+
+        $tree = RealTreeFixture::importGedcom(
+            "0 HEAD\n0 TRLR",
+            'fixture-preferences',
+            [
+                'HIDE_LIVE_PEOPLE' => '0',
+                'SHOW_DEAD_PEOPLE' => '0',
+            ],
+        );
+
+        self::assertSame('0', $tree->getPreference('HIDE_LIVE_PEOPLE'));
+        self::assertSame('0', $tree->getPreference('SHOW_DEAD_PEOPLE'));
+    }
+
+    /**
      * Code that builds a link or reads the request finds the routes of webtrees and a web request of a
      * guest from the test host in the container.
      */
