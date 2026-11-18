@@ -18,6 +18,7 @@ use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 use MagicSunday\Webtrees\ModuleBase\Processor\ImageProcessor;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -237,22 +238,38 @@ final class ImageProcessorTest extends TestCase
     }
 
     /**
-     * With highlight images disabled at the tree level, the processor returns
-     * an empty string without consulting the media file.
+     * With highlight images disabled at the tree level, whether as an empty setting or as the text zero
+     * that the core reads as off, the processor returns an empty string without consulting the media file.
+     *
+     * @param string $setting The value of the highlight images setting that means off
      */
     #[Test]
-    public function getHighlightImageUrlReturnsEmptyWhenHighlightImagesDisabled(): void
+    #[DataProvider('highlightImagesOff')]
+    public function getHighlightImageUrlReturnsEmptyWhenHighlightImagesDisabled(string $setting): void
     {
         $processor = $this->createProcessor(
             $this->createIndividual(
                 true,
-                '',
+                $setting,
                 '1',
                 $this->createMediaFile(false, true),
             )
         );
 
         self::assertSame('', $processor->getHighlightImageUrl());
+    }
+
+    /**
+     * The values of the highlight images setting that switch the images off.
+     *
+     * @return array<string, array{string}> The setting by the name of the case
+     */
+    public static function highlightImagesOff(): array
+    {
+        return [
+            'an empty setting' => [''],
+            'the text zero'    => ['0'],
+        ];
     }
 
     /**
