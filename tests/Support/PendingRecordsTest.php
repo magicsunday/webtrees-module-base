@@ -18,6 +18,7 @@ use Fisharebest\Webtrees\Services\UserService;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\UsesClass;
@@ -38,6 +39,7 @@ use function str_contains;
  */
 #[CoversClass(PendingRecords::class)]
 #[UsesClass(RealTreeFixture::class)]
+#[UsesClass(StatementLog::class)]
 final class PendingRecordsTest extends TestCase
 {
     /**
@@ -74,14 +76,10 @@ final class PendingRecordsTest extends TestCase
         $this->insertChange($tree, '105', 'pending');
         $this->insertChange($tree, '104', 'accepted');
 
-        $connection = DB::connection();
-        $connection->enableQueryLog();
-        $connection->flushQueryLog();
-
-        $xrefs = PendingRecords::xrefs($tree, ['101', '102', '103', '104', '105'], 2);
-
-        $log = $connection->getQueryLog();
-        $connection->disableQueryLog();
+        $xrefs = [];
+        $log   = StatementLog::capture(static function () use ($tree, &$xrefs): void {
+            $xrefs = PendingRecords::xrefs($tree, ['101', '102', '103', '104', '105'], 2);
+        });
 
         sort($xrefs);
 
@@ -129,18 +127,15 @@ final class PendingRecordsTest extends TestCase
 
         Auth::logout();
 
-        $connection = DB::connection();
-        $connection->enableQueryLog();
-        $connection->flushQueryLog();
-
-        $xrefs = PendingRecords::xrefs($tree, ['101'], 10);
+        $xrefs = [];
+        $log   = StatementLog::capture(static function () use ($tree, &$xrefs): void {
+            $xrefs = PendingRecords::xrefs($tree, ['101'], 10);
+        });
 
         $changeStatements = array_filter(
-            $connection->getQueryLog(),
+            $log,
             static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
         );
-
-        $connection->disableQueryLog();
 
         self::assertSame([], $xrefs);
         self::assertSame([], $changeStatements);
@@ -157,18 +152,15 @@ final class PendingRecordsTest extends TestCase
 
         $this->insertChange($tree, '101', 'pending');
 
-        $connection = DB::connection();
-        $connection->enableQueryLog();
-        $connection->flushQueryLog();
-
-        $xrefs = PendingRecords::xrefs($tree, [], 10);
+        $xrefs = [];
+        $log   = StatementLog::capture(static function () use ($tree, &$xrefs): void {
+            $xrefs = PendingRecords::xrefs($tree, [], 10);
+        });
 
         $changeStatements = array_filter(
-            $connection->getQueryLog(),
+            $log,
             static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
         );
-
-        $connection->disableQueryLog();
 
         self::assertSame([], $xrefs);
         self::assertSame([], $changeStatements);
