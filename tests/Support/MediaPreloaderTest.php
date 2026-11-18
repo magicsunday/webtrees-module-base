@@ -581,6 +581,19 @@ final class MediaPreloaderTest extends TestCase
     }
 
     /**
+     * The values of the highlight images setting that switch the images off.
+     *
+     * @return array<string, array{string}> The setting by the name of the case
+     */
+    public static function highlightImagesOff(): array
+    {
+        return [
+            'an empty setting' => [''],
+            'the text zero'    => ['0'],
+        ];
+    }
+
+    /**
      * The rules of the tree that hide a media object from a visitor.
      *
      * @return array<string, array{string|null, string|null}> The rule of the tree by the name of the case
@@ -754,14 +767,18 @@ final class MediaPreloaderTest extends TestCase
     }
 
     /**
-     * A tree without highlight images has no lookup of media objects.
+     * A tree without highlight images has no lookup of media objects, whether the setting is empty, as
+     * the preferences form of webtrees writes it, or the text zero, which the core reads as off as well.
+     *
+     * @param string $setting The value of the highlight images setting that means off
      */
     #[Test]
-    public function aTreeWithoutHighlightImagesLoadsNothing(): void
+    #[DataProvider('highlightImagesOff')]
+    public function aTreeWithoutHighlightImagesLoadsNothing(string $setting): void
     {
         $tree = $this->importPrivacyTree();
 
-        $tree->setPreference('SHOW_HIGHLIGHT_IMAGES', '');
+        $tree->setPreference('SHOW_HIGHLIGHT_IMAGES', $setting);
 
         $people     = $this->people($tree, ['1', '2', '9']);
         $statements = $this->statementsOf(fn () => (new MediaPreloader())->preload($tree, $people));
