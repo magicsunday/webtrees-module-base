@@ -45,6 +45,29 @@ final class ModuleSettingsFixtureTest extends TestCase
     }
 
     /**
+     * The table of the module settings has the three columns that a module reads its preferences from, and
+     * it can be created again on a connection that has dropped it.
+     *
+     * @return void
+     */
+    #[Test]
+    public function createsTheTableWithTheColumnsOfTheModuleSettings(): void
+    {
+        ModuleSettingsFixture::seed('the-module', []);
+
+        DB::connection()->getSchemaBuilder()->drop('module_setting');
+
+        ModuleSettingsFixture::createModuleSettingTable();
+
+        self::assertTrue(
+            DB::connection()->getSchemaBuilder()->hasColumns(
+                'module_setting',
+                ['module_name', 'setting_name', 'setting_value'],
+            ),
+        );
+    }
+
+    /**
      * A later seed replaces every row of the earlier one, also those of another module.
      *
      * @return void

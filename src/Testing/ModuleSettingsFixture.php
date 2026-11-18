@@ -70,6 +70,19 @@ final class ModuleSettingsFixture
     }
 
     /**
+     * Creates the `module_setting` table on the current connection, with the columns that the preferences
+     * of a module are read from. The real tree fixture calls it as well, so the table is defined here only.
+     */
+    public static function createModuleSettingTable(): void
+    {
+        DB::connection()->getSchemaBuilder()->create('module_setting', static function (Blueprint $table): void {
+            $table->string('module_name');
+            $table->string('setting_name');
+            $table->string('setting_value');
+        });
+    }
+
+    /**
      * Boots the in-memory SQLite database with a minimal `module_setting` schema once per process.
      */
     private static function boot(): void
@@ -85,11 +98,7 @@ final class ModuleSettingsFixture
         ]);
         $database->setAsGlobal();
         $database->bootEloquent();
-        DB::connection()->getSchemaBuilder()->create('module_setting', static function (Blueprint $table): void {
-            $table->string('module_name');
-            $table->string('setting_name');
-            $table->string('setting_value');
-        });
+        self::createModuleSettingTable();
 
         self::$booted = true;
     }

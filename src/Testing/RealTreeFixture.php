@@ -29,7 +29,6 @@ use Fisharebest\Webtrees\Session;
 use Fisharebest\Webtrees\Site;
 use Fisharebest\Webtrees\Tree;
 use Fisharebest\Webtrees\Webtrees;
-use Illuminate\Database\Schema\Blueprint;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
@@ -141,11 +140,7 @@ final class RealTreeFixture
             verify_certificate: false,
         );
 
-        DB::connection()->getSchemaBuilder()->create('module_setting', static function (Blueprint $table): void {
-            $table->string('module_name');
-            $table->string('setting_name');
-            $table->string('setting_value');
-        });
+        ModuleSettingsFixture::createModuleSettingTable();
     }
 
     /**
