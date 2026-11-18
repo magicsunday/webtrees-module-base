@@ -128,6 +128,25 @@ final class MediaDirectoryTest extends TestCase
     }
 
     /**
+     * The removal lists the media folder as a plain path, so a prefix with a pattern character and a
+     * file that starts with a dot are removed as well.
+     */
+    #[Test]
+    public function theRemovalHandlesAPatternCharacterInTheNameAndHiddenFiles(): void
+    {
+        $directory = new MediaDirectory();
+        $directory->create('module-base-[media]-directory-test-');
+        $directory->writeFile('photo.jpg');
+        $directory->writeFile('.hidden');
+
+        $indexDirectory = Site::getPreference('INDEX_DIRECTORY');
+
+        $directory->remove();
+
+        self::assertFalse(is_dir($indexDirectory));
+    }
+
+    /**
      * A directory that cannot be created fails with an exception and leaves nothing to remove, so the
      * tear down of the test that follows raises no warning.
      */

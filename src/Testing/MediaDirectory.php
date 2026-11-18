@@ -15,9 +15,9 @@ use Fisharebest\Webtrees\Site;
 use RuntimeException;
 
 use function file_put_contents;
-use function glob;
 use function mkdir;
 use function rmdir;
+use function scandir;
 use function strlen;
 use function sys_get_temp_dir;
 use function uniqid;
@@ -82,10 +82,17 @@ final class MediaDirectory
             return;
         }
 
-        $files = glob($this->indexDirectory . 'media/*');
+        // The folder is listed with scandir() because glob() reads the path as a pattern, so a
+        // prefix with a bracket would leave the files behind.
+        $names = scandir($this->indexDirectory . 'media');
 
-        foreach (($files === false) ? [] : $files as $file) {
-            unlink($file);
+        foreach (($names === false) ? [] : $names as $name) {
+            if (
+                ($name !== '.')
+                && ($name !== '..')
+            ) {
+                unlink($this->indexDirectory . 'media/' . $name);
+            }
         }
 
         rmdir($this->indexDirectory . 'media');
