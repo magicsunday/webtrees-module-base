@@ -184,9 +184,10 @@ final class MediaPreloader
     {
         $accessLevel = Auth::accessLevel($tree);
 
+        // An editor includes a manager, who is the only role with the access level none, so the editor
+        // operand covers that level as well.
         if (
-            ($accessLevel <= Auth::PRIV_NONE)
-            || in_array($tree->getPreference('HIDE_LIVE_PEOPLE'), ['', '0'], true)
+            in_array($tree->getPreference('HIDE_LIVE_PEOPLE'), ['', '0'], true)
             || Auth::isEditor($tree)
         ) {
             return;
