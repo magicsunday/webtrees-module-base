@@ -1089,9 +1089,11 @@ final class MediaPreloaderTest extends TestCase
     {
         // The settings of the tree and of the user are read once per request by the framework, they
         // are no lookup of a record.
-        return array_values(array_filter(
+        $lookups = array_filter(
             StatementLog::capture($action),
             static fn (array $statement): bool => !str_contains($statement['query'], '_setting"'),
-        ));
+        );
+
+        return array_values($lookups);
     }
 }
