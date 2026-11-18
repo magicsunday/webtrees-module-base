@@ -749,7 +749,7 @@ final class MediaPreloaderTest extends TestCase
         self::assertNotSame([], $statements);
 
         foreach ($statements as $statement) {
-            self::assertStringNotContainsString('"xref" in', $statement['query']);
+            self::assertStringNotContainsString('"wt_change"', $statement['query']);
         }
     }
 
