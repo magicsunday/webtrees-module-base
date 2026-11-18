@@ -41,11 +41,11 @@ final class PendingRecords
      *
      * @param Tree         $tree      The tree of the records
      * @param list<string> $xrefs     The xrefs to look up
-     * @param int<1, max>  $chunkSize The most xrefs that one statement binds
+     * @param int<1, max>  $chunkSize The most xrefs that one statement binds, as many as the media preload binds
      *
      * @return list<string> The xrefs of the records with a pending change
      */
-    public static function xrefs(Tree $tree, array $xrefs, int $chunkSize): array
+    public static function xrefs(Tree $tree, array $xrefs, int $chunkSize = MediaPreloader::CHUNK_SIZE): array
     {
         if (!Auth::isEditor($tree)) {
             return [];
