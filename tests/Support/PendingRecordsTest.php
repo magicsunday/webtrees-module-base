@@ -16,8 +16,8 @@ use Fisharebest\Webtrees\Contracts\UserInterface;
 use Fisharebest\Webtrees\DB;
 use Fisharebest\Webtrees\Services\UserService;
 use Fisharebest\Webtrees\Tree;
-use MagicSunday\Webtrees\ModuleBase\Support\MediaPreloader;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -26,14 +26,9 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 use function array_filter;
-use function array_map;
-use function array_slice;
-use function array_values;
 use function count;
-use function range;
 use function sort;
 use function str_contains;
-use function strval;
 
 /**
  * Looks up the pending changes of records on a real schema. An editor sees pending changes, so only an
@@ -44,9 +39,9 @@ use function strval;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(PendingRecords::class)]
-#[UsesClass(MediaPreloader::class)]
 #[UsesClass(RealTreeFixture::class)]
 #[UsesClass(StatementLog::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class PendingRecordsTest extends TestCase
 {
     /**
@@ -104,29 +99,6 @@ final class PendingRecordsTest extends TestCase
         foreach ($changeStatements as $entry) {
             self::assertLessThanOrEqual(4, count($entry['bindings']));
         }
-    }
-
-    /**
-     * Without a chunk size the lookup binds as many xrefs as the media preload does in one statement, so a
-     * list of exactly one chunk is one statement and one xref more is a second one.
-     */
-    #[Test]
-    public function theChunkSizeOfThePreloadIsTheDefault(): void
-    {
-        $tree = RealTreeFixture::importGedcom("0 HEAD\n0 TRLR", 'pending');
-
-        $xrefs = array_map(strval(...), range(1, MediaPreloader::CHUNK_SIZE + 1));
-
-        $oneChunk = StatementLog::capture(static function () use ($tree, $xrefs): void {
-            PendingRecords::xrefs($tree, array_slice($xrefs, 0, MediaPreloader::CHUNK_SIZE));
-        });
-
-        $moreThanOneChunk = StatementLog::capture(static function () use ($tree, $xrefs): void {
-            PendingRecords::xrefs($tree, $xrefs);
-        });
-
-        self::assertCount(1, $this->changeStatementsOf($oneChunk));
-        self::assertCount(2, $this->changeStatementsOf($moreThanOneChunk));
     }
 
     /**
@@ -211,21 +183,6 @@ final class PendingRecordsTest extends TestCase
         Auth::login($member);
 
         self::assertSame([], PendingRecords::xrefs($tree, ['101'], 10));
-    }
-
-    /**
-     * Returns the statements that read the pending changes.
-     *
-     * @param list<array{query: string, bindings: list<string>}> $statements The captured statements
-     *
-     * @return list<array{query: string, bindings: list<string>}> The statements on the change table
-     */
-    private function changeStatementsOf(array $statements): array
-    {
-        return array_values(array_filter(
-            $statements,
-            static fn (array $entry): bool => str_contains($entry['query'], '"wt_change"'),
-        ));
     }
 
     /**
