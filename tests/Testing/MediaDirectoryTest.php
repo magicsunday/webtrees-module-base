@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function basename;
 use function file_get_contents;
 use function is_dir;
 use function is_file;
@@ -28,6 +29,8 @@ use function set_error_handler;
 use function str_ends_with;
 use function str_starts_with;
 use function sys_get_temp_dir;
+use function tempnam;
+use function unlink;
 
 /**
  * Tests that the media directory of a test is created with the media folder that the site reads, that
@@ -118,6 +121,42 @@ final class MediaDirectoryTest extends TestCase
             restore_error_handler();
             $directory->remove();
         }
+    }
+
+    /**
+     * A directory that cannot be created fails with an exception and leaves nothing to remove, so the
+     * tear down of the test that follows raises no warning.
+     */
+    #[Test]
+    public function aDirectoryThatCannotBeCreatedFailsAndLeavesNothingToRemove(): void
+    {
+        $blocker = tempnam(sys_get_temp_dir(), 'module-base-blocker-');
+
+        self::assertIsString($blocker);
+
+        $directory = new MediaDirectory();
+        $warnings  = 0;
+
+        set_error_handler(static function () use (&$warnings): bool {
+            ++$warnings;
+
+            return true;
+        });
+
+        try {
+            $directory->create(basename($blocker) . '/sub-');
+
+            self::fail('The creation below a file has to fail.');
+        } catch (RuntimeException) {
+            $warningsOfTheCreation = $warnings;
+
+            $directory->remove();
+        } finally {
+            restore_error_handler();
+            unlink($blocker);
+        }
+
+        self::assertSame($warningsOfTheCreation, $warnings);
     }
 
     /**

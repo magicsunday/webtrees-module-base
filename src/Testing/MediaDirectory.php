@@ -50,11 +50,13 @@ final class MediaDirectory
      */
     public function create(string $prefix): void
     {
-        $this->indexDirectory = sys_get_temp_dir() . '/' . $prefix . uniqid('', true) . '/';
+        $indexDirectory = sys_get_temp_dir() . '/' . $prefix . uniqid('', true) . '/';
 
-        if (!mkdir($this->indexDirectory . 'media', 0o777, true)) {
+        if (!mkdir($indexDirectory . 'media', 0o777, true)) {
             throw new RuntimeException('The media directory could not be created.');
         }
+
+        $this->indexDirectory = $indexDirectory;
 
         Site::setPreference('INDEX_DIRECTORY', $this->indexDirectory);
     }
