@@ -13,6 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Testing;
 
 use Fisharebest\Webtrees\DB;
 use LogicException;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -30,6 +31,7 @@ use PHPUnit\Framework\TestCase;
  */
 #[CoversClass(StatementLog::class)]
 #[UsesClass(RealTreeFixture::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class StatementLogTest extends TestCase
 {
     /**

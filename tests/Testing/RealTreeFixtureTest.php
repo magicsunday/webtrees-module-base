@@ -19,9 +19,11 @@ use Fisharebest\Webtrees\Http\RequestHandlers\HomePage;
 use Fisharebest\Webtrees\Individual;
 use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Site;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -34,6 +36,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * @link    https://github.com/magicsunday/webtrees-module-base/
  */
 #[CoversClass(RealTreeFixture::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class RealTreeFixtureTest extends TestCase
 {
     /**

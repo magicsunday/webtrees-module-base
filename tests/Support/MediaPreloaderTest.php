@@ -26,6 +26,7 @@ use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\MediaPreloader;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
 use MagicSunday\Webtrees\ModuleBase\Testing\MediaDirectory;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -64,6 +65,7 @@ use function strval;
 #[UsesClass(MediaDirectory::class)]
 #[UsesClass(RealTreeFixture::class)]
 #[UsesClass(StatementLog::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class MediaPreloaderTest extends TestCase
 {
     /**
