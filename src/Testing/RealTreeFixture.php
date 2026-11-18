@@ -151,12 +151,13 @@ final class RealTreeFixture
     /**
      * Imports a GEDCOM as the logged-in administrator into a new tree, record by record.
      *
-     * @param string $gedcom The GEDCOM text
-     * @param string $name   The name and title of the new tree
+     * @param string                $gedcom      The GEDCOM text
+     * @param string                $name        The name and title of the new tree
+     * @param array<string, string> $preferences The preferences to set on the new tree, keyed by name
      *
      * @return Tree The new tree with the imported records
      */
-    public static function importGedcom(string $gedcom, string $name): Tree
+    public static function importGedcom(string $gedcom, string $name, array $preferences = []): Tree
     {
         $service = new GedcomImportService();
         $tree    = (new TreeService($service))->create($name, $name);
@@ -186,6 +187,10 @@ final class RealTreeFixture
 
         foreach ($records as $record) {
             $service->importRecord($record, $tree, false);
+        }
+
+        foreach ($preferences as $preference => $value) {
+            $tree->setPreference($preference, $value);
         }
 
         return $tree;
