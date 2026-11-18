@@ -41,6 +41,7 @@ use function array_values;
 use function count;
 use function implode;
 use function intdiv;
+use function preg_match;
 use function range;
 use function str_contains;
 use function strval;
@@ -571,7 +572,20 @@ final class MediaPreloaderTest extends TestCase
 
         Registry::cache(new CacheFactory());
 
-        (new MediaPreloader())->preload($tree, $this->people($tree, $xrefs));
+        $people    = $this->people($tree, $xrefs);
+        $preloaded = $this->statementsOf(fn () => (new MediaPreloader())->preload($tree, $people));
+
+        // The decision of a member takes one statement each for the media objects, their links, and the
+        // families and individuals that the links point to, and none for a pending change.
+        self::assertSame(
+            ['wt_media', 'wt_link', 'wt_families', 'wt_individuals'],
+            array_map(
+                static fn (array $statement): string => (preg_match('/from "(\w+)"/', $statement['query'], $table) === 1)
+                    ? $table[1]
+                    : '',
+                $preloaded,
+            ),
+        );
 
         self::assertSame($withoutPreload, $this->highlightFiles($tree, $xrefs));
 
