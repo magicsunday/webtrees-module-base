@@ -74,13 +74,15 @@ final class MediaDirectoryTest extends TestCase
         $directory = new MediaDirectory();
         $directory->create('module-base-media-directory-test-');
 
-        $indexDirectory = Site::getPreference('INDEX_DIRECTORY');
+        try {
+            $indexDirectory = Site::getPreference('INDEX_DIRECTORY');
 
-        self::assertTrue(str_starts_with($indexDirectory, sys_get_temp_dir() . '/module-base-media-directory-test-'));
-        self::assertTrue(str_ends_with($indexDirectory, '/'));
-        self::assertTrue(is_dir($indexDirectory . 'media'));
-
-        $directory->remove();
+            self::assertTrue(str_starts_with($indexDirectory, sys_get_temp_dir() . '/module-base-media-directory-test-'));
+            self::assertTrue(str_ends_with($indexDirectory, '/'));
+            self::assertTrue(is_dir($indexDirectory . 'media'));
+        } finally {
+            $directory->remove();
+        }
     }
 
     /**
@@ -94,11 +96,13 @@ final class MediaDirectoryTest extends TestCase
         $directory->create('module-base-media-directory-test-');
         $directory->writeFile('photo.jpg');
 
-        $path = Site::getPreference('INDEX_DIRECTORY') . 'media/photo.jpg';
+        try {
+            $path = Site::getPreference('INDEX_DIRECTORY') . 'media/photo.jpg';
 
-        self::assertSame('image', file_get_contents($path));
-
-        $directory->remove();
+            self::assertSame('image', file_get_contents($path));
+        } finally {
+            $directory->remove();
+        }
     }
 
     /**
