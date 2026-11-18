@@ -22,11 +22,12 @@ use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Services\GedcomImportService;
 use Fisharebest\Webtrees\Services\TreeService;
 use Fisharebest\Webtrees\Services\UserService;
-use Fisharebest\Webtrees\Site;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\MediaPreloader;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
+use MagicSunday\Webtrees\ModuleBase\Testing\MediaDirectory;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
+use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -37,20 +38,11 @@ use function array_filter;
 use function array_map;
 use function array_values;
 use function count;
-use function file_put_contents;
-use function glob;
 use function implode;
 use function intdiv;
-use function is_dir;
-use function is_scalar;
-use function mkdir;
 use function range;
-use function rmdir;
 use function str_contains;
 use function strval;
-use function sys_get_temp_dir;
-use function uniqid;
-use function unlink;
 
 /**
  * Drives the media preload against the real record factories and the real privacy engine of webtrees
@@ -69,13 +61,15 @@ use function unlink;
  */
 #[CoversClass(MediaPreloader::class)]
 #[UsesClass(PendingRecords::class)]
+#[UsesClass(MediaDirectory::class)]
 #[UsesClass(RealTreeFixture::class)]
+#[UsesClass(StatementLog::class)]
 final class MediaPreloaderTest extends TestCase
 {
     /**
-     * The index directory that holds the media files, or an empty string while the test has none.
+     * The media directory of the test, which holds the image files of the people.
      */
-    private string $indexDirectory = '';
+    private MediaDirectory $mediaDirectory;
 
     /**
      * Boots webtrees on a real schema.
@@ -85,6 +79,8 @@ final class MediaPreloaderTest extends TestCase
         parent::setUp();
 
         RealTreeFixture::boot();
+
+        $this->mediaDirectory = new MediaDirectory();
     }
 
     /**
@@ -92,7 +88,7 @@ final class MediaPreloaderTest extends TestCase
      */
     protected function tearDown(): void
     {
-        $this->removeIndexDirectory();
+        $this->mediaDirectory->remove();
         RealTreeFixture::restoreMinimalDatabase();
 
         parent::tearDown();
@@ -753,7 +749,7 @@ final class MediaPreloaderTest extends TestCase
         self::assertNotSame([], $statements);
 
         foreach ($statements as $statement) {
-            self::assertStringNotContainsString('"xref" in', $statement['query']);
+            self::assertStringNotContainsString('"wt_change"', $statement['query']);
         }
     }
 
@@ -984,41 +980,11 @@ final class MediaPreloaderTest extends TestCase
      */
     private function createIndexDirectory(array $names): void
     {
-        $this->indexDirectory = sys_get_temp_dir() . '/module-base-media-' . uniqid('', true) . '/';
-
-        if (
-            !mkdir($this->indexDirectory . 'media', 0o777, true)
-            && !is_dir($this->indexDirectory . 'media')
-        ) {
-            self::fail('The media directory could not be created.');
-        }
+        $this->mediaDirectory->create('module-base-media-');
 
         foreach ($names as $name) {
-            file_put_contents($this->indexDirectory . 'media/' . $name . '.jpg', 'image');
+            $this->mediaDirectory->writeFile($name . '.jpg');
         }
-
-        Site::setPreference('INDEX_DIRECTORY', $this->indexDirectory);
-    }
-
-    /**
-     * Removes the index directory of the test with the files in it.
-     */
-    private function removeIndexDirectory(): void
-    {
-        if ($this->indexDirectory === '') {
-            return;
-        }
-
-        $files = glob($this->indexDirectory . 'media/*');
-
-        foreach (($files === false) ? [] : $files as $file) {
-            unlink($file);
-        }
-
-        rmdir($this->indexDirectory . 'media');
-        rmdir($this->indexDirectory);
-
-        $this->indexDirectory = '';
     }
 
     /**
@@ -1071,36 +1037,11 @@ final class MediaPreloaderTest extends TestCase
      */
     private function statementsOf(Closure $action): array
     {
-        $connection = DB::connection();
-        $connection->enableQueryLog();
-        $connection->flushQueryLog();
-
-        $action();
-
-        $log = $connection->getQueryLog();
-        $connection->disableQueryLog();
-
-        $statements = [];
-
-        foreach ($log as $entry) {
-            // The settings of the tree and of the user are read once per request by the framework, they
-            // are no lookup of a record.
-            if (str_contains($entry['query'], '_setting"')) {
-                continue;
-            }
-
-            $bindings = [];
-
-            foreach ($entry['bindings'] as $binding) {
-                $bindings[] = is_scalar($binding) ? (string) $binding : '';
-            }
-
-            $statements[] = [
-                'query'    => $entry['query'],
-                'bindings' => $bindings,
-            ];
-        }
-
-        return $statements;
+        // The settings of the tree and of the user are read once per request by the framework, they
+        // are no lookup of a record.
+        return array_values(array_filter(
+            StatementLog::capture($action),
+            static fn (array $statement): bool => !str_contains($statement['query'], '_setting"'),
+        ));
     }
 }
