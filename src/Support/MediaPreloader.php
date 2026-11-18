@@ -77,7 +77,8 @@ final class MediaPreloader
     public function preload(Tree $tree, array $people): void
     {
         // The chart walk of a module reads no highlight image without this setting, so nothing is preloaded.
-        if ($tree->getPreference('SHOW_HIGHLIGHT_IMAGES') === '') {
+        // The preferences form writes an empty text for off, and the core reads the text zero as off as well.
+        if (in_array($tree->getPreference('SHOW_HIGHLIGHT_IMAGES'), ['', '0'], true)) {
             return;
         }
 
@@ -183,9 +184,10 @@ final class MediaPreloader
     {
         $accessLevel = Auth::accessLevel($tree);
 
+        // An editor includes a manager, who is the only role with the access level none, so the editor
+        // operand covers that level as well.
         if (
-            ($accessLevel <= Auth::PRIV_NONE)
-            || in_array($tree->getPreference('HIDE_LIVE_PEOPLE'), ['', '0'], true)
+            in_array($tree->getPreference('HIDE_LIVE_PEOPLE'), ['', '0'], true)
             || Auth::isEditor($tree)
         ) {
             return;

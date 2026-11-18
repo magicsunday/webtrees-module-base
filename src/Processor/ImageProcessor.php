@@ -16,6 +16,8 @@ use Fisharebest\Webtrees\MediaFile;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
 use MagicSunday\Webtrees\ModuleBase\Contract\ModuleAssetUrlInterface;
 
+use function in_array;
+
 /**
  * Class ImageProcessor.
  *
@@ -54,7 +56,7 @@ final readonly class ImageProcessor
     ): string {
         if (
             $this->individual->canShow()
-            && ($this->individual->tree()->getPreference('SHOW_HIGHLIGHT_IMAGES') !== '')
+            && !in_array($this->individual->tree()->getPreference('SHOW_HIGHLIGHT_IMAGES'), ['', '0'], true)
         ) {
             $mediaFile = $this->individual->findHighlightedMediaFile();
 

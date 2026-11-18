@@ -17,6 +17,7 @@ use Fisharebest\Webtrees\DB;
 use Fisharebest\Webtrees\Services\UserService;
 use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -40,6 +41,7 @@ use function str_contains;
 #[CoversClass(PendingRecords::class)]
 #[UsesClass(RealTreeFixture::class)]
 #[UsesClass(StatementLog::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class PendingRecordsTest extends TestCase
 {
     /**

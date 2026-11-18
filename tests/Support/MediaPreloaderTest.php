@@ -26,6 +26,7 @@ use Fisharebest\Webtrees\Tree;
 use MagicSunday\Webtrees\ModuleBase\Support\MediaPreloader;
 use MagicSunday\Webtrees\ModuleBase\Support\PendingRecords;
 use MagicSunday\Webtrees\ModuleBase\Testing\MediaDirectory;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -40,6 +41,7 @@ use function array_values;
 use function count;
 use function implode;
 use function intdiv;
+use function preg_match;
 use function range;
 use function str_contains;
 use function strval;
@@ -64,6 +66,7 @@ use function strval;
 #[UsesClass(MediaDirectory::class)]
 #[UsesClass(RealTreeFixture::class)]
 #[UsesClass(StatementLog::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class MediaPreloaderTest extends TestCase
 {
     /**
@@ -78,9 +81,9 @@ final class MediaPreloaderTest extends TestCase
     {
         parent::setUp();
 
-        RealTreeFixture::boot();
-
         $this->mediaDirectory = new MediaDirectory();
+
+        RealTreeFixture::boot();
     }
 
     /**
@@ -98,12 +101,14 @@ final class MediaPreloaderTest extends TestCase
      * The media objects of a generation come in chunked statements, whatever the width of the generation,
      * and the lookups of the walk afterwards send no statement. The administrator has no privacy check, so
      * the media objects are all that the walk looks up.
+     *
+     * @param int $people The number of people of the generation, each with a media object of its own
      */
     #[Test]
-    public function theMediaOfAGenerationIsLoadedInChunkedStatements(): void
+    #[DataProvider('generationWidths')]
+    public function theMediaOfAGenerationIsLoadedInChunkedStatements(int $people): void
     {
-        $people = (2 * MediaPreloader::CHUNK_SIZE) + 20;
-        $lines  = ['0 HEAD'];
+        $lines = ['0 HEAD'];
 
         foreach (range(1, $people) as $person) {
             $lines[] = '0 @' . $person . '@ INDI';
@@ -567,7 +572,20 @@ final class MediaPreloaderTest extends TestCase
 
         Registry::cache(new CacheFactory());
 
-        (new MediaPreloader())->preload($tree, $this->people($tree, $xrefs));
+        $people    = $this->people($tree, $xrefs);
+        $preloaded = $this->statementsOf(fn () => (new MediaPreloader())->preload($tree, $people));
+
+        // The decision of a member takes one statement each for the media objects, their links, and the
+        // families and individuals that the links point to, and none for a pending change.
+        self::assertSame(
+            ['wt_media', 'wt_link', 'wt_families', 'wt_individuals'],
+            array_map(
+                static fn (array $statement): string => (preg_match('/from "(\w+)"/', $statement['query'], $table) === 1)
+                    ? $table[1]
+                    : '',
+                $preloaded,
+            ),
+        );
 
         self::assertSame($withoutPreload, $this->highlightFiles($tree, $xrefs));
 
@@ -578,6 +596,34 @@ final class MediaPreloaderTest extends TestCase
         (new MediaPreloader())->preload($tree, $this->people($tree, $xrefs));
 
         self::assertSame(['one.jpg', null, null], $this->highlightFiles($tree, $xrefs));
+    }
+
+    /**
+     * The widths of a generation around the chunk boundary and well beyond it. A generation of exactly one
+     * chunk is one statement, and one more person makes a second.
+     *
+     * @return array<string, array{int}> The number of people by the name of the case
+     */
+    public static function generationWidths(): array
+    {
+        return [
+            'a generation of exactly one chunk'      => [MediaPreloader::CHUNK_SIZE],
+            'a generation of one chunk and a person' => [MediaPreloader::CHUNK_SIZE + 1],
+            'a generation of several chunks'         => [(2 * MediaPreloader::CHUNK_SIZE) + 20],
+        ];
+    }
+
+    /**
+     * The values of the highlight images setting that switch the images off.
+     *
+     * @return array<string, array{string}> The setting by the name of the case
+     */
+    public static function highlightImagesOff(): array
+    {
+        return [
+            'an empty setting' => [''],
+            'the text zero'    => ['0'],
+        ];
     }
 
     /**
@@ -754,14 +800,18 @@ final class MediaPreloaderTest extends TestCase
     }
 
     /**
-     * A tree without highlight images has no lookup of media objects.
+     * A tree without highlight images has no lookup of media objects, whether the setting is empty, as
+     * the preferences form of webtrees writes it, or the text zero, which the core reads as off as well.
+     *
+     * @param string $setting The value of the highlight images setting that means off
      */
     #[Test]
-    public function aTreeWithoutHighlightImagesLoadsNothing(): void
+    #[DataProvider('highlightImagesOff')]
+    public function aTreeWithoutHighlightImagesLoadsNothing(string $setting): void
     {
         $tree = $this->importPrivacyTree();
 
-        $tree->setPreference('SHOW_HIGHLIGHT_IMAGES', '');
+        $tree->setPreference('SHOW_HIGHLIGHT_IMAGES', $setting);
 
         $people     = $this->people($tree, ['1', '2', '9']);
         $statements = $this->statementsOf(fn () => (new MediaPreloader())->preload($tree, $people));

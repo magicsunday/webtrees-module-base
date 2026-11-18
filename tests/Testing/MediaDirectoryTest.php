@@ -13,6 +13,7 @@ namespace MagicSunday\Webtrees\ModuleBase\Test\Testing;
 
 use Fisharebest\Webtrees\Site;
 use MagicSunday\Webtrees\ModuleBase\Testing\MediaDirectory;
+use MagicSunday\Webtrees\ModuleBase\Testing\ModuleSettingsFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -42,6 +43,7 @@ use function unlink;
  */
 #[CoversClass(MediaDirectory::class)]
 #[UsesClass(RealTreeFixture::class)]
+#[UsesClass(ModuleSettingsFixture::class)]
 final class MediaDirectoryTest extends TestCase
 {
     /**
