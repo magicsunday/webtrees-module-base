@@ -78,9 +78,9 @@ final class MediaPreloaderTest extends TestCase
     {
         parent::setUp();
 
-        RealTreeFixture::boot();
-
         $this->mediaDirectory = new MediaDirectory();
+
+        RealTreeFixture::boot();
     }
 
     /**
