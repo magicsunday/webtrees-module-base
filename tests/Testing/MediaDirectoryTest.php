@@ -25,6 +25,7 @@ use function is_dir;
 use function is_file;
 use function restore_error_handler;
 use function set_error_handler;
+use function str_ends_with;
 use function str_starts_with;
 use function sys_get_temp_dir;
 
@@ -73,6 +74,7 @@ final class MediaDirectoryTest extends TestCase
         $indexDirectory = Site::getPreference('INDEX_DIRECTORY');
 
         self::assertTrue(str_starts_with($indexDirectory, sys_get_temp_dir() . '/module-base-media-directory-test-'));
+        self::assertTrue(str_ends_with($indexDirectory, '/'));
         self::assertTrue(is_dir($indexDirectory . 'media'));
 
         $directory->remove();

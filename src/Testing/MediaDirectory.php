@@ -16,7 +16,6 @@ use RuntimeException;
 
 use function file_put_contents;
 use function glob;
-use function is_dir;
 use function mkdir;
 use function rmdir;
 use function strlen;
@@ -53,10 +52,7 @@ final class MediaDirectory
     {
         $this->indexDirectory = sys_get_temp_dir() . '/' . $prefix . uniqid('', true) . '/';
 
-        if (
-            !mkdir($this->indexDirectory . 'media', 0o777, true)
-            && !is_dir($this->indexDirectory . 'media')
-        ) {
+        if (!mkdir($this->indexDirectory . 'media', 0o777, true)) {
             throw new RuntimeException('The media directory could not be created.');
         }
 
