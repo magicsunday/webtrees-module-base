@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Webtrees\ModuleBase\Test\Testing;
 
 use Fisharebest\Webtrees\DB;
+use LogicException;
 use MagicSunday\Webtrees\ModuleBase\Testing\RealTreeFixture;
 use MagicSunday\Webtrees\ModuleBase\Testing\StatementLog;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -97,6 +98,26 @@ final class StatementLogTest extends TestCase
     {
         StatementLog::capture(static function (): void {
         });
+
+        DB::table('gedcom')->get();
+
+        self::assertCount(0, DB::connection()->getQueryLog());
+    }
+
+    /**
+     * An action that throws leaves the log off as well, so the statements of a later part of the test are
+     * not collected on the shared connection.
+     */
+    #[Test]
+    public function theLogIsOffAfterAnActionThatThrows(): void
+    {
+        try {
+            StatementLog::capture(static function (): never {
+                throw new LogicException('The action fails.');
+            });
+        } catch (LogicException) {
+            // The failure of the action is the case under test.
+        }
 
         DB::table('gedcom')->get();
 

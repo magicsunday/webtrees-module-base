@@ -19,8 +19,8 @@ use function is_scalar;
 /**
  * Collects the SQL statements that an action sends, for the tests that count the lookups of a chart.
  *
- * The log of the connection is cleared before the action and switched off afterwards, so the result
- * holds exactly the statements of the action. A test that ignores some statements, such as the reads
+ * The log of the connection is cleared before the action and switched off afterwards, also when the
+ * action throws, so the result holds exactly the statements of the action. A test that ignores some statements, such as the reads
  * of the settings, filters the list itself.
  *
  * @author  Rico Sonntag <mail@ricosonntag.de>
@@ -50,10 +50,13 @@ final class StatementLog
         $connection->enableQueryLog();
         $connection->flushQueryLog();
 
-        $action();
+        try {
+            $action();
 
-        $log = $connection->getQueryLog();
-        $connection->disableQueryLog();
+            $log = $connection->getQueryLog();
+        } finally {
+            $connection->disableQueryLog();
+        }
 
         $statements = [];
 
