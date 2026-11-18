@@ -125,6 +125,21 @@ final class StatementLogTest extends TestCase
     }
 
     /**
+     * A binding that is no scalar becomes an empty text and keeps its position, so the bindings of a
+     * statement stay aligned with the placeholders.
+     */
+    #[Test]
+    public function aBindingThatIsNoScalarBecomesAnEmptyText(): void
+    {
+        $statements = StatementLog::capture(static function (): void {
+            DB::connection()->select('select ? as first, ? as second, ? as third', [1, null, 'x']);
+        });
+
+        self::assertCount(1, $statements);
+        self::assertSame(['1', '', 'x'], $statements[0]['bindings']);
+    }
+
+    /**
      * An action without a statement gives an empty list.
      */
     #[Test]
