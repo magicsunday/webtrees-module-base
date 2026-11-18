@@ -98,12 +98,14 @@ final class MediaPreloaderTest extends TestCase
      * The media objects of a generation come in chunked statements, whatever the width of the generation,
      * and the lookups of the walk afterwards send no statement. The administrator has no privacy check, so
      * the media objects are all that the walk looks up.
+     *
+     * @param int $people The number of people of the generation, each with a media object of its own
      */
     #[Test]
-    public function theMediaOfAGenerationIsLoadedInChunkedStatements(): void
+    #[DataProvider('generationWidths')]
+    public function theMediaOfAGenerationIsLoadedInChunkedStatements(int $people): void
     {
-        $people = (2 * MediaPreloader::CHUNK_SIZE) + 20;
-        $lines  = ['0 HEAD'];
+        $lines = ['0 HEAD'];
 
         foreach (range(1, $people) as $person) {
             $lines[] = '0 @' . $person . '@ INDI';
@@ -578,6 +580,21 @@ final class MediaPreloaderTest extends TestCase
         (new MediaPreloader())->preload($tree, $this->people($tree, $xrefs));
 
         self::assertSame(['one.jpg', null, null], $this->highlightFiles($tree, $xrefs));
+    }
+
+    /**
+     * The widths of a generation around the chunk boundary and well beyond it. A generation of exactly one
+     * chunk is one statement, and one more person makes a second.
+     *
+     * @return array<string, array{int}> The number of people by the name of the case
+     */
+    public static function generationWidths(): array
+    {
+        return [
+            'a generation of exactly one chunk'      => [MediaPreloader::CHUNK_SIZE],
+            'a generation of one chunk and a person' => [MediaPreloader::CHUNK_SIZE + 1],
+            'a generation of several chunks'         => [(2 * MediaPreloader::CHUNK_SIZE) + 20],
+        ];
     }
 
     /**
