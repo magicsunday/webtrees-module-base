@@ -42,12 +42,18 @@ Before adding an entry, check the following. Is the package a direct dependency 
 - Some tests of the resolver and the writer run the gettext tools (`msgcat`, `msgattrib`, `msgfilter`, `msgmerge`, `msgfmt`) and skip themselves where one of them is missing. They are the tests that call `requireTools()` of `tests/Double/SkipsWithoutGettextTools`, which asks `GettextWorkspace::toolsAvailable()`. A green run without the tools therefore did not run them. The CI workflow installs the tools in a step of its own before the PHPUnit step. `CatalogueToolchainTest::keepsTheOwnerAndTheGroupOfTheCatalogue` needs root and skips itself for any other user, so the CI runs that one test again through sudo in the step `PHP Unit ownership test as root`, on the leg of the mutation run, where a skip fails the step. Locally the buildbox service that runs as a regular user has neither gettext nor root, so run the catalogue tests in a throwaway root container that installs `gettext` first (`apk add gettext`). A run as root skips the tests that need a normal user, so a complete local check runs the container once as root and once as a normal user.
 - No Makefile. This library has no JS build, no translation catalogue of its own (the fixture catalogues under `tests/` are compiled by hand with `msgfmt`) and no build step that produces a release artifact, so every command it needs is a composer script run through the buildbox (see above). To force a full regeneration, delete the generated paths directly: `rm -rf .build node_modules`, followed by `npm ci`.
 
-<!-- testing-policy:begin v1 -->
+<!-- testing-policy:begin v2 -->
 ## Testing policy
 
 Tests protect behavior whose regression would be materially incorrect, unsafe,
 destructive or hard to notice before release. They are not a coverage target and
 they are not a mutation-score target.
+
+This block decides which behavior needs testing, even when a repository rule
+requires tests for every change. Repository rules about test-first work or
+positive and negative tests still apply when this block requires a test, but
+they do not require tests excluded by the "Do not add tests whose only content
+is" list.
 
 Protect these with durable tests:
 - security and privacy boundaries, including untrusted data reaching a path,
@@ -62,16 +68,19 @@ Protect these with durable tests:
   persisted configuration keys, producer and consumer contracts
 - every fixed behavioral bug (some test must fail on the old behavior). A bug
   that is only a wrong label, CSS class or default is not behavioral unless a
-  named consumer breaks on it.
+  named consumer breaks on it or it breaks a security, privacy or accessibility
+  property.
 
-For side effects assert the postcondition and the identity of the affected
-resource, not only that a collaborator was called.
+For side effects, assert the observable result and the identity of the affected
+resource. For external calls, assert the destination and the relevant payload,
+not only that a collaborator was called.
 
 Do not add tests whose only content is:
 - a getter, setter, constructor that only stores values, DTO, enum or constant,
   unless it carries a persisted key or a serialized format from the list above
 - a CSS class list, a label or message text, or a default value, unless the exact
-  value is a documented interface that a named consumer breaks on. Prefer testing
+  value is a documented interface that a named consumer breaks on or it encodes a
+  security, privacy or accessibility property. Prefer testing
   the consuming behavior over the producer literal and pin only the minimum literal.
 - transparent delegation that adds no argument selection, ordering, error
   translation or security context
